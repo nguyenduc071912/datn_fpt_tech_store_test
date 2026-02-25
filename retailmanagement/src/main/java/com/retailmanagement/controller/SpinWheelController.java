@@ -54,4 +54,13 @@ public class SpinWheelController {
         List<Map<String, Object>> prizes = spinWheelService.getPrizeOptions();
         return ResponseEntity.ok(prizes);
     }
+    @GetMapping("/spin-expiry/preview")
+    public ResponseEntity<?> previewExpiringBonuses(
+            @RequestParam(defaultValue = "24") int hours) {
+        List<Map<String, Object>> expiring = spinWheelService.getExpiringBonuses(hours);
+        return ResponseEntity.ok(Map.of(
+                "count", expiring.size(),
+                "bonuses", expiring
+        ));
+    }
 }

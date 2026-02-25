@@ -11,7 +11,8 @@ public enum NotificationType {
     PROMOTION("Khuyến mãi", "🎁"),
     LOYALTY_POINTS("Điểm tích lũy", "⭐"),
     VIP_TIER_UPGRADE("Nâng hạng VIP", "👑"),
-    SYSTEM("Hệ thống", "🔔");
+    SYSTEM("Hệ thống", "🔔"),
+    SPIN_EXPIRY_WARNING("Ưu đãi vòng quay sắp hết hạn", "🎡");
 
     private final String displayName;
     private final String icon;

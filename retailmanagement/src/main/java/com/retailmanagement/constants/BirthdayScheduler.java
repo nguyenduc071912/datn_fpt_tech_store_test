@@ -79,4 +79,9 @@ public class BirthdayScheduler {
         log.info("⏰ Chạy job kiểm tra lên hạng...");
         notificationService.checkAndSendTierUpgradeNotifications();
     }
+    @Scheduled(cron = "0 0 */6 * * *")
+    public void checkExpiringSpinBonuses() {
+        System.out.println("⏰ [Scheduler] Checking expiring spin bonuses...");
+        notificationService.sendSpinExpiryWarnings();
+    }
 }

@@ -13,6 +13,7 @@ import com.retailmanagement.entity.User;
 import com.retailmanagement.entity.VipTier;
 import com.retailmanagement.repository.CustomRes;
 import com.retailmanagement.repository.LoyaltyLedgerRepository;
+import com.retailmanagement.repository.OrderRepository;
 import com.retailmanagement.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,13 @@ public class CustomerService {
     private final CustomRes customRes;
     private final LoyaltyLedgerRepository loyaltyLedgerRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
+    @Audit(
+            module = AuditModule.CUSTOMER,
+            action = AuditAction.UPDATE,
+            targetType = TargetType.CUSTOMER
+    )
     private void saveLoyaltyLedger(
             Customer customer,
             int pointsDelta,
@@ -119,6 +126,7 @@ public class CustomerService {
                 .totalSpent(BigDecimal.ZERO)
                 .loyaltyPoints(0)
                 .isActive(true)
+                .vipNote(customerRequest.getVipNote())
                 .build();
 
         Customer saved = customRes.save(customer);
@@ -130,6 +138,7 @@ public class CustomerService {
         int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
 
         Integer pointsToNext = 0;
+        int orderCount = (int) orderRepository.countByCustomerId(customer.getId());
 
         if (currentTier == null) {
             pointsToNext = VipTier.BRONZE.getMinPoints() - currentPoints;
@@ -165,6 +174,8 @@ public class CustomerService {
                 .isActive(customer.getIsActive())
                 .createdAt(customer.getCreatedAt())
                 .updatedAt(customer.getUpdatedAt())
+                .vipNote(customer.getVipNote())
+                .orderCount(orderCount)
                 .build();
     }
 
@@ -285,6 +296,10 @@ public class CustomerService {
             }
             customer.setEmail(customerRequest.getEmail());
         }
+        if (customerRequest.getVipNote() != null) {
+            customer.setVipNote(customerRequest.getVipNote());
+        }
+
 
         String oldPhone = customer.getPhone();
         if (customerRequest.getPhone() != null && !customerRequest.getPhone().equals(oldPhone)) {
@@ -536,5 +551,12 @@ public class CustomerService {
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+    @Transactional
+    public CustomerResponse updateVipNote(Integer id, String vipNote) {
+        Customer customer = customRes.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng: " + id));
+        customer.setVipNote(vipNote);
+        return mapToResponse(customRes.save(customer));
     }
 }

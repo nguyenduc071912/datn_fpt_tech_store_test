@@ -31,9 +31,6 @@ export const customersApi = {
   listByPointsRange(minPoints, maxPoints) {
     return http.get(`/api/auth/customers/points?min=${minPoints}&max=${maxPoints}`);
   },
-  listByPointsRange(minPoints, maxPoints) {
-    return http.get(`/api/auth/customers/points?min=${minPoints}&max=${maxPoints}`);
-  },
   listByVipTier(tier) {
     return http.get(`/api/auth/customers/vip-tier/${tier}`);
   },
@@ -122,5 +119,9 @@ restorePayment(paymentId) {
 },
 listInactiveTransaction(days = 30) {
   return http.get(`/api/auth/customers/inactive-transaction?days=${days}`);
-}
+},
+updateVipNote(id, vipNote) {
+  return http.patch(`/api/auth/customers/${id}/vip-note`, { vipNote });
+},
+
 };

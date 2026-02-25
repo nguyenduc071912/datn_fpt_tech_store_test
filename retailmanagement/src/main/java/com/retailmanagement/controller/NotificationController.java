@@ -24,6 +24,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
     private final CustomerService customerService;
+    private final SpinWheelController spinWheelService;
 
     /**
      * Lấy danh sách thông báo của khách hàng hiện tại
@@ -136,4 +137,18 @@ public class NotificationController {
         notificationService.sendPurchaseReminders();
         return ResponseEntity.ok(Map.of("message", "Triggered successfully"));
     }
+    /**
+     * Admin: Trigger cảnh báo spin sắp hết hạn thủ công
+     * POST /api/auth/notifications/spin-expiry/trigger
+     */
+    @PostMapping("/spin-expiry/trigger")
+    public ResponseEntity<?> triggerSpinExpiryWarnings() {
+        notificationService.sendSpinExpiryWarnings();
+        return ResponseEntity.ok(Map.of(
+                "message", "Spin expiry warnings triggered successfully"
+        ));
+    }
+
+
+
 }

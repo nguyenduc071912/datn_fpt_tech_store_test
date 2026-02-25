@@ -49,4 +49,15 @@ public interface SpinWheelHistoryRepository extends JpaRepository<SpinWheelHisto
                                 @Param("weekStart") LocalDate weekStart);
 
     Optional<SpinWheelHistory> findByUsedOrderId(Long usedOrderId);
+
+    @Query("SELECT s FROM SpinWheelHistory s " +
+            "WHERE s.isUsed = false " +
+            "AND s.expiresAt > :now " +
+            "AND s.expiresAt <= :threshold " +
+            "ORDER BY s.expiresAt ASC")
+    List<SpinWheelHistory> findExpiringUnusedBonuses(
+            @Param("now")       LocalDateTime now,
+            @Param("threshold") LocalDateTime threshold
+    );
+
 }
