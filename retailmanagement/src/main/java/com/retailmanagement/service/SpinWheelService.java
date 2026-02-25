@@ -11,9 +11,11 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,34 +24,45 @@ public class SpinWheelService {
     private final SpinWheelHistoryRepository spinWheelHistoryRepository;
     private final CustomRes customerRepository;
 
-    // Possible discount bonuses with their weights
     private static final Map<BigDecimal, Integer> DISCOUNT_WEIGHTS = new LinkedHashMap<>();
     static {
-        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(1.00), 30);  // 1% - 30% chance
-        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(2.00), 25);  // 2% - 25% chance
-        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(3.00), 20);  // 3% - 20% chance
-        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(5.00), 15);  // 5% - 15% chance
-        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(7.00), 10); // 7% - 10% chance
+        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(1.00), 30);  // 1%  - 30% chance
+        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(2.00), 25);  // 2%  - 25% chance
+        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(3.00), 20);  // 3%  - 20% chance
+        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(5.00), 15);  // 5%  - 15% chance
+        DISCOUNT_WEIGHTS.put(BigDecimal.valueOf(7.00), 10);  // 7%  - 10% chance
     }
 
-    /**
-     * Get the Monday of current week
-     */
+    // ================================================================
+    // PRIVATE HELPERS
+    // ================================================================
+
     private LocalDate getWeekStartDate() {
-        LocalDate today = LocalDate.now();
-        return today.with(DayOfWeek.MONDAY);
+        return LocalDate.now().with(DayOfWeek.MONDAY);
     }
 
-    /**
-     * Check if customer can spin this week
-     */
+    private BigDecimal generateRandomDiscount() {
+        int totalWeight = DISCOUNT_WEIGHTS.values().stream().mapToInt(Integer::intValue).sum();
+        int randomValue = new Random().nextInt(totalWeight);
+        int cumulative  = 0;
+
+        for (Map.Entry<BigDecimal, Integer> entry : DISCOUNT_WEIGHTS.entrySet()) {
+            cumulative += entry.getValue();
+            if (randomValue < cumulative) return entry.getKey();
+        }
+
+        return BigDecimal.valueOf(1.00); // fallback
+    }
+
+    // ================================================================
+    // GET SPIN STATUS
+    // ================================================================
+
     public Map<String, Object> getSpinStatus(Integer customerId) {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         Map<String, Object> status = new HashMap<>();
-
-        // Check if customer is VIP
         boolean isVip = customer.getCustomerType() == CustomerType.VIP;
         status.put("isVip", isVip);
 
@@ -59,7 +72,6 @@ public class SpinWheelService {
             return status;
         }
 
-        // Check if already spun this week
         LocalDate weekStart = getWeekStartDate();
         Optional<SpinWheelHistory> thisWeekSpin =
                 spinWheelHistoryRepository.findByCustomerIdAndWeekStartDate(customerId, weekStart);
@@ -69,12 +81,11 @@ public class SpinWheelService {
             status.put("canSpin", false);
             status.put("message", "Bạn đã quay thưởng tuần này");
             status.put("lastSpin", Map.of(
-                    "spunAt", spin.getSpunAt(),
+                    "spunAt",        spin.getSpunAt(),
                     "discountBonus", spin.getDiscountBonus(),
-                    "expiresAt", spin.getExpiresAt()
+                    "expiresAt",     spin.getExpiresAt()
             ));
 
-            // Check if bonus is still active
             if (!spin.getIsUsed() && spin.getExpiresAt().isAfter(LocalDateTime.now())) {
                 status.put("activeBonus", spin.getDiscountBonus());
             }
@@ -83,12 +94,11 @@ public class SpinWheelService {
             status.put("message", "Bạn có thể quay thưởng tuần này!");
         }
 
-        // Get active bonus if any
         Optional<SpinWheelHistory> activeBonus =
                 spinWheelHistoryRepository.findMostRecentActiveBonus(customerId, LocalDateTime.now());
 
         if (activeBonus.isPresent()) {
-            status.put("currentBonus", activeBonus.get().getDiscountBonus());
+            status.put("currentBonus",   activeBonus.get().getDiscountBonus());
             status.put("bonusExpiresAt", activeBonus.get().getExpiresAt());
         } else {
             status.put("currentBonus", BigDecimal.ZERO);
@@ -97,39 +107,19 @@ public class SpinWheelService {
         return status;
     }
 
-    /**
-     * Generate random discount based on weights
-     */
-    private BigDecimal generateRandomDiscount() {
-        int totalWeight = DISCOUNT_WEIGHTS.values().stream().mapToInt(Integer::intValue).sum();
-        Random random = new Random();
-        int randomValue = random.nextInt(totalWeight);
+    // ================================================================
+    // SPIN
+    // ================================================================
 
-        int cumulativeWeight = 0;
-        for (Map.Entry<BigDecimal, Integer> entry : DISCOUNT_WEIGHTS.entrySet()) {
-            cumulativeWeight += entry.getValue();
-            if (randomValue < cumulativeWeight) {
-                return entry.getKey();
-            }
-        }
-
-        return BigDecimal.valueOf(1.00); // Fallback
-    }
-
-    /**
-     * Perform the spin
-     */
     @Transactional
     public Map<String, Object> spin(Integer customerId) {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-        // Verify customer is VIP
         if (customer.getCustomerType() != CustomerType.VIP) {
             throw new RuntimeException("Only VIP customers can spin the wheel");
         }
 
-        // Check if already spun this week
         LocalDate weekStart = getWeekStartDate();
         Optional<SpinWheelHistory> existingSpin =
                 spinWheelHistoryRepository.findByCustomerIdAndWeekStartDate(customerId, weekStart);
@@ -138,12 +128,10 @@ public class SpinWheelService {
             throw new RuntimeException("You have already spun this week");
         }
 
-        // Generate random discount
         BigDecimal discountBonus = generateRandomDiscount();
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime expiresAt = now.plusDays(7); // Bonus valid for 1 week
+        LocalDateTime now        = LocalDateTime.now();
+        LocalDateTime expiresAt  = now.plusDays(7);
 
-        // Save spin history
         SpinWheelHistory spinHistory = SpinWheelHistory.builder()
                 .customer(customer)
                 .discountBonus(discountBonus)
@@ -155,22 +143,21 @@ public class SpinWheelService {
 
         spinWheelHistoryRepository.save(spinHistory);
 
-        // Update customer's current bonus
         customer.setSpinDiscountBonus(discountBonus);
         customerRepository.save(customer);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
+        result.put("success",       true);
         result.put("discountBonus", discountBonus);
-        result.put("expiresAt", expiresAt);
-        result.put("message", String.format("Chúc mừng! Bạn nhận được %.0f%% giảm giá bổ sung", discountBonus));
-
+        result.put("expiresAt",     expiresAt);
+        result.put("message",       String.format("Chúc mừng! Bạn nhận được %.0f%% giảm giá bổ sung", discountBonus));
         return result;
     }
 
-    /**
-     * Get customer's spin history
-     */
+    // ================================================================
+    // GET SPIN HISTORY
+    // ================================================================
+
     public List<Map<String, Object>> getSpinHistory(Integer customerId) {
         List<SpinWheelHistory> history =
                 spinWheelHistoryRepository.findByCustomerIdOrderBySpunAtDesc(customerId);
@@ -178,15 +165,14 @@ public class SpinWheelService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (SpinWheelHistory spin : history) {
             Map<String, Object> item = new HashMap<>();
-            item.put("id", spin.getId());
+            item.put("id",            spin.getId());
             item.put("discountBonus", spin.getDiscountBonus());
-            item.put("spunAt", spin.getSpunAt());
-            item.put("expiresAt", spin.getExpiresAt());
-            item.put("isUsed", spin.getIsUsed());
-            item.put("usedOrderId", spin.getUsedOrderId());
+            item.put("spunAt",        spin.getSpunAt());
+            item.put("expiresAt",     spin.getExpiresAt());
+            item.put("isUsed",        spin.getIsUsed());
+            item.put("usedOrderId",   spin.getUsedOrderId());
             item.put("weekStartDate", spin.getWeekStartDate());
 
-            // Status
             if (spin.getIsUsed()) {
                 item.put("status", "Đã sử dụng");
             } else if (spin.getExpiresAt().isBefore(LocalDateTime.now())) {
@@ -201,11 +187,22 @@ public class SpinWheelService {
         return result;
     }
 
-    /**
-     * Mark bonus as used (called when order is placed)
-     */
+    // ================================================================
+    // USE BONUS — gọi từ OrderService khi tạo đơn
+    // ================================================================
+
     @Transactional
     public void useBonus(Integer customerId, Long orderId) {
+        // Lock customer trước để tránh race condition
+        Customer customer = customerRepository.findByIdWithLock(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Double-check: nếu bonus đã bị dùng bởi request khác thì skip
+        if (customer.getSpinDiscountBonus() == null ||
+                customer.getSpinDiscountBonus().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
         Optional<SpinWheelHistory> activeBonus =
                 spinWheelHistoryRepository.findMostRecentActiveBonus(customerId, LocalDateTime.now());
 
@@ -215,23 +212,74 @@ public class SpinWheelService {
             bonus.setUsedOrderId(orderId);
             spinWheelHistoryRepository.save(bonus);
 
-            // Clear customer's bonus
-            Customer customer = customerRepository.findById(customerId).orElseThrow();
             customer.setSpinDiscountBonus(BigDecimal.ZERO);
             customerRepository.save(customer);
         }
     }
 
-    /**
-     * Get all possible prizes for display on wheel
-     */
+    // ================================================================
+    // RESTORE BONUS — gọi từ OrderService khi hủy đơn
+    // ================================================================
+
+    @Transactional
+    public void restoreBonus(Long orderId) {
+        Optional<SpinWheelHistory> spinOpt =
+                spinWheelHistoryRepository.findByUsedOrderId(orderId);
+
+        if (spinOpt.isEmpty()) return;
+
+        SpinWheelHistory spin = spinOpt.get();
+
+        // Chỉ restore nếu đang isUsed = true và chưa hết hạn
+        if (!spin.getIsUsed() || spin.getExpiresAt().isBefore(LocalDateTime.now())) return;
+
+        // Lock customer trước khi ghi
+        Customer customer = customerRepository.findByIdWithLock(spin.getCustomer().getId())
+                .orElseThrow();
+
+        spin.setIsUsed(false);
+        spin.setUsedOrderId(null);
+        spinWheelHistoryRepository.save(spin);
+
+        customer.setSpinDiscountBonus(spin.getDiscountBonus());
+        customerRepository.save(customer);
+    }
+
+    // ================================================================
+    // ✅ GET EXPIRING BONUSES — gọi từ NotificationService
+    // Trả về danh sách bonus chưa dùng sẽ hết hạn trong withinHours giờ tới
+    // ================================================================
+
+    public List<Map<String, Object>> getExpiringBonuses(int withinHours) {
+        LocalDateTime now       = LocalDateTime.now();
+        LocalDateTime threshold = now.plusHours(withinHours);
+
+        List<SpinWheelHistory> expiring =
+                spinWheelHistoryRepository.findExpiringUnusedBonuses(now, threshold);
+
+        return expiring.stream().map(spin -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("customerId",    spin.getCustomer().getId());
+            item.put("customerName",  spin.getCustomer().getName());
+            item.put("customerEmail", spin.getCustomer().getEmail());
+            item.put("discountBonus", spin.getDiscountBonus());
+            item.put("expiresAt",     spin.getExpiresAt());
+            item.put("hoursLeft",     Duration.between(now, spin.getExpiresAt()).toHours());
+            return item;
+        }).collect(Collectors.toList());
+    }
+
+    // ================================================================
+    // GET PRIZES — hiển thị trên vòng quay
+    // ================================================================
+
     public List<Map<String, Object>> getPrizeOptions() {
         List<Map<String, Object>> prizes = new ArrayList<>();
         for (Map.Entry<BigDecimal, Integer> entry : DISCOUNT_WEIGHTS.entrySet()) {
             Map<String, Object> prize = new HashMap<>();
             prize.put("discount", entry.getKey());
-            prize.put("weight", entry.getValue());
-            prize.put("label", String.format("%.0f%%", entry.getKey()));
+            prize.put("weight",   entry.getValue());
+            prize.put("label",    String.format("%.0f%%", entry.getKey()));
             prizes.add(prize);
         }
         return prizes;

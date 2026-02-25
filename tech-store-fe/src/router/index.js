@@ -36,6 +36,8 @@ import PaymentSuccess from "../pages/customer/PaymentSuccess.vue";
 import Birthday from "../pages/system/BirthdayManager.vue"
 import Customerspendinganalytics from "../pages/system/Customerspendinganalytics.vue";
 import Spinwheel from "../pages/customer/Spinwheel.vue";
+import InactiveCustomers from "../pages/system/InactiveCustomers.vue";
+import Toployalcustomers from "../pages/system/Toployalcustomers.vue";
 const routes = [
   // ===== CUSTOMER PORTAL =====
   {
@@ -139,6 +141,18 @@ const routes = [
         name: "system-customers",
         component: CustomerManager,
         meta: { title: "Customers & Loyalty" },
+      },
+      {
+        path: "Toployalcustomers",
+        name: "Toployal customers",
+        component: Toployalcustomers,
+        meta: { title: "Toployal - customers" },
+      },
+       {
+        path: "inactive-customers",
+        name: "system-customers-inactive",
+        component: InactiveCustomers,
+        meta: { title: "Inactive Customers" },
       },
       {
         path: "categories",

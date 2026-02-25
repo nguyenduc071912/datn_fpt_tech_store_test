@@ -7,6 +7,7 @@ import com.retailmanagement.service.CustomerService;
 import com.retailmanagement.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
     private final CustomerService customerService;
+    private final SpinWheelController spinWheelService;
 
     /**
      * Lấy danh sách thông báo của khách hàng hiện tại
@@ -87,13 +89,13 @@ public class NotificationController {
     // Helper methods
     private Integer getCurrentCustomerId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
+        String principal = auth.getName(); // có thể là email hoặc username
 
-        var customer = customerService.findByEmail(email);
+        // findByEmail đã tự fallback sang findByName bên trong CustomerService
+        var customer = customerService.findByEmail(principal);
         if (customer == null) {
-            throw new RuntimeException("Không tìm thấy khách hàng");
+            throw new RuntimeException("Không tìm thấy khách hàng: " + principal);
         }
-
         return customer.getId();
     }
 
@@ -110,4 +112,43 @@ public class NotificationController {
                 .readAt(notification.getReadAt())
                 .build();
     }
+    // Thêm vào NotificationController.java
+
+    /**
+     * Admin: Xem lịch sử reminder đã gửi
+     * GET /api/auth/notifications/purchase-reminders/history
+     */
+    @GetMapping("/purchase-reminders/history")
+    public ResponseEntity<List<NotificationResponse>> getPurchaseReminderHistory() {
+        List<Notification> notifications = notificationService.getPurchaseReminderHistory();
+        List<NotificationResponse> response = notifications.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Admin: Trigger thủ công (test hoặc gửi ngay)
+     * POST /api/auth/notifications/purchase-reminders/trigger
+     */
+
+    @PostMapping("/purchase-reminders/trigger")
+    public ResponseEntity<?> triggerPurchaseReminders() {
+        notificationService.sendPurchaseReminders();
+        return ResponseEntity.ok(Map.of("message", "Triggered successfully"));
+    }
+    /**
+     * Admin: Trigger cảnh báo spin sắp hết hạn thủ công
+     * POST /api/auth/notifications/spin-expiry/trigger
+     */
+    @PostMapping("/spin-expiry/trigger")
+    public ResponseEntity<?> triggerSpinExpiryWarnings() {
+        notificationService.sendSpinExpiryWarnings();
+        return ResponseEntity.ok(Map.of(
+                "message", "Spin expiry warnings triggered successfully"
+        ));
+    }
+
+
+
 }

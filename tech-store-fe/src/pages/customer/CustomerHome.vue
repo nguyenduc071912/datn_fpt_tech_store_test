@@ -40,6 +40,95 @@ FILE: src/pages/customer/CustomerHome.vue
       </el-card>
     </div>
 
+    <!-- Purchase Reminder / Winback Banner -->
+    <div v-if="reminderNotifications.length > 0" class="mb-4">
+      <el-card
+        v-for="notif in reminderNotifications"
+        :key="notif.id"
+        shadow="always"
+        class="reminder-notification-card mb-3"
+      >
+        <div class="d-flex align-items-start gap-3">
+          <div class="reminder-icon-large">
+            {{ notif.type === 'WINBACK' ? '💝' : '🛒' }}
+          </div>
+          <div class="flex-grow-1">
+            <h3 class="mb-2">{{ notif.title }}</h3>
+            <div class="reminder-message" v-html="formatMessage(notif.message)"></div>
+            <div class="mt-3 d-flex gap-2">
+              <el-button
+                type="primary"
+                size="large"
+                @click="handleReminderClick(notif.id)"
+              >
+                Xem ngay 🛍️
+              </el-button>
+              <el-button size="large" @click="markNotificationAsRead(notif.id)">
+                Để sau
+              </el-button>
+            </div>
+          </div>
+          <el-icon class="close-icon" @click="markNotificationAsRead(notif.id)" :size="20">
+            <Close />
+          </el-icon>
+        </div>
+      </el-card>
+    </div>
+
+    <!-- ✨ Spin Expiry Warning Banners -->
+    <div v-if="spinExpiryBonuses.length > 0" class="mb-4">
+      <div
+        v-for="bonus in spinExpiryBonuses"
+        :key="bonus.customerId"
+        class="spin-expiry-banner mb-3"
+        :class="getSpinUrgencyClass(bonus.hoursLeft)"
+      >
+        <div class="spin-expiry-banner__glow"></div>
+        <div class="spin-expiry-banner__content">
+          <!-- Icon -->
+          <div class="spin-expiry-banner__icon">
+            <span class="spin-wheel-emoji">🎡</span>
+            <div class="spin-urgency-ring" :class="getSpinUrgencyClass(bonus.hoursLeft)"></div>
+          </div>
+
+          <!-- Text -->
+          <div class="spin-expiry-banner__text">
+            <div class="spin-expiry-banner__title">Ưu đãi vòng quay sắp hết hạn!</div>
+            <div class="spin-expiry-banner__body">
+              Bạn có ưu đãi giảm
+              <span class="spin-expiry-banner__discount">{{ bonus.discountBonus }}%</span>
+              chưa sử dụng —
+              <span class="spin-expiry-banner__urgency" :class="getSpinUrgencyClass(bonus.hoursLeft)">
+                còn <b>{{ bonus.hoursLeft }} giờ</b> nữa hết hạn!
+              </span>
+            </div>
+            <div class="spin-expiry-banner__expires">
+              Hết hạn lúc: {{ formatDate(bonus.expiresAt) }}
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="spin-expiry-banner__actions">
+            <button class="spin-btn-use-now" @click="handleSpinExpiryUseNow(bonus)">
+              Dùng ngay
+            </button>
+            <button class="spin-btn-dismiss" @click="dismissSpinExpiry(bonus.customerId)">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Countdown progress bar -->
+        <div class="spin-expiry-progress">
+          <div
+            class="spin-expiry-progress__bar"
+            :style="{ width: getSpinProgressWidth(bonus.hoursLeft) }"
+            :class="getSpinUrgencyClass(bonus.hoursLeft)"
+          ></div>
+        </div>
+      </div>
+    </div>
+
     <div class="row g-3">
       <div class="col-12 col-lg-3">
         <el-card shadow="never">
@@ -85,7 +174,7 @@ FILE: src/pages/customer/CustomerHome.vue
                 Profile
               </el-button>
 
-              <!-- ✨ Event Button redesigned -->
+              <!-- ✨ Event Button -->
               <button
                 v-if="isCustomer"
                 class="event-btn"
@@ -270,10 +359,56 @@ const clientPageSize = 9;
 const cartStore = useCartStore();
 
 const birthdayNotifications = ref([]);
+const reminderNotifications = ref([]);
 const allNotifications = ref([]);
 const unreadNotificationCount = ref(0);
 const notificationsDialog = ref(false);
 const tierProgressRef = ref(null);
+
+// ── Spin expiry state ──────────────────────────────────────────────
+const spinExpiryBonuses = ref([]);
+const spinExpiryDismissed = ref(new Set());
+
+// ── Spin expiry helpers ────────────────────────────────────────────
+async function loadSpinExpiryBonuses() {
+  if (!isCustomer.value) return;
+  try {
+    const res = await http.get("/api/spin-wheel/spin-expiry/preview?hours=24");
+    const bonuses = res.data?.bonuses || [];
+    spinExpiryBonuses.value = bonuses.filter(
+      (b) => !spinExpiryDismissed.value.has(b.customerId)
+    );
+  } catch (err) {
+    // Fail silently — non-critical
+    console.error("Failed to load spin expiry bonuses:", err);
+  }
+}
+
+function dismissSpinExpiry(customerId) {
+  spinExpiryDismissed.value.add(customerId);
+  spinExpiryBonuses.value = spinExpiryBonuses.value.filter(
+    (b) => b.customerId !== customerId
+  );
+}
+
+function handleSpinExpiryUseNow(bonus) {
+  dismissSpinExpiry(bonus.customerId);
+  // Navigate to orders — the spin bonus will be applied automatically
+  // (SpinWheelService.useBonus is called by OrderService on checkout)
+  window.location.href = "/orders/new";
+}
+
+function getSpinUrgencyClass(hoursLeft) {
+  if (hoursLeft <= 3) return "spin-critical";
+  if (hoursLeft <= 12) return "spin-warning";
+  return "spin-normal";
+}
+
+function getSpinProgressWidth(hoursLeft) {
+  const pct = Math.max(0, Math.min(100, (hoursLeft / 24) * 100));
+  return `${pct}%`;
+}
+// ──────────────────────────────────────────────────────────────────
 
 function extractList(payload) {
   if (!payload) return [];
@@ -401,9 +536,15 @@ async function loadNotifications() {
   try {
     const unreadRes = await http.get("/api/auth/notifications/my?unreadOnly=true");
     const unreadNotifs = unreadRes.data || [];
-    birthdayNotifications.value = unreadNotifs.filter(n => n.type === 'BIRTHDAY');
+
+    birthdayNotifications.value = unreadNotifs.filter(n => n.type === "BIRTHDAY");
+    reminderNotifications.value = unreadNotifs.filter(
+      n => n.type === "PURCHASE_REMINDER" || n.type === "WINBACK"
+    );
+
     const countRes = await http.get("/api/auth/notifications/my/unread-count");
     unreadNotificationCount.value = countRes.data?.unreadCount || 0;
+
     if (notificationsDialog.value) {
       const allRes = await http.get("/api/auth/notifications/my");
       allNotifications.value = allRes.data || [];
@@ -431,6 +572,11 @@ async function markAllAsRead() {
   } catch (error) {
     toast("Không thể đánh dấu tất cả", "error");
   }
+}
+
+async function handleReminderClick(notificationId) {
+  await markNotificationAsRead(notificationId);
+  window.scrollTo({ top: 400, behavior: "smooth" });
 }
 
 function viewAllNotifications() {
@@ -467,8 +613,16 @@ onMounted(async () => {
   if (isCustomer.value) {
     cartStore.refreshCount();
     loadNotifications();
+    loadSpinExpiryBonuses();
+
     const notifInterval = setInterval(loadNotifications, 30000);
-    onBeforeUnmount(() => clearInterval(notifInterval));
+    // Re-check spin expiry every 10 minutes
+    const spinInterval = setInterval(loadSpinExpiryBonuses, 10 * 60 * 1000);
+
+    onBeforeUnmount(() => {
+      clearInterval(notifInterval);
+      clearInterval(spinInterval);
+    });
   }
 });
 
@@ -512,16 +666,11 @@ onBeforeUnmount(() => {
   transition: opacity 0.2s, transform 0.15s;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
 }
-.event-btn:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-}
+.event-btn:hover { opacity: 0.92; transform: translateY(-1px); }
 .event-btn:active { transform: translateY(0); }
-
 .event-icon { font-size: 16px; line-height: 1; }
 .event-text { white-space: nowrap; }
 
-/* Chấm ping động */
 .event-ping {
   position: absolute;
   top: -3px;
@@ -532,7 +681,6 @@ onBeforeUnmount(() => {
   background: #fff;
   animation: ping 1.5s ease-in-out infinite;
 }
-
 @keyframes ping {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.6); opacity: 0; }
@@ -548,16 +696,192 @@ onBeforeUnmount(() => {
 .birthday-notification-card :deep(.el-card__body) { padding: 24px; }
 .birthday-icon-large { font-size: 64px; line-height: 1; animation: bounce 2s infinite; }
 .birthday-message { font-size: 16px; line-height: 1.6; white-space: pre-line; }
+
+/* Purchase Reminder / Winback Banner */
+.reminder-notification-card {
+  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  color: white;
+  border: none;
+  animation: slideIn 0.5s ease-out;
+}
+.reminder-notification-card :deep(.el-card__body) { padding: 24px; }
+.reminder-icon-large { font-size: 64px; line-height: 1; animation: bounce 2s infinite; }
+.reminder-message { font-size: 16px; line-height: 1.6; white-space: pre-line; }
+
 .close-icon { cursor: pointer; opacity: 0.8; transition: opacity 0.3s; }
 .close-icon:hover { opacity: 1; }
 
+/* ================================================================
+   ✨ SPIN EXPIRY BANNER
+   ================================================================ */
+.spin-expiry-banner {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0f0f1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  animation: slideIn 0.45s ease-out;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.spin-expiry-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* Urgency tints */
+.spin-expiry-banner.spin-normal  { border-color: rgba(99, 179, 237, 0.3); }
+.spin-expiry-banner.spin-warning { border-color: rgba(251, 191, 36, 0.4); }
+.spin-expiry-banner.spin-critical {
+  border-color: rgba(239, 68, 68, 0.55);
+  animation: slideIn 0.45s ease-out, criticalGlow 2s ease-in-out infinite;
+}
+@keyframes criticalGlow {
+  0%, 100% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15); }
+  50%       { box-shadow: 0 4px 32px rgba(239, 68, 68, 0.45); }
+}
+
+/* Ambient glow overlay */
+.spin-expiry-banner__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.spin-normal  .spin-expiry-banner__glow { background: radial-gradient(ellipse at 8% 50%, rgba(99,179,237,0.07) 0%, transparent 55%); }
+.spin-warning .spin-expiry-banner__glow { background: radial-gradient(ellipse at 8% 50%, rgba(251,191,36,0.09) 0%, transparent 55%); }
+.spin-critical .spin-expiry-banner__glow { background: radial-gradient(ellipse at 8% 50%, rgba(239,68,68,0.11) 0%, transparent 55%); }
+
+/* Content row */
+.spin-expiry-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px 13px;
+}
+
+/* Wheel icon + pulsing ring */
+.spin-expiry-banner__icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spin-wheel-emoji {
+  font-size: 40px;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.55));
+}
+.spin-urgency-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  animation: ringPulse 2s ease-in-out infinite;
+}
+.spin-urgency-ring.spin-normal  { border-color: rgba(99, 179, 237, 0.5); }
+.spin-urgency-ring.spin-warning { border-color: rgba(251, 191, 36, 0.65); }
+.spin-urgency-ring.spin-critical { border-color: rgba(239, 68, 68, 0.75); }
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.14); opacity: 0.35; }
+}
+
+/* Text block */
+.spin-expiry-banner__text { flex: 1; min-width: 0; }
+.spin-expiry-banner__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #f0f0ff;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+.spin-expiry-banner__body {
+  font-size: 13px;
+  color: rgba(240, 240, 255, 0.7);
+  line-height: 1.55;
+}
+.spin-expiry-banner__discount {
+  font-weight: 800;
+  font-size: 15px;
+  color: #fbbf24;
+}
+.spin-expiry-banner__urgency {
+  display: inline;
+  color: rgba(240, 240, 255, 0.85);
+}
+.spin-expiry-banner__urgency.spin-critical { color: #f87171; }
+.spin-expiry-banner__urgency.spin-warning  { color: #fbbf24; }
+.spin-expiry-banner__expires {
+  font-size: 11px;
+  color: rgba(240, 240, 255, 0.38);
+  margin-top: 5px;
+}
+
+/* Actions */
+.spin-expiry-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.spin-btn-use-now {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.35);
+  transition: opacity 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.spin-btn-use-now:hover  { opacity: 0.88; transform: translateY(-1px); }
+.spin-btn-use-now:active { transform: translateY(0); }
+
+.spin-btn-dismiss {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.spin-btn-dismiss:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+/* Countdown bar */
+.spin-expiry-progress {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.spin-expiry-progress__bar {
+  height: 100%;
+  transition: width 0.6s ease;
+  border-radius: 0 2px 2px 0;
+}
+.spin-expiry-progress__bar.spin-normal  { background: linear-gradient(90deg, #63b3ed, #90cdf4); }
+.spin-expiry-progress__bar.spin-warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.spin-expiry-progress__bar.spin-critical { background: linear-gradient(90deg, #ef4444, #f87171); }
+/* ================================================================ */
+
 @keyframes slideIn {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { transform: translateY(-18px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
 }
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  50%       { transform: translateY(-10px); }
 }
 
 /* Notifications Dialog */
