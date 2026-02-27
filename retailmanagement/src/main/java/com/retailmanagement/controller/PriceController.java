@@ -8,6 +8,7 @@ import com.retailmanagement.service.PricingService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/prices")
@@ -24,7 +25,7 @@ public class PriceController {
      */
     @PostMapping("/variants/{variantId}")
     public ApiResponse<PriceHistory> setVariantPrice(@PathVariable Integer variantId,
-                                                     @RequestBody UpsertPriceRequest req) {
+            @RequestBody UpsertPriceRequest req) {
         PriceHistory ph = pricingService.setVariantPrice(variantId, req, 0);
         return ApiResponse.success(ph);
     }
@@ -83,5 +84,23 @@ public class PriceController {
             @PathVariable Integer variantId,
             @PathVariable Integer customerId) {
         return ApiResponse.success(pricingService.getEffectivePriceForCustomer(variantId, customerId));
+    }
+
+    // Lịch sử giá của variant
+    @GetMapping("/variants/{variantId}/history")
+    public ApiResponse<List<PriceHistory>> getPriceHistory(@PathVariable Integer variantId) {
+        return ApiResponse.success(pricingService.getPriceHistory(variantId));
+    }
+
+    // Cảnh báo giá thấp hơn giá nhập
+    @GetMapping("/variants/{variantId}/cost-warning")
+    public ApiResponse<Map<String, Object>> getCostWarning(@PathVariable Integer variantId) {
+        return ApiResponse.success(pricingService.checkPriceBelowCost(variantId));
+    }
+
+    // Dashboard giá & khuyến mãi
+    @GetMapping("/dashboard")
+    public ApiResponse<Map<String, Object>> getDashboard() {
+        return ApiResponse.success(pricingService.getDashboard());
     }
 }
