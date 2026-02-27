@@ -1,21 +1,17 @@
 <template>
   <div class="audit-page">
-
     <!-- ===== HEADER ===== -->
     <div class="page-header">
       <div class="title">Audit Logs</div>
 
       <div class="actions">
-        <el-button type="success" @click="exportCsv">
-          Export CSV
-        </el-button>
+        <el-button type="success" @click="exportCsv"> Export CSV </el-button>
       </div>
     </div>
 
     <!-- ===== FILTER PANEL ===== -->
     <el-card shadow="never" class="filter-card">
       <el-form :inline="true" class="filter-form">
-
         <el-input
           v-model="filter.keyword"
           placeholder="Keyword"
@@ -61,14 +57,9 @@
           value-format="YYYY-MM-DD"
         />
 
-        <el-button type="primary" @click="searchLogs">
-          Search
-        </el-button>
+        <el-button type="primary" @click="searchLogs"> Search </el-button>
 
-        <el-button @click="resetFilter">
-          Reset
-        </el-button>
-
+        <el-button @click="resetFilter"> Reset </el-button>
       </el-form>
     </el-card>
 
@@ -81,10 +72,16 @@
         style="width: 100%"
         @sort-change="handleSort"
       >
-
         <el-table-column prop="id" label="ID" width="90" sortable="custom" />
 
-        <el-table-column prop="userId" label="User" width="90" />
+        <el-table-column label="User" width="220">
+          <template #default="scope">
+            <div>
+              {{ scope.row.user?.username }}
+              <span style="color: #999"> (ID: {{ scope.row.user?.id }}) </span>
+            </div>
+          </template>
+        </el-table-column>
 
         <el-table-column prop="module" label="Module" width="140" />
 
@@ -104,7 +101,6 @@
           width="200"
           sortable="custom"
         />
-
       </el-table>
 
       <!-- ===== PAGINATION ===== -->
@@ -114,15 +110,13 @@
           layout="total, sizes, prev, pager, next"
           :current-page="page"
           :page-size="size"
-          :page-sizes="[5,10,20,50]"
+          :page-sizes="[5, 10, 20, 50]"
           :total="total"
           @current-change="handlePageChange"
           @size-change="handleSizeChange"
         />
       </div>
-
     </el-card>
-
   </div>
 </template>
 
@@ -151,7 +145,7 @@ const filter = reactive({
   action: null,
   keyword: "",
   startDate: null,
-  endDate: null
+  endDate: null,
 });
 
 /* =========================
@@ -170,22 +164,17 @@ async function fetchLogs() {
   }
 
   try {
-    const res = await http.post(
-      "/api/auth/audit-log/search",
-      filter,
-      {
-        params: {
-          page: page.value - 1,
-          size: size.value,
-          sortBy: sortBy.value,
-          sortDir: sortDir.value
-        }
-      }
-    );
+    const res = await http.post("/api/auth/audit-log/search", filter, {
+      params: {
+        page: page.value - 1,
+        size: size.value,
+        sortBy: sortBy.value,
+        sortDir: sortDir.value,
+      },
+    });
 
     logs.value = res.data.content;
     total.value = res.data.totalElements;
-
   } finally {
     loading.value = false;
   }
@@ -232,8 +221,38 @@ function handleSort({ prop, order }) {
    EXPORT CSV
 ========================= */
 
-function exportCsv() {
-  window.open("/api/auth/audit-log/export", "_blank");
+async function exportCsv() {
+  if (dateRange.value?.length === 2) {
+    filter.startDate = dateRange.value[0];
+    filter.endDate = dateRange.value[1];
+  } else {
+    filter.startDate = null;
+    filter.endDate = null;
+  }
+
+  try {
+    const response = await http.post(
+      "/api/auth/audit-log/export",
+      filter,
+      { responseType: "blob" }
+    );
+
+    const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "audit_logs.csv";
+
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (e) {
+    console.error("Export failed", e);
+  }
 }
 
 /* =========================

@@ -86,38 +86,16 @@ public class AuditLogController {
         return  auditLogService.filterLogs(request,page,size,sortBy,sortDir);
     }
 
-    @GetMapping("export")
+    @PostMapping("export")
     public void exportAuditLogs(
-            @RequestParam(required = false) LocalDate from,
-            @RequestParam(required = false) LocalDate to,
+            @RequestBody AuditLogFilterRequest filter,
             HttpServletResponse response
     ) throws IOException {
+
         response.setContentType("text/csv; charset=UTF-8");
-        response.setHeader("Content-Disposition","attachment; filename=audit_logs.csv");
+        response.setHeader("Content-Disposition", "attachment; filename=audit_logs.csv");
 
-        List<AuditLog> logs = auditLogService.getByDateRange(from,to);
-
-        PrintWriter writer = response.getWriter();
-
-        writer.println(
-                "id,user_id,module,action,target_type,target_id,details_json,ip_address,created_at"
-        );
-
-        for(AuditLog log: logs) {
-            writer.printf(
-                    "%d,%s,%s,%s,%s,%s,%s,%s,%s%n",
-                    log.getId(),
-                    safe(log.getUser() != null ? log.getUser().getId() : ""),
-                    log.getModule(),
-                    log.getAction(),
-                    log.getTargetType(),
-                    log.getTargetId(),
-                    safe(log.getDetailsJson()),
-                    log.getIpAddress(),
-                    log.getCreatedAt()
-            );
-        }
-        writer.flush();
+        auditLogService.exportCsv(filter, response.getWriter());
     }
 
     private String safe(Object value) {

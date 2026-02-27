@@ -3,6 +3,7 @@ package com.retailmanagement.audit;
 import lombok.Data;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -19,8 +20,8 @@ public class AuditLogFilterRequest {
 
     private String keyword;
 
-    private Instant startDate;
-    private Instant endDate;
+    private LocalDate startDate;
+    private LocalDate  endDate;
 
     private List<String> modules;
     private List<String> actions;

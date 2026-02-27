@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.io.PrintWriter;
 import java.time.*;
 import java.time.temporal.ChronoField;
 import java.util.List;
@@ -163,6 +164,28 @@ public class AuditLogService {
         );
     }
 
+    public void exportCsv(AuditLogFilterRequest filter, PrintWriter writer) {
+
+        List<AuditLog> logs =
+                auditLogRepository.findAll(AuditLogSpecification.filter(filter));
+
+        writer.println("id,user,module,action,targetType,targetId,ip,createdAt,details");
+
+        for (AuditLog log : logs) {
+            writer.printf("%d,%s,%s,%s,%s,%s,%s,%s,%s%n",
+                    log.getId(),
+                    safe(log.getUser() != null ? log.getUser().getUsername() : ""),
+                    safe(log.getModule()),
+                    safe(log.getAction()),
+                    safe(log.getTargetType()),
+                    safe(log.getTargetId()),
+                    safe(log.getIpAddress()),
+                    safe(log.getCreatedAt()),
+                    safe(log.getDetailsJson())
+            );
+        }
+    }
+
     private AuditLogResponse toResponse(AuditLog auditLog){
 
         Integer userId = auditLog.getUser() != null
@@ -180,5 +203,12 @@ public class AuditLogService {
                 .ipAddress(auditLog.getIpAddress())
                 .createdAt(auditLog.getCreatedAt())
                 .build();
+    }
+
+    private String safe(Object value) {
+        if (value == null) return "";
+
+        String s = value.toString().replace("\"", "\"\"");
+        return "\"" + s + "\"";
     }
 }

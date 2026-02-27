@@ -3,6 +3,9 @@ package com.retailmanagement.audit;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -82,17 +85,33 @@ public class AuditLogSpecification {
             if (hasText(request.getKeyword())) {
                 predicates.add(
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("detailsJson")),
-                                "%" + request.getKeyword().toLowerCase().trim() + "%"
+                                root.get("detailsJson"),
+                                "%" + request.getKeyword().trim() + "%"
                         )
                 );
             }
 
             // ===== DATE =====
+            ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+
             if (request.getStartDate() != null) {
+                Instant start = request.getStartDate()
+                        .atStartOfDay(zone)
+                        .toInstant();
+
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(
-                        root.get("createdAt"),
-                        request.getStartDate()
+                        root.get("createdAt"), start
+                ));
+            }
+
+            if (request.getEndDate() != null) {
+                Instant end = request.getEndDate()
+                        .atTime(LocalTime.MAX)
+                        .atZone(zone)
+                        .toInstant();
+
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(
+                        root.get("createdAt"), end
                 ));
             }
 
