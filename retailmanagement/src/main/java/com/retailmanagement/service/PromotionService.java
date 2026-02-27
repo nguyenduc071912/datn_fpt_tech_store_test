@@ -21,6 +21,8 @@ public class PromotionService {
     private final PromotionRedemptionRepository redemptionRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+
+
     public PromotionService(PromotionRepository promoRepo,
             ProductVariantRepository variantRepo,
             PromotionRedemptionRepository redemptionRepo) {

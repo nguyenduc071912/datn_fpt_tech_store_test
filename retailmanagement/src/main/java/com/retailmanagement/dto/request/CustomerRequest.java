@@ -40,4 +40,5 @@ public class CustomerRequest {
 
     @Size(max = 2000, message = "Ghi chú không được vượt quá 2000 ký tự")
     private String notes; // MATCH với entity: notes (không phải note)
+    private String vipNote;
 }

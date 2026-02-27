@@ -32,7 +32,7 @@ public class CustomerResponse {
     private Integer loyaltyPoints; // Thêm loyaltyPoints
     private Integer pointsToNextTier; // Điểm cần để lên hạng
     private Double discountRate; // % giảm giá
-
+    private String vipNote;
     private BigDecimal totalSpent; // Thêm totalSpent
     private LocalDateTime lastOrderAt; // Thêm lastOrderAt
     private String address; // Thêm address
@@ -46,4 +46,6 @@ public class CustomerResponse {
     private Integer birthDay; // 1-31
     private Integer age; // Tuổi hiện tại hoặc tuổi sẽ đạt được
     private Long daysUntilBirthday;
+    @Builder.Default
+    private Integer orderCount = 0;
 }
