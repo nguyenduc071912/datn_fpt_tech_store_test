@@ -1,6 +1,5 @@
 package com.retailmanagement.service;
 
-
 import com.retailmanagement.dto.response.CustomerBirthdayResponse;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.CustomRes;
@@ -12,13 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.retailmanagement.entity.Promotion;
 
 @Service
 @RequiredArgsConstructor
@@ -40,8 +39,7 @@ public class NotificationService {
                 customer.getId(),
                 NotificationType.BIRTHDAY,
                 yearStart,
-                yearEnd
-        );
+                yearEnd);
 
         if (!exists) {
             Notification notification = Notification.builder()
@@ -51,8 +49,7 @@ public class NotificationService {
                     .message(String.format(
                             "Chúc mừng sinh nhật %s! 🎉 Chúc bạn một ngày thật vui vẻ và hạnh phúc. " +
                                     "Đừng quên check voucher sinh nhật đặc biệt của bạn nhé!",
-                            customer.getName()
-                    ))
+                            customer.getName()))
                     .isRead(false)
                     .build();
 
@@ -110,6 +107,7 @@ public class NotificationService {
             notificationRepository.save(notification);
         }
     }
+
     @Transactional
     public void createCustomBirthdayNotification(Integer customerId, String customMessage) {
         Customer customer = customerRepository.findById(customerId)
@@ -169,6 +167,7 @@ public class NotificationService {
 
         notificationRepository.delete(notification);
     }
+
     // Method này phải có trong NotificationService
     public void sendCustomBirthdayGreeting(Integer customerId, String customMessage) {
         Customer customer = customerRepository.findById(customerId)
@@ -194,8 +193,6 @@ public class NotificationService {
         return notificationRepository.findByTypeAndCreatedAtBetweenOrderByCreatedAtDesc(
                 NotificationType.BIRTHDAY, from, to);
     }
-
-
 
     /**
      * Lấy khách hàng có sinh nhật trong tháng
@@ -223,8 +220,7 @@ public class NotificationService {
                 today.getMonthValue(),
                 today.getDayOfMonth(),
                 endDate.getMonthValue(),
-                endDate.getDayOfMonth()
-        );
+                endDate.getDayOfMonth());
 
         return customers.stream()
                 .map(this::mapToResponse)
@@ -276,15 +272,13 @@ public class NotificationService {
         Map<String, Long> byType = birthdays.stream()
                 .collect(Collectors.groupingBy(
                         c -> c.getCustomerType().name(),
-                        Collectors.counting()
-                ));
+                        Collectors.counting()));
 
         // Phân loại theo VipTier
         Map<String, Long> byTier = birthdays.stream()
                 .collect(Collectors.groupingBy(
                         c -> c.getVipTier() != null ? c.getVipTier().name() : "NONE",
-                        Collectors.counting()
-                ));
+                        Collectors.counting()));
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("month", month);
@@ -343,6 +337,7 @@ public class NotificationService {
                 .totalSpent(customer.getTotalSpent())
                 .build();
     }
+
     @Transactional
     public void createTierUpgradeNotification(Integer customerId, String tierName, int pointsGap) {
         Customer customer = customerRepository.findById(customerId)
@@ -354,8 +349,7 @@ public class NotificationService {
                 customer.getId(),
                 NotificationType.VIP_TIER_UPGRADE,
                 weekAgo,
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
 
         if (!exists) {
             String message;
@@ -363,14 +357,12 @@ public class NotificationService {
                 message = String.format(
                         "🔥 Bạn chỉ còn thiếu %,d điểm nữa là lên hạng %s! " +
                                 "Hoàn tất một đơn hàng nhỏ để nhận ưu đãi tốt hơn ngay!",
-                        pointsGap, tierName
-                );
+                        pointsGap, tierName);
             } else {
                 message = String.format(
                         "⭐ Bạn sắp đạt hạng %s với %,d điểm nữa! " +
                                 "Tiếp tục mua sắm để tận hưởng nhiều đặc quyền hơn.",
-                        pointsGap, tierName
-                );
+                        pointsGap, tierName);
             }
 
             Notification notification = Notification.builder()
@@ -400,16 +392,14 @@ public class NotificationService {
                     customer.getId(),
                     NotificationType.VIP_TIER_UPGRADE,
                     weekAgo,
-                    LocalDateTime.now()
-            );
+                    LocalDateTime.now());
 
             if (!exists) {
                 String message = String.format(
                         "👑 Chỉ còn %,d điểm nữa, bạn sẽ trở thành khách hàng VIP! " +
                                 "Khách VIP được giảm giá cao hơn, ưu đãi độc quyền và nhiều đặc quyền khác. " +
                                 "Mua sắm ngay để nâng cấp!",
-                        pointsNeeded
-                );
+                        pointsNeeded);
 
                 Notification notification = Notification.builder()
                         .customer(customer)
@@ -448,7 +438,7 @@ public class NotificationService {
                         : nextTier.getMinPoints();
 
                 double progress = tierRange > 0
-                        ? (double)(tierRange - pointsGap) / tierRange * 100
+                        ? (double) (tierRange - pointsGap) / tierRange * 100
                         : 0;
 
                 // Nếu đã hoàn thành >= 80% (trong 20% cuối)
@@ -484,5 +474,34 @@ public class NotificationService {
         }
 
         return null;
+    }
+
+    @Transactional
+    public void sendPromotionExpiryWarnings(List<Promotion> expiringPromos) {
+        List<Customer> allActive = customerRepository.findAll().stream()
+                .filter(Customer::getIsActive).toList();
+
+        for (Promotion promo : expiringPromos) {
+            String message = String.format(
+                    "🔔 Khuyến mãi \"%s\" (mã: %s) sắp hết hạn vào %s! Mua ngay để không bỏ lỡ.",
+                    promo.getName(), promo.getCode(),
+                    promo.getEndDate().toString());
+
+            for (Customer customer : allActive) {
+                LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+                boolean exists = notificationRepository.existsByCustomerIdAndTypeAndCreatedAtBetween(
+                        customer.getId(), NotificationType.PROMOTION, oneDayAgo, LocalDateTime.now());
+                if (!exists) {
+                    Notification n = Notification.builder()
+                            .customer(customer)
+                            .type(NotificationType.PROMOTION)
+                            .title("⏰ Khuyến mãi sắp hết hạn!")
+                            .message(message)
+                            .isRead(false)
+                            .build();
+                    notificationRepository.save(n);
+                }
+            }
+        }
     }
 }
