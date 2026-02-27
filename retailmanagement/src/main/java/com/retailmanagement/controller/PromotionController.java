@@ -37,6 +37,11 @@ public class PromotionController {
         return ApiResponse.success(promotionService.create(req, 0));
     }
 
+    /**
+     * List promotions
+     * 
+     * @param activeOnly - if true, only return currently active promotions
+     */
     @GetMapping
     public ApiResponse<List<Promotion>> list(@RequestParam(required = false) Boolean activeOnly) {
         return ApiResponse.success(promotionService.list(activeOnly));
@@ -61,6 +66,30 @@ public class PromotionController {
         return ApiResponse.success("Promotion deactivated successfully");
     }
 
+    // Dashboard: tổng hợp khuyến mãi theo tuần/tháng
+    @GetMapping("/report")
+    public ApiResponse<Map<String, Object>> getReport(
+            @RequestParam(required = false) String period) { // "week" | "month"
+        return ApiResponse.success(promotionService.getReport(period));
+    }
+
+    // Cảnh báo xung đột khuyến mãi
+    @GetMapping("/conflicts")
+    public ApiResponse<List<Map<String, Object>>> getConflicts() {
+        return ApiResponse.success(promotionService.detectConflicts());
+    }
+
+    // Cảnh báo khuyến mãi sắp hết hạn (trong N ngày)
+    @GetMapping("/expiring")
+    public ApiResponse<List<Promotion>> getExpiring(
+            @RequestParam(defaultValue = "3") int withinDays) {
+        return ApiResponse.success(promotionService.getExpiringPromotions(withinDays));
+    }
+
+    /**
+     * Record redemption (increment usage counter)
+     * Used when a promotion is applied to an order
+     */
     @PostMapping("/{id}/redeem")
     public ApiResponse<String> recordRedemption(@PathVariable Integer id) {
         promotionService.recordRedemption(id, 1);

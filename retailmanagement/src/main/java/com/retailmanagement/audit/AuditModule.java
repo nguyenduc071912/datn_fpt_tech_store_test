@@ -4,5 +4,7 @@ public enum AuditModule {
     USER,
     PRODUCT,
     CUSTOMER,
-    ORDER
+    ORDER,
+    PRICING,
+    PROMOTION
 }
