@@ -32,4 +32,7 @@ export const spinWheelApi = {
   getPrizes() {
     return http.get("/api/spin-wheel/prizes");
   },
+  previewExpiringBonuses(hours = 24) {
+    return http.get(`/api/spin-wheel/spin-expiry/preview?hours=${hours}`);
+  }
 };

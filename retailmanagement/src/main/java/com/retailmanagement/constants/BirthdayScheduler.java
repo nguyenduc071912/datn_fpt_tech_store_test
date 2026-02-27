@@ -68,4 +68,29 @@ public class BirthdayScheduler {
         log.info("💓 Scheduler đang hoạt động - {}",
                 LocalDateTime.now().format(formatter));
     }
+
+    @Scheduled(cron = "0 0 9 * * *")
+    public void sendPurchaseReminders() {
+        log.info("⏰ Chạy job nhắc mua hàng...");
+        notificationService.sendPurchaseReminders();
+    }
+    @Scheduled(cron = "0 0 10 * * *")
+    public void checkTierUpgrades() {
+        log.info("⏰ Chạy job kiểm tra lên hạng...");
+        notificationService.checkAndSendTierUpgradeNotifications();
+    }
+    @Scheduled(cron = "0 0 */6 * * *")
+    public void checkExpiringSpinBonuses() {
+        System.out.println("⏰ [Scheduler] Checking expiring spin bonuses...");
+        notificationService.sendSpinExpiryWarnings();
+    }
+    @Scheduled(cron = "0 0 9 * * *")
+    public void sendWelcomeToZeroOrderCustomers() {
+        System.out.println("⏰ [SCHEDULED] sendWelcomeToZeroOrderCustomers start...");
+        try {
+            notificationService.sendWelcomeToZeroOrderCustomers();
+        } catch (Exception e) {
+            System.err.println("❌ sendWelcomeToZeroOrderCustomers failed: " + e.getMessage());
+        }
+    }
 }

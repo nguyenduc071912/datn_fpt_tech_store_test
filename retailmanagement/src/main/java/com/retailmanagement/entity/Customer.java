@@ -75,7 +75,8 @@ public class Customer {
     private LocalDateTime createdAt;
     @Column(name = "spin_discount_bonus", precision = 5, scale = 2)
     private BigDecimal spinDiscountBonus = BigDecimal.ZERO;
-
+    @Column(name = "vip_note", columnDefinition = "NVARCHAR(1000)")
+    private String vipNote;
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

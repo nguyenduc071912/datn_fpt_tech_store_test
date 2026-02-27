@@ -1,3 +1,182 @@
+retailmanagement
+ ┣ audit
+ ┃ ┣ Audit.java
+ ┃ ┣ AuditAction.java
+ ┃ ┣ AuditArgsBuilder.java
+ ┃ ┣ AuditLog.java
+ ┃ ┣ AuditLogAspect.java
+ ┃ ┣ AuditLogFilterRequest.java
+ ┃ ┣ AuditLogRepository.java
+ ┃ ┣ AuditLogService.java
+ ┃ ┣ AuditLogSpecification.java
+ ┃ ┣ AuditModule.java
+ ┃ ┣ AuditReportService.java
+ ┃ ┗ TargetType.java
+ ┣ config
+ ┃ ┣ CorsConfig.java
+ ┃ ┣ JwtProperties.java
+ ┃ ┣ ModelMapperConfig.java
+ ┃ ┣ SchedulingConfig.java
+ ┃ ┣ SecurityConfig.java
+ ┃ ┗ WebConfig.java
+ ┣ constants
+ ┃ ┣ BirthdayScheduler.java
+ ┃ ┣ OrderStatuses.java
+ ┃ ┗ TierUpgradeNotificationScheduler.java
+ ┣ controller
+ ┃ ┣ AuditLogController.java
+ ┃ ┣ AuthController.java
+ ┃ ┣ BirthdayController.java
+ ┃ ┣ CartController.java
+ ┃ ┣ CategoryController.java
+ ┃ ┣ CusController.java
+ ┃ ┣ NotificationController.java
+ ┃ ┣ OrderController.java
+ ┃ ┣ PaymentController.java
+ ┃ ┣ PriceController.java
+ ┃ ┣ ProductController.java
+ ┃ ┣ PromotionController.java
+ ┃ ┣ ReturnController.java
+ ┃ ┣ SettingController.java
+ ┃ ┣ SpinWheelController.java
+ ┃ ┣ TestApiController.java
+ ┃ ┣ TierProgressController.java
+ ┃ ┣ UserController.java
+ ┃ ┗ UserLoginController.java
+ ┣ dto
+ ┃ ┣ request
+ ┃ ┃ ┣ AddToCartRequest.java
+ ┃ ┃ ┣ AttributeRequest.java
+ ┃ ┃ ┣ CategoryRequest.java
+ ┃ ┃ ┣ CreateOrderItemRequest.java
+ ┃ ┃ ┣ CreateOrderRequest.java
+ ┃ ┃ ┣ CreateReturnRequest.java
+ ┃ ┃ ┣ CreateUserRequest.java
+ ┃ ┃ ┣ CustomerRequest.java
+ ┃ ┃ ┣ LoginRequest.java
+ ┃ ┃ ┣ PaymentRequest.java
+ ┃ ┃ ┣ ProcessReturnRequest.java
+ ┃ ┃ ┣ ProductRequest.java
+ ┃ ┃ ┣ PromotionRequest.java
+ ┃ ┃ ┣ RegisterRequest.java
+ ┃ ┃ ┣ SetDefaultCurrencyRequest.java
+ ┃ ┃ ┣ UpdateOrderRequest.java
+ ┃ ┃ ┣ UpdateUserPasswordRequest.java
+ ┃ ┃ ┣ UpdateUserRequest.java
+ ┃ ┃ ┣ UpdateUserRoleRequest.java
+ ┃ ┃ ┗ UpsertPriceRequest.java
+ ┃ ┗ response
+ ┃ ┃ ┣ ApiResponse.java
+ ┃ ┃ ┣ AuditLogResponse.java
+ ┃ ┃ ┣ AuthResponse.java
+ ┃ ┃ ┣ CartItemResponse.java
+ ┃ ┃ ┣ CategoryResponse.java
+ ┃ ┃ ┣ CreateOrderResponse.java
+ ┃ ┃ ┣ CustomerBirthdayResponse.java
+ ┃ ┃ ┣ CustomerResponse.java
+ ┃ ┃ ┣ ImageResponse.java
+ ┃ ┃ ┣ LoyaltyLedgerResponse.java
+ ┃ ┃ ┣ ModuleLogReportResponse.java
+ ┃ ┃ ┣ NotificationResponse.java
+ ┃ ┃ ┣ OrderDetailResponse.java
+ ┃ ┃ ┣ OrderItemDTO.java
+ ┃ ┃ ┣ OrderListResponse.java
+ ┃ ┃ ┣ PaymentResponse.java
+ ┃ ┃ ┣ ProductResponse.java
+ ┃ ┃ ┣ ReturnResponse.java
+ ┃ ┃ ┣ RevenueByCustomerResponse.java
+ ┃ ┃ ┣ TierProgressResponse.java
+ ┃ ┃ ┣ UserActionReportResponse.java
+ ┃ ┃ ┣ UserLoginResponse.java
+ ┃ ┃ ┣ UserResponse.java
+ ┃ ┃ ┗ VariantPriceResponse.java
+ ┣ entity
+ ┃ ┣ BaseEntity.java
+ ┃ ┣ CartItem.java
+ ┃ ┣ Category.java
+ ┃ ┣ Customer.java
+ ┃ ┣ Customergroup.java
+ ┃ ┣ CustomerType.java
+ ┃ ┣ Image.java
+ ┃ ┣ LoyaltyLedger.java
+ ┃ ┣ Notification.java
+ ┃ ┣ NotificationType.java
+ ┃ ┣ Order.java
+ ┃ ┣ OrderItem.java
+ ┃ ┣ Payment.java
+ ┃ ┣ PriceHistory.java
+ ┃ ┣ Product.java
+ ┃ ┣ ProductCategory.java
+ ┃ ┣ ProductCategoryId.java
+ ┃ ┣ ProductTag.java
+ ┃ ┣ ProductTagId.java
+ ┃ ┣ ProductVariant.java
+ ┃ ┣ Promotion.java
+ ┃ ┣ PromotionRedemption.java
+ ┃ ┣ Return.java
+ ┃ ┣ Role.java
+ ┃ ┣ SpinWheelHistory.java
+ ┃ ┣ StockTransaction.java
+ ┃ ┣ SystemSetting.java
+ ┃ ┣ Tag.java
+ ┃ ┣ User.java
+ ┃ ┣ UserLogin.java
+ ┃ ┗ VipTier.java
+ ┣ exception
+ ┃ ┣ ErrorResponse.java
+ ┃ ┗ GlobalExceptionHandler.java
+ ┣ repository
+ ┃ ┣ CartItemRepository.java
+ ┃ ┣ CategoryRepository.java
+ ┃ ┣ CustomRes.java
+ ┃ ┣ ImageRepository.java
+ ┃ ┣ LoyaltyLedgerRepository.java
+ ┃ ┣ NotificationRepository.java
+ ┃ ┣ OrderItemRepository.java
+ ┃ ┣ OrderRepository.java
+ ┃ ┣ PaymentRepository.java
+ ┃ ┣ PriceHistoryRepository.java
+ ┃ ┣ ProductCategoryRepository.java
+ ┃ ┣ ProductRepository.java
+ ┃ ┣ ProductVariantRepository.java
+ ┃ ┣ PromotionRedemptionRepository.java
+ ┃ ┣ PromotionRepository.java
+ ┃ ┣ ReturnRepository.java
+ ┃ ┣ SpinWheelHistoryRepository.java
+ ┃ ┣ StockTransactionRepository.java
+ ┃ ┣ SystemSettingRepository.java
+ ┃ ┣ UserLoginRepository.java
+ ┃ ┗ UserRepository.java
+ ┣ security
+ ┃ ┣ CustomUserDetails.java
+ ┃ ┣ CustomUserDetailsService.java
+ ┃ ┣ JwtAuthenticationFilter.java
+ ┃ ┗ JwtService.java
+ ┣ service
+ ┃ ┣ AuthService.java
+ ┃ ┣ CartService.java
+ ┃ ┣ CategoryService.java
+ ┃ ┣ CustomerService.java
+ ┃ ┣ LoyaltyHistoryService.java
+ ┃ ┣ NotificationService.java
+ ┃ ┣ OrderQueryService.java
+ ┃ ┣ OrderService.java
+ ┃ ┣ PaymentService.java
+ ┃ ┣ PricingService.java
+ ┃ ┣ ProductService.java
+ ┃ ┣ PromotionService.java
+ ┃ ┣ ReturnService.java
+ ┃ ┣ SettingService.java
+ ┃ ┣ SpinWheelService.java
+ ┃ ┣ TierProgressService.java
+ ┃ ┣ UserLoginLogService.java
+ ┃ ┗ UserService.java
+ ┣ util
+ ┃ ┣ IpUtil.java
+ ┃ ┗ SecurityUtil.java
+ ┗ RetailmanagementApplication.java
+Dựa vào tree code check giúp tôi xem để làm đủ các chức năng này thì còn thiếu file nào trong MODULE_PRESETS không.
+Tạo bảng giá sản phẩm: giá, tiền tệ. Hiển thị danh sách giá theo sản phẩm. Chỉnh sửa / xóa giá. Hiển thị giá hiện tại trên danh sách sản phẩm. Thiết lập tiền tệ mặc định. Tạo khuyến mãi: tên, % giảm, thời gian áp dụng, sản phẩm áp dụng. Hiển thị danh sách khuyến mãi. Chỉnh sửa / xóa khuyến mãi. Hiển thị giá sản phẩm sau khuyến mãi. Kiểm tra trùng khuyến mãi. Tính giá sau khuyến mãi tự động cho từng sản phẩm. Áp dụng combo khuyến mãi (mua 2 tặng 1). Giới hạn số lần áp dụng khuyến mãi. Hiển thị tất cả khuyến mãi đang hoạt động. Kiểm tra trùng khuyến mãi. Hiển thị giá khuyến mãi trên danh sách sản phẩm. Tính giá cuối cùng sau khuyến mãi & combo. Thêm tính năng ưu tiên khuyến mãi. Hiển thị chi tiết khuyến mãi. Chỉnh sửa, xóa khuyến mãi. Tạo bảng giá theo nhóm khách hàng. Hiển thị giá theo nhóm khách hàng. Chỉnh sửa bảng giá. Áp dụng khuyến mãi theo nhóm khách. Hiển thị giá cuối cùng theo khuyến mãi. Áp dụng khuyến mãi tự động khi tạo đơn. Hiển thị khuyến mãi combo trong đơn hàng. Tạo cảnh báo khi khuyến mãi hết hạn. Kiểm tra trùng lặp khuyến mãi. Hiển thị chi tiết khuyến mãi trên sản phẩm. Tạo bảng giá theo chiến dịch. Hiển thị giá áp dụng chiến dịch. Cập nhật khuyến mãi theo chiến dịch. Hiển thị giá combo. Thêm cảnh báo khi giá xung đột. Tạo bảng giá tự động áp dụng theo ngày. Hiển thị lịch sử giá sản phẩm. Cập nhật giá khi hết khuyến mãi. Tạo cảnh báo khi giá thấp hơn giá nhập. Hiển thị giá cuối cùng cho khách. Tạo báo cáo khuyến mãi đang áp dụng. Hiển thị chi tiết giá theo khách hàng. Cảnh báo xung đột khuyến mãi. Hiển thị giá cuối cùng sau combo. Cập nhật khuyến mãi theo chiến dịch. Tổng hợp khuyến mãi theo tuần/tháng. Hiển thị dashboard giá & khuyến mãi. Cập nhật khuyến mãi combo. Tối ưu giá cuối cùng. Tạo báo cáo giá & khuyến mãi.
 // Chạy:
 //   node export-tree-with-code.js
 
@@ -36,24 +215,18 @@ const MODULE_PRESETS = {
     label: "Pricing & Promotion (Minimal)",
     mode: "seed",
     seedFiles: [
-      // ─── Controllers ───────────────────────────────────────────
+      // Controllers (API entry)
       "controller/PriceController.java",
       "controller/PromotionController.java",
       "controller/ProductController.java",
-      "controller/SettingController.java",
-      "controller/NotificationController.java",
-      "controller/OrderController.java",
 
-      // ─── Services ──────────────────────────────────────────────
+      // Services (business logic)
       "service/PricingService.java",
       "service/PromotionService.java",
       "service/ProductService.java",
       "service/CustomerService.java",
-      "service/SettingService.java",
-      "service/NotificationService.java",
-      "service/OrderService.java",
 
-      // ─── Repositories ──────────────────────────────────────────
+      // Repositories
       "repository/PriceHistoryRepository.java",
       "repository/PromotionRepository.java",
       "repository/PromotionRedemptionRepository.java",
@@ -61,29 +234,18 @@ const MODULE_PRESETS = {
       "repository/ProductRepository.java",
       "repository/CustomRes.java",
       "repository/LoyaltyLedgerRepository.java",
-      "repository/SystemSettingRepository.java",
-      "repository/OrderRepository.java",
-      "repository/OrderItemRepository.java",
-      "repository/NotificationRepository.java",
 
-      // ─── DTO Requests ──────────────────────────────────────────
+      // DTO - Requests
       "dto/request/UpsertPriceRequest.java",
       "dto/request/PromotionRequest.java",
-      "dto/request/SetDefaultCurrencyRequest.java",
-      "dto/request/CreateOrderRequest.java",
-      "dto/request/CreateOrderItemRequest.java",
 
-      // ─── DTO Responses ─────────────────────────────────────────
+      // DTO - Responses
       "dto/response/ApiResponse.java",
       "dto/response/VariantPriceResponse.java",
       "dto/response/ProductResponse.java",
       "dto/response/OrderDetailResponse.java",
-      "dto/response/OrderListResponse.java",
-      "dto/response/CustomerResponse.java",
-      "dto/response/LoyaltyLedgerResponse.java",
-      "dto/response/NotificationResponse.java",
 
-      // ─── Entities ──────────────────────────────────────────────
+      // Entities (core domain)
       "entity/PriceHistory.java",
       "entity/Promotion.java",
       "entity/PromotionRedemption.java",
@@ -91,16 +253,13 @@ const MODULE_PRESETS = {
       "entity/Product.java",
       "entity/Customer.java",
       "entity/CustomerType.java",
-      "entity/Customergroup.java",
       "entity/VipTier.java",
-      "entity/SystemSetting.java",
-      "entity/Order.java",
-      "entity/OrderItem.java",
-      "entity/StockTransaction.java",
-      "entity/Notification.java",
-      "entity/NotificationType.java",
 
-      // ─── Exceptions ────────────────────────────────────────────
+      // System setting (currency/defaults)
+      "entity/SystemSetting.java",
+      "repository/SystemSettingRepository.java",
+
+      // Exceptions
       "exception/ErrorResponse.java",
       "exception/GlobalExceptionHandler.java",
     ],

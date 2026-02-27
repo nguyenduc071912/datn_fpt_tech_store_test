@@ -21,9 +21,11 @@ public class PromotionService {
     private final PromotionRedemptionRepository redemptionRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+
+
     public PromotionService(PromotionRepository promoRepo,
-                            ProductVariantRepository variantRepo,
-                            PromotionRedemptionRepository redemptionRepo) {
+            ProductVariantRepository variantRepo,
+            PromotionRedemptionRepository redemptionRepo) {
         this.promoRepo = promoRepo;
         this.variantRepo = variantRepo;
         this.redemptionRepo = redemptionRepo;
@@ -88,7 +90,8 @@ public class PromotionService {
             Rules r = new Rules();
 
             if (req.getUsageLimit() != null) {
-                if (req.getUsageLimit() <= 0) throw new IllegalArgumentException("usageLimit phải > 0 hoặc null");
+                if (req.getUsageLimit() <= 0)
+                    throw new IllegalArgumentException("usageLimit phải > 0 hoặc null");
                 r.usage_limit = req.getUsageLimit();
             }
 
@@ -96,15 +99,18 @@ public class PromotionService {
             Integer get = req.getGetQty();
             boolean hasCombo = buy != null || get != null;
             if (hasCombo) {
-                if (buy == null || get == null) throw new IllegalArgumentException("combo buyQty/getQty phải đủ");
-                if (buy <= 0 || get <= 0) throw new IllegalArgumentException("combo buyQty/getQty phải > 0");
+                if (buy == null || get == null)
+                    throw new IllegalArgumentException("combo buyQty/getQty phải đủ");
+                if (buy <= 0 || get <= 0)
+                    throw new IllegalArgumentException("combo buyQty/getQty phải > 0");
                 Combo c = new Combo();
                 c.buy_qty = buy;
                 c.get_qty = get;
                 r.combo = c;
             }
 
-            if (r.usage_limit == null && r.combo == null) return null;
+            if (r.usage_limit == null && r.combo == null)
+                return null;
             return objectMapper.writeValueAsString(r);
         } catch (IllegalArgumentException ex) {
             throw ex;
@@ -115,7 +121,8 @@ public class PromotionService {
 
     private Rules parseRules(String json) {
         try {
-            if (json == null || json.isBlank()) return new Rules();
+            if (json == null || json.isBlank())
+                return new Rules();
             return objectMapper.readValue(json, Rules.class);
         } catch (Exception e) {
             return new Rules();
@@ -132,7 +139,8 @@ public class PromotionService {
     private boolean applicabilityOverlap(Applicability a, Applicability b) {
         String sa = (a.scope == null) ? "ALL" : a.scope.toUpperCase();
         String sb = (b.scope == null) ? "ALL" : b.scope.toUpperCase();
-        if ("ALL".equals(sa) || "ALL".equals(sb)) return true;
+        if ("ALL".equals(sa) || "ALL".equals(sb))
+            return true;
 
         Set<Integer> aProducts = a.product_ids == null ? Set.of() : new HashSet<>(a.product_ids);
         Set<Integer> bProducts = b.product_ids == null ? Set.of() : new HashSet<>(b.product_ids);
@@ -169,20 +177,24 @@ public class PromotionService {
 
         List<Promotion> candidates = (ignoreId == null)
                 ? promoRepo.findByIsActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(e, s)
-                : promoRepo.findByIsActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIdNot(e, s, ignoreId);
+                : promoRepo.findByIsActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndIdNot(e, s,
+                        ignoreId);
 
         Applicability newApp = parseApplicability(draft.getApplicabilityJson());
 
         List<String> conflicts = new ArrayList<>();
         for (Promotion p : candidates) {
-            if (!dateOverlap(p.getStartDate(), p.getEndDate(), s, e)) continue;
+            if (!dateOverlap(p.getStartDate(), p.getEndDate(), s, e))
+                continue;
 
             Applicability oldApp = parseApplicability(p.getApplicabilityJson());
-            if (applicabilityOverlap(newApp, oldApp)) conflicts.add(p.getCode());
+            if (applicabilityOverlap(newApp, oldApp))
+                conflicts.add(p.getCode());
         }
 
         if (!conflicts.isEmpty()) {
-            throw new IllegalArgumentException("Trùng khuyến mãi theo thời gian/phạm vi với: " + String.join(", ", conflicts));
+            throw new IllegalArgumentException(
+                    "Trùng khuyến mãi theo thời gian/phạm vi với: " + String.join(", ", conflicts));
         }
     }
 
@@ -191,14 +203,21 @@ public class PromotionService {
     // =========================
     @Transactional
     public Promotion create(PromotionRequest req, Integer createdBy) {
-        if (req == null) throw new IllegalArgumentException("Body rỗng");
-        if (req.getCode() == null || req.getCode().isBlank()) throw new IllegalArgumentException("code không được rỗng");
-        if (req.getName() == null || req.getName().isBlank()) throw new IllegalArgumentException("name không được rỗng");
-        if (req.getStartDate() == null || req.getEndDate() == null) throw new IllegalArgumentException("startDate/endDate bắt buộc");
-        if (!req.getStartDate().isBefore(req.getEndDate())) throw new IllegalArgumentException("startDate phải < endDate");
+        if (req == null)
+            throw new IllegalArgumentException("Body rỗng");
+        if (req.getCode() == null || req.getCode().isBlank())
+            throw new IllegalArgumentException("code không được rỗng");
+        if (req.getName() == null || req.getName().isBlank())
+            throw new IllegalArgumentException("name không được rỗng");
+        if (req.getStartDate() == null || req.getEndDate() == null)
+            throw new IllegalArgumentException("startDate/endDate bắt buộc");
+        if (!req.getStartDate().isBefore(req.getEndDate()))
+            throw new IllegalArgumentException("startDate phải < endDate");
 
         String code = req.getCode().trim().toUpperCase();
-        promoRepo.findByCode(code).ifPresent(x -> { throw new IllegalArgumentException("Promo code đã tồn tại"); });
+        promoRepo.findByCode(code).ifPresent(x -> {
+            throw new IllegalArgumentException("Promo code đã tồn tại");
+        });
 
         String discountType = req.getDiscountType() == null ? "PERCENT" : req.getDiscountType().trim().toUpperCase();
         BigDecimal discountValue = req.getDiscountValue();
@@ -212,8 +231,10 @@ public class PromotionService {
                 throw new IllegalArgumentException("Khuyến mãi combo (mua X tặng Y) không dùng discountValue");
             }
         } else {
-            if (discountValue == null) throw new IllegalArgumentException("discountValue bắt buộc (trừ combo)");
-            if (discountValue.compareTo(BigDecimal.ZERO) < 0) throw new IllegalArgumentException("discountValue phải >= 0");
+            if (discountValue == null)
+                throw new IllegalArgumentException("discountValue bắt buộc (trừ combo)");
+            if (discountValue.compareTo(BigDecimal.ZERO) < 0)
+                throw new IllegalArgumentException("discountValue phải >= 0");
             if (!"PERCENT".equals(discountType) && !"AMOUNT".equals(discountType)) {
                 throw new IllegalArgumentException("discountType chỉ hỗ trợ PERCENT hoặc AMOUNT");
             }
@@ -227,7 +248,8 @@ public class PromotionService {
         p.setName(req.getName().trim());
         p.setDescription(req.getDescription());
         p.setDiscountType(discountType);
-        p.setDiscountValue(discountValue == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : discountValue.setScale(2, RoundingMode.HALF_UP));
+        p.setDiscountValue(discountValue == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                : discountValue.setScale(2, RoundingMode.HALF_UP));
         p.setStartDate(req.getStartDate());
         p.setEndDate(req.getEndDate());
         p.setPriority(req.getPriority() == null ? 0 : req.getPriority());
@@ -264,22 +286,32 @@ public class PromotionService {
     @Transactional
     public Promotion update(Integer id, PromotionRequest req) {
         Promotion p = promoRepo.findById(id).orElseThrow(() -> new NoSuchElementException("Promotion not found"));
-        if (req == null) throw new IllegalArgumentException("Body rỗng");
+        if (req == null)
+            throw new IllegalArgumentException("Body rỗng");
 
-        if (req.getName() != null) p.setName(req.getName().trim());
-        if (req.getDescription() != null) p.setDescription(req.getDescription());
+        if (req.getName() != null)
+            p.setName(req.getName().trim());
+        if (req.getDescription() != null)
+            p.setDescription(req.getDescription());
 
-        if (req.getDiscountType() != null) p.setDiscountType(req.getDiscountType().trim().toUpperCase());
+        if (req.getDiscountType() != null)
+            p.setDiscountType(req.getDiscountType().trim().toUpperCase());
         if (req.getDiscountValue() != null) {
-            if (req.getDiscountValue().compareTo(BigDecimal.ZERO) < 0) throw new IllegalArgumentException("discountValue phải >= 0");
+            if (req.getDiscountValue().compareTo(BigDecimal.ZERO) < 0)
+                throw new IllegalArgumentException("discountValue phải >= 0");
             p.setDiscountValue(req.getDiscountValue().setScale(2, RoundingMode.HALF_UP));
         }
 
-        if (req.getStartDate() != null) p.setStartDate(req.getStartDate());
-        if (req.getEndDate() != null) p.setEndDate(req.getEndDate());
-        if (req.getPriority() != null) p.setPriority(req.getPriority());
-        if (req.getStackable() != null) p.setStackable(req.getStackable());
-        if (req.getIsActive() != null) p.setIsActive(req.getIsActive());
+        if (req.getStartDate() != null)
+            p.setStartDate(req.getStartDate());
+        if (req.getEndDate() != null)
+            p.setEndDate(req.getEndDate());
+        if (req.getPriority() != null)
+            p.setPriority(req.getPriority());
+        if (req.getStackable() != null)
+            p.setStackable(req.getStackable());
+        if (req.getIsActive() != null)
+            p.setIsActive(req.getIsActive());
 
         if (req.getScope() != null || req.getProductIds() != null || req.getVariantIds() != null) {
             p.setApplicabilityJson(buildApplicabilityJson(req));
@@ -289,7 +321,8 @@ public class PromotionService {
             p.setRulesJson(buildRulesJson(req));
         }
 
-        if (!p.getStartDate().isBefore(p.getEndDate())) throw new IllegalArgumentException("startDate phải < endDate");
+        if (!p.getStartDate().isBefore(p.getEndDate()))
+            throw new IllegalArgumentException("startDate phải < endDate");
 
         String dt = p.getDiscountType() == null ? "PERCENT" : p.getDiscountType().trim().toUpperCase();
         if (!"PERCENT".equals(dt) && !"AMOUNT".equals(dt)) {
@@ -303,11 +336,13 @@ public class PromotionService {
             if (p.getDiscountValue() != null && p.getDiscountValue().compareTo(BigDecimal.ZERO) != 0) {
                 throw new IllegalArgumentException("Khuyến mãi combo (mua X tặng Y) không dùng discountValue");
             }
-            if (rules.combo.buy_qty == null || rules.combo.get_qty == null || rules.combo.buy_qty <= 0 || rules.combo.get_qty <= 0) {
+            if (rules.combo.buy_qty == null || rules.combo.get_qty == null || rules.combo.buy_qty <= 0
+                    || rules.combo.get_qty <= 0) {
                 throw new IllegalArgumentException("combo buyQty/getQty phải > 0");
             }
         } else {
-            if (p.getDiscountValue() == null) throw new IllegalArgumentException("discountValue bắt buộc (trừ combo)");
+            if (p.getDiscountValue() == null)
+                throw new IllegalArgumentException("discountValue bắt buộc (trừ combo)");
             if ("PERCENT".equals(dt) && p.getDiscountValue().compareTo(new BigDecimal("100")) > 0) {
                 throw new IllegalArgumentException("discountValue PERCENT tối đa 100");
             }
@@ -327,9 +362,10 @@ public class PromotionService {
     // =========================
     // Pricing logic with customer group support
     // =========================
-    
+
     /**
-     * Find best promotion for variant without customer context (backwards compatibility)
+     * Find best promotion for variant without customer context (backwards
+     * compatibility)
      */
     public Promotion findBestPromotionForVariant(ProductVariant v, LocalDateTime at) {
         return findBestPromotionForVariantAndCustomer(v, null, at);
@@ -337,10 +373,12 @@ public class PromotionService {
 
     /**
      * Find best promotion considering customer type/tier
-     * Priority mechanism: highest discount wins, if equal then highest priority number wins
+     * Priority mechanism: highest discount wins, if equal then highest priority
+     * number wins
      */
     public Promotion findBestPromotionForVariantAndCustomer(ProductVariant v, Customer customer, LocalDateTime at) {
-        List<Promotion> active = promoRepo.findByIsActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(at, at);
+        List<Promotion> active = promoRepo.findByIsActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(at,
+                at);
 
         BigDecimal base = v.getPrice() == null ? BigDecimal.ZERO : v.getPrice();
         Promotion best = null;
@@ -348,19 +386,23 @@ public class PromotionService {
 
         for (Promotion p : active) {
             Applicability app = parseApplicability(p.getApplicabilityJson());
-            
+
             // Check product/variant applicability
-            if (!isApplicable(app, v)) continue;
-            
+            if (!isApplicable(app, v))
+                continue;
+
             // Check customer group applicability
-            if (!isApplicableToCustomer(app, customer)) continue;
-            
+            if (!isApplicableToCustomer(app, customer))
+                continue;
+
             // Check usage limit
-            if (!isUsableByLimit(p)) continue;
+            if (!isUsableByLimit(p))
+                continue;
 
             BigDecimal finalPrice = computeEffectiveUnitPrice(base, p);
 
-            // Priority mechanism: lower price wins, if equal then higher priority number wins
+            // Priority mechanism: lower price wins, if equal then higher priority number
+            // wins
             if (finalPrice.compareTo(bestFinal) < 0) {
                 bestFinal = finalPrice;
                 best = p;
@@ -389,9 +431,9 @@ public class PromotionService {
 
         // Check customer type
         if (app.customer_types != null && !app.customer_types.isEmpty()) {
-            String customerTypeStr = customer.getCustomerType() != null 
-                ? customer.getCustomerType().name() 
-                : "REGULAR";
+            String customerTypeStr = customer.getCustomerType() != null
+                    ? customer.getCustomerType().name()
+                    : "REGULAR";
             if (!app.customer_types.contains(customerTypeStr)) {
                 return false;
             }
@@ -399,9 +441,9 @@ public class PromotionService {
 
         // Check VIP tier
         if (app.vip_tiers != null && !app.vip_tiers.isEmpty()) {
-            String tierStr = customer.getVipTier() != null 
-                ? customer.getVipTier().name() 
-                : null;
+            String tierStr = customer.getVipTier() != null
+                    ? customer.getVipTier().name()
+                    : null;
             if (tierStr == null || !app.vip_tiers.contains(tierStr)) {
                 return false;
             }
@@ -412,13 +454,16 @@ public class PromotionService {
 
     public boolean isApplicable(Applicability app, ProductVariant v) {
         String scope = (app.scope == null) ? "ALL" : app.scope.toUpperCase();
-        if ("ALL".equals(scope)) return true;
+        if ("ALL".equals(scope))
+            return true;
 
         Integer productId = v.getProduct().getId();
         Integer variantId = v.getId();
 
-        if (app.product_ids != null && app.product_ids.contains(productId)) return true;
-        if (app.variant_ids != null && app.variant_ids.contains(variantId)) return true;
+        if (app.product_ids != null && app.product_ids.contains(productId))
+            return true;
+        if (app.variant_ids != null && app.variant_ids.contains(variantId))
+            return true;
 
         return false;
     }
@@ -427,8 +472,10 @@ public class PromotionService {
      * Compute effective unit price with combo support
      */
     public BigDecimal computeEffectiveUnitPrice(BigDecimal base, Promotion p) {
-        if (base == null) base = BigDecimal.ZERO;
-        if (p == null) return money(base);
+        if (base == null)
+            base = BigDecimal.ZERO;
+        if (p == null)
+            return money(base);
 
         Rules rules = parseRules(p.getRulesJson());
         if (rules != null && rules.combo != null && rules.combo.buy_qty != null && rules.combo.get_qty != null) {
@@ -446,8 +493,10 @@ public class PromotionService {
     }
 
     public BigDecimal applyDiscount(BigDecimal base, String type, BigDecimal value) {
-        if (base == null) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        if (value == null) return money(base);
+        if (base == null)
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        if (value == null)
+            return money(base);
 
         String t = (type == null) ? "PERCENT" : type.toUpperCase();
         if ("AMOUNT".equals(t)) {
@@ -456,8 +505,10 @@ public class PromotionService {
         }
 
         BigDecimal pct = value;
-        if (pct.compareTo(BigDecimal.ZERO) < 0) pct = BigDecimal.ZERO;
-        if (pct.compareTo(new BigDecimal("100")) > 0) pct = new BigDecimal("100");
+        if (pct.compareTo(BigDecimal.ZERO) < 0)
+            pct = BigDecimal.ZERO;
+        if (pct.compareTo(new BigDecimal("100")) > 0)
+            pct = new BigDecimal("100");
 
         BigDecimal discount = base.multiply(pct).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
         BigDecimal r = base.subtract(discount);
@@ -468,12 +519,15 @@ public class PromotionService {
     // Usage limit
     // =========================
     public boolean isUsableByLimit(Promotion p) {
-        if (p == null) return false;
+        if (p == null)
+            return false;
         Rules rules = parseRules(p.getRulesJson());
-        if (rules == null || rules.usage_limit == null) return true;
+        if (rules == null || rules.usage_limit == null)
+            return true;
 
         int limit = rules.usage_limit;
-        if (limit <= 0) return true;
+        if (limit <= 0)
+            return true;
 
         long used = redemptionRepo.findByPromotionId(p.getId()).map(PromotionRedemption::getUsedCount).orElse(0L);
         return used < limit;
@@ -481,8 +535,10 @@ public class PromotionService {
 
     @Transactional
     public void recordRedemption(Integer promotionId, long delta) {
-        if (promotionId == null) return;
-        if (delta <= 0) delta = 1;
+        if (promotionId == null)
+            return;
+        if (delta <= 0)
+            delta = 1;
 
         PromotionRedemption r = redemptionRepo.findByPromotionId(promotionId).orElseGet(() -> {
             PromotionRedemption x = new PromotionRedemption();
@@ -501,4 +557,67 @@ public class PromotionService {
         return v.setScale(2, RoundingMode.HALF_UP);
     }
 
+    // Cảnh báo sắp hết hạn
+    public List<Promotion> getExpiringPromotions(int withinDays) {
+        LocalDateTime now = LocalDateTime.now();
+        return promoRepo.findByIsActiveTrueAndEndDateBetween(now, now.plusDays(withinDays));
+    }
+
+    // Phát hiện xung đột
+    public List<Map<String, Object>> detectConflicts() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Promotion> active = promoRepo.findByIsActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(now,
+                now);
+        List<Map<String, Object>> conflicts = new ArrayList<>();
+
+        for (int i = 0; i < active.size(); i++) {
+            for (int j = i + 1; j < active.size(); j++) {
+                Promotion a = active.get(i);
+                Promotion b = active.get(j);
+                Applicability appA = parseApplicability(a.getApplicabilityJson());
+                Applicability appB = parseApplicability(b.getApplicabilityJson());
+                if (applicabilityOverlap(appA, appB)) {
+                    Map<String, Object> conflict = new HashMap<>();
+                    conflict.put("promotion1", a.getCode());
+                    conflict.put("promotion2", b.getCode());
+                    conflict.put("stackable", a.getStackable() && b.getStackable());
+                    conflicts.add(conflict);
+                }
+            }
+        }
+        return conflicts;
+    }
+
+    // Báo cáo theo tuần/tháng
+    public Map<String, Object> getReport(String period) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime from = "week".equalsIgnoreCase(period)
+                ? now.minusWeeks(1)
+                : now.minusMonths(1);
+
+        List<Promotion> all = promoRepo.findActiveInPeriod(from, now);
+        Map<String, Object> report = new HashMap<>();
+        report.put("total", all.size());
+        report.put("period", period == null ? "month" : period);
+        report.put("promotions", all);
+
+        long comboCount = all.stream().filter(p -> {
+            Rules r = parseRules(p.getRulesJson());
+            return r != null && r.combo != null;
+        }).count();
+        report.put("comboCount", comboCount);
+
+        long usageLimitedCount = all.stream().filter(p -> {
+            Rules r = parseRules(p.getRulesJson());
+            return r != null && r.usage_limit != null;
+        }).count();
+        report.put("usageLimitedCount", usageLimitedCount);
+
+        // Tổng lượt đã dùng
+        long totalUsed = all.stream().mapToLong(p -> redemptionRepo.findByPromotionId(p.getId())
+                .map(PromotionRedemption::getUsedCount).orElse(0L)).sum();
+        report.put("totalRedemptions", totalUsed);
+
+        return report;
+    }
 }
