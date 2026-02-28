@@ -5,7 +5,11 @@ import com.retailmanagement.dto.response.CustomerBirthdayResponse;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.CustomRes;
 import com.retailmanagement.repository.NotificationRepository;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +30,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final CustomRes customerRepository;
+    private final JavaMailSender mailSender;
 
     /**
      * Tạo thông báo sinh nhật cho khách hàng
@@ -484,5 +489,62 @@ public class NotificationService {
         }
 
         return null;
+    }
+
+    public void sendOrderDeliveredEmail(
+            String email,
+            Order order,
+            byte[] pdf) {
+
+        String subject = "Đơn hàng đã giao thành công";
+
+        String content = """
+            Xin chào %s,
+
+            Đơn hàng %s đã được giao thành công.
+
+            Cảm ơn bạn đã mua hàng!
+            """.formatted(
+                order.getCustomer().getName(),
+                order.getOrderNumber()
+        );
+
+        sendEmailWithAttachment(
+                email,
+                subject,
+                content,
+                pdf,
+                "invoice-" + order.getOrderNumber() + ".pdf"
+        );
+    }
+
+    public void sendEmailWithAttachment(
+            String to,
+            String subject,
+            String content,
+            byte[] file,
+            String filename) {
+
+        MimeMessage message = mailSender.createMimeMessage();
+
+        try {
+
+            MimeMessageHelper helper =
+                    new MimeMessageHelper(message, true);
+
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(content);
+
+            helper.addAttachment(
+                    filename,
+                    new ByteArrayResource(file)
+            );
+
+            mailSender.send(message);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Send mail failed", e);
+        }
     }
 }

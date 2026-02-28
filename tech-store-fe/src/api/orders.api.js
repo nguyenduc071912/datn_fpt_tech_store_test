@@ -58,6 +58,10 @@ export const ordersApi = {
     return http.put(`/api/orders/${orderId}/deliver`);
   },
 
+  markAsProcessing(orderId) {
+    return http.put(`/api/orders/${orderId}/process`);
+  },
+
   remove(orderId) {
     return http.delete(`/api/orders/${orderId}`);
   },
@@ -66,27 +70,27 @@ export const ordersApi = {
   },
 
   // LẤY ĐƠN THEO KHOẢNG NGÀY
-getByDate(from, to) {
-  return http.get("/api/orders/by-date", {
-    params: { from, to },
-  });
-},
+  getByDate(from, to) {
+    return http.get("/api/orders/by-date", {
+      params: { from, to },
+    });
+  },
 
-// FILTER THEO KHÁCH HÀNG + NGÀY
-filter(customerId, from, to) {
-  return http.get("/api/orders/filter", {
-    params: { customerId, from, to },
-  });
-},
+  // FILTER THEO KHÁCH HÀNG + NGÀY
+  filter(customerId, from, to) {
+    return http.get("/api/orders/filter", {
+      params: { customerId, from, to },
+    });
+  },
 
-// DOANH THU THEO KHÁCH HÀNG
-getRevenueByCustomer() {
-  return http.get("/api/orders/revenue-by-customer");
-},
-getOrderDetail(orderId) {
+  // DOANH THU THEO KHÁCH HÀNG
+  getRevenueByCustomer() {
+    return http.get("/api/orders/revenue-by-customer");
+  },
+  getOrderDetail(orderId) {
     return http.get(`/api/orders/${orderId}`);
   },
   getOrderDetail(orderId) {
     return http.get(`/api/orders/${orderId}`);
-  }
+  },
 };

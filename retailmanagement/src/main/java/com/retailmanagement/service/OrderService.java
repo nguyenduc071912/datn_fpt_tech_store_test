@@ -1,10 +1,10 @@
 package com.retailmanagement.service;
 
-import com.retailmanagement.constants.OrderStatuses;
 import com.retailmanagement.audit.Audit;
 import com.retailmanagement.audit.AuditAction;
 import com.retailmanagement.audit.AuditModule;
 import com.retailmanagement.audit.TargetType;
+import com.retailmanagement.constants.OrderStatuses;
 import com.retailmanagement.dto.request.CreateOrderItemRequest;
 import com.retailmanagement.dto.request.CreateOrderRequest;
 import com.retailmanagement.dto.request.UpdateOrderRequest;
@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.*;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,28 +30,16 @@ import java.util.List;
 @Transactional
 public class OrderService {
 
-    // ================================================================
-    // INNER CLASS: Discount Breakdown
-    // ================================================================
-    @lombok.Data
-    private static class DiscountCalculation {
-        private BigDecimal vipDiscountRate   = BigDecimal.ZERO;  // % (chỉ cho Platinum/Diamond)
-        private BigDecimal vipDiscount       = BigDecimal.ZERO;  // Số tiền giảm VIP
-        private BigDecimal spinDiscountRate  = BigDecimal.ZERO;  // % spin
-        private BigDecimal spinDiscount      = BigDecimal.ZERO;  // Số tiền giảm spin
-        private BigDecimal totalDiscount     = BigDecimal.ZERO;
-        private boolean    hasSpinBonus      = false;
-        private String     discountType      = "NONE";           // "FIXED" | "PERCENTAGE" | "NONE"
-    }
-
-    private final OrderRepository           orderRepository;
-    private final OrderItemRepository       orderItemRepository;
-    private final ProductVariantRepository  variantRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final ProductVariantRepository variantRepository;
     private final StockTransactionRepository stockTransactionRepository;
-    private final CustomRes                 customerRepository;
-    private final UserRepository            userRepository;
-    private final CustomerService           customerService;
-    private final SpinWheelService          spinWheelService;
+    private final CustomRes customerRepository;
+    private final UserRepository userRepository;
+    private final CustomerService customerService;
+    private final SpinWheelService spinWheelService;
+    private final EmailService emailService;
+    private final OrderEmailService orderEmailService;
 
     // ================================================================
     // ORDER NUMBER GENERATOR
@@ -57,7 +47,7 @@ public class OrderService {
     private String generateOrderNumber() {
         LocalDate today = LocalDate.now();
         Instant start = today.atStartOfDay(ZoneId.systemDefault()).toInstant();
-        Instant end   = today.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant();
+        Instant end = today.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant();
         long countToday = orderRepository.countByCreatedAtBetween(start, end);
         return "ORD-" + today.format(DateTimeFormatter.BASIC_ISO_DATE)
                 + "-" + String.format("%06d", countToday + 1);
@@ -76,9 +66,9 @@ public class OrderService {
         DiscountCalculation result = new DiscountCalculation();
 
         // ── 1. VIP discount ──────────────────────────────────────────
-        BigDecimal vipDiscount    = BigDecimal.ZERO;
-        BigDecimal vipRate        = BigDecimal.ZERO;   // chỉ có giá trị cho Platinum/Diamond
-        String     discountType   = "NONE";
+        BigDecimal vipDiscount = BigDecimal.ZERO;
+        BigDecimal vipRate = BigDecimal.ZERO;   // chỉ có giá trị cho Platinum/Diamond
+        String discountType = "NONE";
 
         VipTier tier = customer.getVipTier();
         if (tier != null) {
@@ -87,14 +77,14 @@ public class OrderService {
             if (subtotal.compareTo(minOrder) >= 0) {
                 if (tier.isPercentageDiscount()) {
                     // PLATINUM / DIAMOND: theo %
-                    vipRate    = BigDecimal.valueOf(tier.getDiscountRate() * 100);  // e.g. 3.0 or 5.0
+                    vipRate = BigDecimal.valueOf(tier.getDiscountRate() * 100);  // e.g. 3.0 or 5.0
                     vipDiscount = subtotal
                             .multiply(BigDecimal.valueOf(tier.getDiscountRate()))
                             .setScale(0, RoundingMode.HALF_UP);
                     discountType = "PERCENTAGE";
                 } else {
                     // BRONZE / SILVER / GOLD: số tiền cố định
-                    vipDiscount  = tier.getDiscountAmount();
+                    vipDiscount = tier.getDiscountAmount();
                     discountType = "FIXED";
                 }
             }
@@ -103,12 +93,12 @@ public class OrderService {
 
         // ── 2. Spin Wheel discount (luôn theo %) ────────────────────
         BigDecimal spinDiscount = BigDecimal.ZERO;
-        BigDecimal spinRate     = BigDecimal.ZERO;
-        boolean    hasSpinBonus = false;
+        BigDecimal spinRate = BigDecimal.ZERO;
+        boolean hasSpinBonus = false;
 
         if (customer.getSpinDiscountBonus() != null
                 && customer.getSpinDiscountBonus().compareTo(BigDecimal.ZERO) > 0) {
-            spinRate    = customer.getSpinDiscountBonus();
+            spinRate = customer.getSpinDiscountBonus();
             spinDiscount = subtotal
                     .multiply(spinRate.divide(BigDecimal.valueOf(100)))
                     .setScale(0, RoundingMode.HALF_UP);
@@ -307,7 +297,7 @@ public class OrderService {
         response.setSpinDiscountRate(discountCalc.getSpinDiscountRate());
         response.setSpinDiscount(discountCalc.getSpinDiscount());
         response.setHasSpinBonus(discountCalc.isHasSpinBonus());
-
+        emailService.sendOrderCreatedEmail(order);
         return response;
     }
 
@@ -431,9 +421,30 @@ public class OrderService {
     // STATUS TRANSITIONS
     // ================================================================
     @Transactional
+    public void markAsProcessing(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // ✅ chỉ cho phép PAID -> PROCESSING
+        if (!OrderStatuses.PAID.equals(order.getStatus())) {
+            throw new IllegalStateException("Only PAID orders can be processed");
+        }
+
+        order.setStatus(OrderStatuses.PROCESSING);
+        order.setUpdatedAt(Instant.now());
+
+        orderRepository.save(order);
+    }
+
+    @Transactional
     public void markAsShipping(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
+        // ✅ chỉ cho phép PROCESSING -> SHIPPING
+        if (!OrderStatuses.PROCESSING.equals(order.getStatus())) {
+            throw new IllegalStateException("Only PAID orders can be processed");
+        }
         order.setStatus(OrderStatuses.SHIPPING);
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
@@ -441,14 +452,65 @@ public class OrderService {
 
     @Transactional
     public void markAsDelivered(Long orderId) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getDeliveredAt() != null) {
+            return;
+        }
+
         if (!OrderStatuses.SHIPPING.equals(order.getStatus()))
             throw new IllegalStateException("Only SHIPPING orders can be delivered");
+
+        // ===== 1. Convert RESERVED -> SOLD =====
+        for (OrderItem item : order.getOrderItems()) {
+
+            ProductVariant variant = variantRepository.findById(
+                    item.getVariant().getId()
+            ).orElseThrow();
+
+            int newReserved =
+                    Math.max(0, variant.getReservedQty() - item.getQuantity());
+
+            int newStock =
+                    Math.max(0, variant.getStockQuantity() - item.getQuantity());
+
+            variant.setReservedQty(newReserved);
+            variant.setStockQuantity(newStock);
+
+            variantRepository.save(variant);
+
+            // stock transaction
+            StockTransaction tx = new StockTransaction();
+            tx.setVariant(variant);
+            tx.setQuantity(-item.getQuantity());
+            tx.setType("STOCK_OUT");
+            tx.setReferenceType("orders");
+            tx.setReferenceId(order.getId());
+            tx.setCreatedAt(Instant.now());
+            tx.setCreatedBy(order.getUser());
+
+            stockTransactionRepository.save(tx);
+        }
+
+        // ===== 2. Update order =====
         order.setStatus(OrderStatuses.DELIVERED);
         order.setDeliveredAt(Instant.now());
         order.setUpdatedAt(Instant.now());
+
         orderRepository.save(order);
+
+        // ===== 3. Loyalty earn (Revenue finalized) =====
+        if (order.getCustomer() != null &&
+                "PAID".equals(order.getPaymentStatus())) {
+
+            customerService.addLoyaltyPoints(
+                    order.getCustomer().getId(),
+                    order.getTotalAmount()
+            );
+        }
+        orderEmailService.sendDeliveredEmail(order);
     }
 
     // ================================================================
@@ -475,5 +537,19 @@ public class OrderService {
             tx.setCreatedAt(Instant.now());
             stockTransactionRepository.save(tx);
         }
+    }
+
+    // ================================================================
+    // INNER CLASS: Discount Breakdown
+    // ================================================================
+    @lombok.Data
+    private static class DiscountCalculation {
+        private BigDecimal vipDiscountRate = BigDecimal.ZERO;  // % (chỉ cho Platinum/Diamond)
+        private BigDecimal vipDiscount = BigDecimal.ZERO;  // Số tiền giảm VIP
+        private BigDecimal spinDiscountRate = BigDecimal.ZERO;  // % spin
+        private BigDecimal spinDiscount = BigDecimal.ZERO;  // Số tiền giảm spin
+        private BigDecimal totalDiscount = BigDecimal.ZERO;
+        private boolean hasSpinBonus = false;
+        private String discountType = "NONE";           // "FIXED" | "PERCENTAGE" | "NONE"
     }
 }
