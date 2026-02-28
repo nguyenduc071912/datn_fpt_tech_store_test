@@ -44,6 +44,10 @@ import InventoryOrders from "../pages/inventory/InventoryOrders.vue";
 import InventoryOrderDetail from "../pages/inventory/InventoryOrderDetail.vue";
 import InventoryOrdersPaid from "../pages/inventory/InventoryOrdersPaid.vue";
 import InventoryOrdersProcessing from "../pages/inventory/InventoryOrdersProcessing.vue";
+import InactiveCustomers from "../pages/system/InactiveCustomers.vue";
+import Toployalcustomers from "../pages/system/Toployalcustomers.vue";
+import AuditLog from "../pages/system/AuditLog.vue";
+import Zeroordercustomers from "../pages/system/Zeroordercustomers.vue";
 const routes = [
   // ===== CUSTOMER PORTAL =====
   {
@@ -149,6 +153,24 @@ const routes = [
         meta: { title: "Customers & Loyalty" },
       },
       {
+        path: "Toployalcustomers",
+        name: "Toployal customers",
+        component: Toployalcustomers,
+        meta: { title: "Toployal - customers" },
+      },
+    {
+        path: "Zeroordercustomers",
+        name: "Customers with zero oder",
+        component: Zeroordercustomers,
+        meta: { title: "Zero oder - customers" },
+      },
+       {
+        path: "inactive-customers",
+        name: "system-customers-inactive",
+        component: InactiveCustomers,
+        meta: { title: "Inactive Customers" },
+      },
+      {
         path: "categories",
         name: "system-categories",
         component: CategoryManager,
@@ -249,6 +271,13 @@ const routes = [
         name: "Birthday Manager",
         component: Birthday,
         meta: { title: "Settings - Birthday Manager" },
+      },
+      // Audit
+      {
+        path: "audit-logs",
+        name: "system-audit-logs",
+       component: AuditLog,
+      meta: { title: "Audit Logs" },
       },
     ],
   },

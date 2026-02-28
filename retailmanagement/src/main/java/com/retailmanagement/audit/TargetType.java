@@ -1,8 +1,5 @@
 package com.retailmanagement.audit;
 
 public enum TargetType {
-    USER,
-    PRODUCT,
-    CUSTOMER,
-    ORDER
+    USER, PRODUCT, CUSTOMER, ORDER, PRICE, PROMOTION
 }

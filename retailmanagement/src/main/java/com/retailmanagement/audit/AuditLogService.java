@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.io.PrintWriter;
 import java.time.*;
 import java.time.temporal.ChronoField;
 import java.util.List;
@@ -63,7 +64,7 @@ public class AuditLogService {
 
         Instant from = date.atStartOfDay(zone).toInstant();
 
-        Instant to = date.plusDays(30).atStartOfDay(zone).toInstant();
+        Instant to = date.plusDays(1).atStartOfDay(zone).toInstant();
 
         return auditLogRepository.findByCreatedAtBetween(from, to)
                 .stream()
@@ -163,6 +164,12 @@ public class AuditLogService {
         );
     }
 
+    public List<AuditLog> searchForExport(AuditLogFilterRequest req) {
+        return auditLogRepository.findAll(
+                AuditLogSpecification.filter(req)
+        );
+    }
+
     private AuditLogResponse toResponse(AuditLog auditLog){
 
         Integer userId = auditLog.getUser() != null
@@ -180,5 +187,12 @@ public class AuditLogService {
                 .ipAddress(auditLog.getIpAddress())
                 .createdAt(auditLog.getCreatedAt())
                 .build();
+    }
+
+    private String safe(Object value) {
+        if (value == null) return "";
+
+        String s = value.toString().replace("\"", "\"\"");
+        return "\"" + s + "\"";
     }
 }

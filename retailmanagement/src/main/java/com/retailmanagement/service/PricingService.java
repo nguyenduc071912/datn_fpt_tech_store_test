@@ -1,6 +1,7 @@
 package com.retailmanagement.service;
 
 import com.retailmanagement.dto.request.UpsertPriceRequest;
+import com.retailmanagement.dto.response.PriceHistoryResponse;
 import com.retailmanagement.dto.response.VariantPriceResponse;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.*;
@@ -11,7 +12,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -25,11 +28,11 @@ public class PricingService {
     private final CustomRes customerRepository;
 
     public PricingService(ProductVariantRepository variantRepo,
-                          PriceHistoryRepository priceHistoryRepo,
-                          SettingService settingService,
-                          PromotionService promotionService,
-                          UserRepository userRepository,
-                          CustomRes customerRepository) {
+            PriceHistoryRepository priceHistoryRepo,
+            SettingService settingService,
+            PromotionService promotionService,
+            UserRepository userRepository,
+            CustomRes customerRepository) {
         this.variantRepo = variantRepo;
         this.priceHistoryRepo = priceHistoryRepo;
         this.settingService = settingService;
@@ -43,7 +46,8 @@ public class PricingService {
         ProductVariant v = variantRepo.findById(variantId)
                 .orElseThrow(() -> new NoSuchElementException("Variant not found"));
 
-        if (req == null) throw new IllegalArgumentException("Body rỗng");
+        if (req == null)
+            throw new IllegalArgumentException("Body rỗng");
         if (req.getPrice() == null || req.getPrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("price phải >= 0");
         }
@@ -102,7 +106,7 @@ public class PricingService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        
+
         // Get base price (considering customer group pricing if implemented)
         BigDecimal basePrice = getBasePriceForCustomer(v, customer);
 
@@ -132,7 +136,7 @@ public class PricingService {
      */
     private BigDecimal getBasePriceForCustomer(ProductVariant variant, Customer customer) {
         BigDecimal basePrice = variant.getPrice();
-        
+
         if (customer == null) {
             return basePrice;
         }
@@ -141,8 +145,7 @@ public class PricingService {
         VipTier tier = customer.getVipTier();
         if (tier != null && tier.getDiscountRate() != null && tier.getDiscountRate() > 0) {
             BigDecimal discountMultiplier = BigDecimal.ONE.subtract(
-                BigDecimal.valueOf(tier.getDiscountRate())
-            );
+                    BigDecimal.valueOf(tier.getDiscountRate()));
             basePrice = basePrice.multiply(discountMultiplier).setScale(2, RoundingMode.HALF_UP);
         }
 
@@ -169,7 +172,7 @@ public class PricingService {
 
         return variants.stream().map(v -> {
             BigDecimal basePrice = getBasePriceForCustomer(v, finalCustomer);
-            
+
             VariantPriceResponse r = new VariantPriceResponse();
             r.setVariantId(v.getId());
             r.setProductId(v.getProduct().getId());
@@ -191,7 +194,7 @@ public class PricingService {
     }
 
     @Transactional
-    public PriceHistory updateLatestHistory(Long priceHistoryId, UpsertPriceRequest req) {
+    public PriceHistoryResponse updateLatestHistory(Long priceHistoryId, UpsertPriceRequest req) {
         PriceHistory ph = priceHistoryRepo.findById(priceHistoryId)
                 .orElseThrow(() -> new NoSuchElementException("Price history not found"));
 
@@ -199,7 +202,8 @@ public class PricingService {
             throw new IllegalArgumentException("Chỉ được sửa bản ghi giá hiện tại (effective_to = null)");
         }
 
-        if (req == null) throw new IllegalArgumentException("Body rỗng");
+        if (req == null)
+            throw new IllegalArgumentException("Body rỗng");
         if (req.getPrice() == null || req.getPrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("price phải >= 0");
         }
@@ -214,7 +218,8 @@ public class PricingService {
         ph.setCurrencyCode(currency);
         ph.setPrice(scaleMoney(req.getPrice()));
         ph.setCostPrice(req.getCostPrice() == null ? null : scaleMoney(req.getCostPrice()));
-        if (req.getReason() != null && !req.getReason().isBlank()) ph.setReason(req.getReason().trim());
+        if (req.getReason() != null && !req.getReason().isBlank())
+            ph.setReason(req.getReason().trim());
         priceHistoryRepo.save(ph);
 
         ProductVariant v = ph.getVariant();
@@ -224,7 +229,19 @@ public class PricingService {
         v.setUpdatedAt(Instant.now());
         variantRepo.save(v);
 
-        return ph;
+        // Map sang DTO thay vì trả entity
+        PriceHistoryResponse dto = new PriceHistoryResponse();
+        dto.setId(ph.getId());
+        dto.setVariantId(v.getId());
+        dto.setCurrencyCode(ph.getCurrencyCode());
+        dto.setPrice(ph.getPrice());
+        dto.setCostPrice(ph.getCostPrice());
+        dto.setReason(ph.getReason());
+        dto.setEffectiveFrom(ph.getEffectiveFrom());
+        dto.setEffectiveTo(ph.getEffectiveTo());
+        dto.setCreatedByUsername(ph.getCreatedBy() != null ? ph.getCreatedBy().getUsername() : null);
+        dto.setCreatedAt(ph.getCreatedAt());
+        return dto;
     }
 
     @Transactional
@@ -270,7 +287,73 @@ public class PricingService {
     }
 
     private static BigDecimal scaleMoney(BigDecimal v) {
-        if (v == null) return null;
+        if (v == null)
+            return null;
         return v.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    // Lịch sử giá
+    public List<PriceHistoryResponse> getPriceHistory(Integer variantId) {
+        return priceHistoryRepo.findByVariant_IdOrderByEffectiveFromDesc(variantId)
+                .stream()
+                .map(ph -> {
+                    PriceHistoryResponse dto = new PriceHistoryResponse();
+                    dto.setId(ph.getId());
+                    dto.setVariantId(ph.getVariant().getId());
+                    dto.setCurrencyCode(ph.getCurrencyCode());
+                    dto.setPrice(ph.getPrice());
+                    dto.setCostPrice(ph.getCostPrice());
+                    dto.setReason(ph.getReason());
+                    dto.setEffectiveFrom(ph.getEffectiveFrom());
+                    dto.setEffectiveTo(ph.getEffectiveTo());
+                    dto.setCreatedByUsername(ph.getCreatedBy() != null ? ph.getCreatedBy().getUsername() : null);
+                    dto.setCreatedAt(ph.getCreatedAt());
+                    return dto;
+                })
+                .toList();
+    }
+
+    // Cảnh báo giá < giá nhập
+    public Map<String, Object> checkPriceBelowCost(Integer variantId) {
+        ProductVariant v = variantRepo.findById(variantId)
+                .orElseThrow(() -> new NoSuchElementException("Variant not found"));
+        Map<String, Object> result = new HashMap<>();
+        result.put("variantId", variantId);
+        result.put("price", v.getPrice());
+        result.put("costPrice", v.getCostPrice());
+        boolean warning = v.getCostPrice() != null
+                && v.getPrice() != null
+                && v.getPrice().compareTo(v.getCostPrice()) < 0;
+        result.put("belowCost", warning);
+        if (warning) {
+            result.put("message", "⚠️ Giá bán thấp hơn giá nhập!");
+        }
+        return result;
+    }
+
+    // Dashboard
+    public Map<String, Object> getDashboard() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Promotion> activePromos = promotionService.list(true);
+
+        Map<String, Object> dashboard = new HashMap<>();
+        dashboard.put("activePromotions", activePromos.size());
+
+        // Giá xung đột (price below cost)
+        List<ProductVariant> allVariants = variantRepo.findAll();
+        long belowCostCount = allVariants.stream()
+                .filter(v -> v.getCostPrice() != null
+                        && v.getPrice() != null
+                        && v.getPrice().compareTo(v.getCostPrice()) < 0)
+                .count();
+        dashboard.put("variantsBelowCost", belowCostCount);
+        dashboard.put("totalVariants", allVariants.size());
+
+        long expiringIn3Days = activePromos.stream()
+                .filter(p -> p.getEndDate().isBefore(now.plusDays(3)))
+                .count();
+        dashboard.put("expiringIn3Days", expiringIn3Days);
+
+        return dashboard;
     }
 }

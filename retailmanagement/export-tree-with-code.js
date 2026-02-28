@@ -36,18 +36,24 @@ const MODULE_PRESETS = {
     label: "Pricing & Promotion (Minimal)",
     mode: "seed",
     seedFiles: [
-      // Controllers (API entry)
+      // ─── Controllers ───────────────────────────────────────────
       "controller/PriceController.java",
       "controller/PromotionController.java",
       "controller/ProductController.java",
+      "controller/SettingController.java",
+      "controller/NotificationController.java",
+      "controller/OrderController.java",
 
-      // Services (business logic)
+      // ─── Services ──────────────────────────────────────────────
       "service/PricingService.java",
       "service/PromotionService.java",
       "service/ProductService.java",
       "service/CustomerService.java",
+      "service/SettingService.java",
+      "service/NotificationService.java",
+      "service/OrderService.java",
 
-      // Repositories
+      // ─── Repositories ──────────────────────────────────────────
       "repository/PriceHistoryRepository.java",
       "repository/PromotionRepository.java",
       "repository/PromotionRedemptionRepository.java",
@@ -55,18 +61,29 @@ const MODULE_PRESETS = {
       "repository/ProductRepository.java",
       "repository/CustomRes.java",
       "repository/LoyaltyLedgerRepository.java",
+      "repository/SystemSettingRepository.java",
+      "repository/OrderRepository.java",
+      "repository/OrderItemRepository.java",
+      "repository/NotificationRepository.java",
 
-      // DTO - Requests
+      // ─── DTO Requests ──────────────────────────────────────────
       "dto/request/UpsertPriceRequest.java",
       "dto/request/PromotionRequest.java",
+      "dto/request/SetDefaultCurrencyRequest.java",
+      "dto/request/CreateOrderRequest.java",
+      "dto/request/CreateOrderItemRequest.java",
 
-      // DTO - Responses
+      // ─── DTO Responses ─────────────────────────────────────────
       "dto/response/ApiResponse.java",
       "dto/response/VariantPriceResponse.java",
       "dto/response/ProductResponse.java",
       "dto/response/OrderDetailResponse.java",
+      "dto/response/OrderListResponse.java",
+      "dto/response/CustomerResponse.java",
+      "dto/response/LoyaltyLedgerResponse.java",
+      "dto/response/NotificationResponse.java",
 
-      // Entities (core domain)
+      // ─── Entities ──────────────────────────────────────────────
       "entity/PriceHistory.java",
       "entity/Promotion.java",
       "entity/PromotionRedemption.java",
@@ -74,13 +91,16 @@ const MODULE_PRESETS = {
       "entity/Product.java",
       "entity/Customer.java",
       "entity/CustomerType.java",
+      "entity/Customergroup.java",
       "entity/VipTier.java",
-
-      // System setting (currency/defaults)
       "entity/SystemSetting.java",
-      "repository/SystemSettingRepository.java",
+      "entity/Order.java",
+      "entity/OrderItem.java",
+      "entity/StockTransaction.java",
+      "entity/Notification.java",
+      "entity/NotificationType.java",
 
-      // Exceptions
+      // ─── Exceptions ────────────────────────────────────────────
       "exception/ErrorResponse.java",
       "exception/GlobalExceptionHandler.java",
     ],

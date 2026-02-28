@@ -63,5 +63,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
 
 
+    long countByCustomerId(Integer customerId);
+
+
+    long countByCustomerIdAndStatus(Integer customerId, String status);
 }
 

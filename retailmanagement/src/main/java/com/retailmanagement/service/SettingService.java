@@ -5,6 +5,7 @@ import com.retailmanagement.repository.SystemSettingRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Service
 public class SettingService {
@@ -56,5 +57,11 @@ public class SettingService {
         setting.setValue(value);
         setting.setUpdatedAt(LocalDateTime.now());
         settingRepo.save(setting);
+    }
+
+    public Map<String, String> getAllSettings() {
+        Map<String, String> map = new java.util.HashMap<>();
+        settingRepo.findAll().forEach(s -> map.put(s.getKey(), s.getValue()));
+        return map;
     }
 }

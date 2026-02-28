@@ -1,112 +1,111 @@
 package com.retailmanagement.service;
 
-
-import com.retailmanagement.dto.response.CustomerBirthdayResponse;
+import com.retailmanagement.dto.request.SendNotificationRequest;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.CustomRes;
 import com.retailmanagement.repository.NotificationRepository;
+import com.retailmanagement.repository.*;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Period;
+import java.math.BigDecimal;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final CustomRes customerRepository;
+    private final SpinWheelService spinWheelService;
+    private final PromotionRepository promotionRepository;
+    private final PromotionRedemptionRepository promotionRedemptionRepository;
     private final JavaMailSender mailSender;
 
-    /**
-     * Tạo thông báo sinh nhật cho khách hàng
-     */
+    private static final String BIRTHDAY_VOUCHER_CODE = "BIRTHDAY250K";
+    private static final BigDecimal BIRTHDAY_DISCOUNT_AMOUNT = new BigDecimal("250000");
+    private static final BigDecimal BIRTHDAY_MIN_ORDER = new BigDecimal("1000000");
+    private static final int BIRTHDAY_VALID_DAYS = 7;
+
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            CustomRes customerRepository,
+            @Lazy SpinWheelService spinWheelService,
+            PromotionRepository promotionRepository,
+            PromotionRedemptionRepository promotionRedemptionRepository,
+            JavaMailSender mailSender) {
+        this.notificationRepository = notificationRepository;
+        this.customerRepository = customerRepository;
+        this.spinWheelService = spinWheelService;
+        this.promotionRepository = promotionRepository;
+        this.promotionRedemptionRepository = promotionRedemptionRepository;
+        this.mailSender = mailSender;
+    }
+
+    // =========================================================
+    // GENERIC CREATE
+    // =========================================================
+
     @Transactional
-    public void createBirthdayNotification(Customer customer) {
-        // Kiểm tra xem đã có thông báo sinh nhật cho khách hàng này trong năm nay chưa
-        LocalDateTime yearStart = LocalDate.now().withDayOfYear(1).atStartOfDay();
-        LocalDateTime yearEnd = LocalDate.now().withDayOfYear(1).plusYears(1).atStartOfDay();
+    public void createAndSaveNotification(
+            Integer customerId,
+            NotificationType type,
+            String title,
+            String message) {
 
-        boolean exists = notificationRepository.existsByCustomerIdAndTypeAndCreatedAtBetween(
-                customer.getId(),
-                NotificationType.BIRTHDAY,
-                yearStart,
-                yearEnd
-        );
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng: " + customerId));
 
-        if (!exists) {
-            Notification notification = Notification.builder()
-                    .customer(customer)
-                    .type(NotificationType.BIRTHDAY)
-                    .title("🎂 Chúc mừng sinh nhật!")
-                    .message(String.format(
-                            "Chúc mừng sinh nhật %s! 🎉 Chúc bạn một ngày thật vui vẻ và hạnh phúc. " +
-                                    "Đừng quên check voucher sinh nhật đặc biệt của bạn nhé!",
-                            customer.getName()
-                    ))
-                    .isRead(false)
-                    .build();
+        Notification notification = Notification.builder()
+                .customer(customer)
+                .type(type)
+                .title(title)
+                .message(message)
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .build();
 
-            notificationRepository.save(notification);
-        }
+        notificationRepository.save(notification);
     }
 
-    /**
-     * Tự động gửi thông báo sinh nhật cho tất cả khách hàng có sinh nhật hôm nay
-     * Hàm này nên được gọi bởi Scheduled Task mỗi ngày
-     */
-    @Transactional
-    public void sendBirthdayNotifications() {
-        List<Customer> birthdayCustomers = customerRepository.findCustomersWithBirthdayToday();
+    // =========================================================
+    // CUSTOMER API
+    // =========================================================
 
-        for (Customer customer : birthdayCustomers) {
-            if (customer.getIsActive()) {
-                createBirthdayNotification(customer);
-            }
-        }
-
-        // Log số lượng thông báo đã tạo
-        System.out.println("📨 Đã gửi " + birthdayCustomers.size() + " thông báo sinh nhật");
-    }
-
-    /**
-     * Lấy danh sách thông báo chưa đọc của khách hàng
-     */
-    public List<Notification> getUnreadNotifications(Integer customerId) {
-        return notificationRepository.findByCustomerIdAndIsReadFalseOrderByCreatedAtDesc(customerId);
-    }
-
-    /**
-     * Lấy tất cả thông báo của khách hàng
-     */
+    @Transactional(readOnly = true)
     public List<Notification> getAllNotifications(Integer customerId) {
-        return notificationRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        return notificationRepository
+                .findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
-    /**
-     * Đánh dấu thông báo đã đọc
-     */
+    @Transactional(readOnly = true)
+    public List<Notification> getUnreadNotifications(Integer customerId) {
+        return notificationRepository
+                .findByCustomerIdAndIsReadFalseOrderByCreatedAtDesc(customerId);
+    }
+
+    @Transactional(readOnly = true)
+    public long countUnread(Integer customerId) {
+        return notificationRepository
+                .countByCustomerIdAndIsReadFalse(customerId);
+    }
+
     @Transactional
     public void markAsRead(Long notificationId, Integer customerId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông báo"));
+
+        Notification notification = notificationRepository
+                .findById(notificationId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy notification: " + notificationId));
 
         if (!notification.getCustomer().getId().equals(customerId)) {
-            throw new RuntimeException("Bạn không có quyền đọc thông báo này");
+            throw new RuntimeException("Không có quyền truy cập notification này");
         }
 
         if (!notification.getIsRead()) {
@@ -115,381 +114,382 @@ public class NotificationService {
             notificationRepository.save(notification);
         }
     }
-    @Transactional
-    public void createCustomBirthdayNotification(Integer customerId, String customMessage) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
-        if (!customer.getIsActive()) {
-            throw new RuntimeException("Khách hàng không hoạt động");
-        }
-
-        Notification notification = Notification.builder()
-                .customer(customer)
-                .type(NotificationType.BIRTHDAY)
-                .title("🎂 Lời chúc sinh nhật từ Admin")
-                .message(customMessage)
-                .isRead(false)
-                .build();
-
-        notificationRepository.save(notification);
-    }
-
-    /**
-     * Đánh dấu tất cả thông báo đã đọc
-     */
     @Transactional
     public void markAllAsRead(Integer customerId) {
-        List<Notification> unreadNotifications = notificationRepository
+
+        List<Notification> notifications = notificationRepository
                 .findByCustomerIdAndIsReadFalseOrderByCreatedAtDesc(customerId);
 
-        for (Notification notification : unreadNotifications) {
+        for (Notification notification : notifications) {
             notification.setIsRead(true);
             notification.setReadAt(LocalDateTime.now());
         }
 
-        if (!unreadNotifications.isEmpty()) {
-            notificationRepository.saveAll(unreadNotifications);
-        }
+        notificationRepository.saveAll(notifications);
     }
 
-    /**
-     * Đếm số thông báo chưa đọc
-     */
-    public long countUnread(Integer customerId) {
-        return notificationRepository.countByCustomerIdAndIsReadFalse(customerId);
-    }
-
-    /**
-     * Xóa thông báo (soft delete)
-     */
     @Transactional
     public void deleteNotification(Long notificationId, Integer customerId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông báo"));
+
+        Notification notification = notificationRepository
+                .findById(notificationId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy notification: " + notificationId));
 
         if (!notification.getCustomer().getId().equals(customerId)) {
-            throw new RuntimeException("Bạn không có quyền xóa thông báo này");
+            throw new RuntimeException("Không có quyền xoá notification này");
         }
 
         notificationRepository.delete(notification);
     }
-    // Method này phải có trong NotificationService
-    public void sendCustomBirthdayGreeting(Integer customerId, String customMessage) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
-        Notification notification = Notification.builder()
-                .customer(customer)
-                .type(NotificationType.BIRTHDAY)
-                .title("🎉 Lời chúc sinh nhật từ Admin")
-                .message(customMessage)
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+    // =========================================================
+    // ADMIN - PURCHASE REMINDER HISTORY
+    // =========================================================
 
-        notificationRepository.save(notification);
+    @Transactional(readOnly = true)
+    public List<Notification> getPurchaseReminderHistory() {
+        return notificationRepository
+                .findByTypeOrderByCreatedAtDesc(NotificationType.PURCHASE_REMINDER);
     }
 
-    public List<Notification> getBirthdayNotificationHistory() {
-        return notificationRepository.findByTypeOrderByCreatedAtDesc(NotificationType.BIRTHDAY);
-    }
+    // =========================================================
+    // ADMIN - MANUAL SEND
+    // =========================================================
 
-    public List<Notification> getBirthdayNotificationHistory(LocalDateTime from, LocalDateTime to) {
-        return notificationRepository.findByTypeAndCreatedAtBetweenOrderByCreatedAtDesc(
-                NotificationType.BIRTHDAY, from, to);
-    }
-
-
-
-    /**
-     * Lấy khách hàng có sinh nhật trong tháng
-     */
-    public List<CustomerBirthdayResponse> getBirthdaysByMonth(int month) {
-        if (month < 1 || month > 12) {
-            throw new IllegalArgumentException("Tháng phải từ 1 đến 12");
-        }
-
-        List<Customer> customers = customerRepository.findCustomersWithBirthdayInMonth(month);
-        return customers.stream()
-                .map(this::mapToResponse)
-                .sorted(Comparator.comparing(CustomerBirthdayResponse::getBirthDay))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Lấy sinh nhật sắp tới trong N ngày
-     */
-    public List<CustomerBirthdayResponse> getUpcomingBirthdays(int days) {
-        LocalDate today = LocalDate.now();
-        LocalDate endDate = today.plusDays(days);
-
-        List<Customer> customers = customerRepository.findCustomersWithBirthdayBetween(
-                today.getMonthValue(),
-                today.getDayOfMonth(),
-                endDate.getMonthValue(),
-                endDate.getDayOfMonth()
-        );
-
-        return customers.stream()
-                .map(this::mapToResponse)
-                .filter(c -> c.getDaysUntilBirthday() != null && c.getDaysUntilBirthday() <= days)
-                .sorted(Comparator.comparing(CustomerBirthdayResponse::getDaysUntilBirthday))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Lấy thống kê sinh nhật theo tháng
-     */
-    public Map<String, Object> getStatistics() {
-        Map<Integer, Long> monthlyCount = new HashMap<>();
-
-        // Đếm số khách hàng có sinh nhật trong từng tháng
-        for (int month = 1; month <= 12; month++) {
-            long count = customerRepository.countCustomersWithBirthdayInMonth(month);
-            monthlyCount.put(month, count);
-        }
-
-        // Tính tổng số khách hàng
-        long totalCustomers = customerRepository.count();
-
-        // Tính tổng số khách hàng có ngày sinh
-        long customersWithBirthday = monthlyCount.values().stream()
-                .mapToLong(Long::longValue)
-                .sum();
-
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("monthlyCount", monthlyCount);
-        stats.put("totalCustomers", totalCustomers);
-        stats.put("customersWithBirthday", customersWithBirthday);
-        stats.put("customersWithoutBirthday", totalCustomers - customersWithBirthday);
-
-        return stats;
-    }
-
-    /**
-     * Lấy thống kê chi tiết theo tháng
-     */
-    public Map<String, Object> getMonthlyStatistics(int month) {
-        if (month < 1 || month > 12) {
-            throw new IllegalArgumentException("Tháng phải từ 1 đến 12");
-        }
-
-        List<CustomerBirthdayResponse> birthdays = getBirthdaysByMonth(month);
-
-        // Phân loại theo CustomerType
-        Map<String, Long> byType = birthdays.stream()
-                .collect(Collectors.groupingBy(
-                        c -> c.getCustomerType().name(),
-                        Collectors.counting()
-                ));
-
-        // Phân loại theo VipTier
-        Map<String, Long> byTier = birthdays.stream()
-                .collect(Collectors.groupingBy(
-                        c -> c.getVipTier() != null ? c.getVipTier().name() : "NONE",
-                        Collectors.counting()
-                ));
-
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("month", month);
-        stats.put("totalCount", birthdays.size());
-        stats.put("byCustomerType", byType);
-        stats.put("byVipTier", byTier);
-        stats.put("birthdays", birthdays);
-
-        return stats;
-    }
-
-    /**
-     * Map Customer entity sang CustomerBirthdayResponse DTO
-     */
-    private CustomerBirthdayResponse mapToResponse(Customer customer) {
-        LocalDate birthDate = customer.getDateOfBirth();
-        if (birthDate == null) {
-            return null;
-        }
-
-        LocalDate today = LocalDate.now();
-
-        // Tính tuổi
-        int age = Period.between(birthDate, today).getYears();
-
-        // Tính sinh nhật tiếp theo
-        LocalDate nextBirthday = LocalDate.of(today.getYear(), birthDate.getMonth(), birthDate.getDayOfMonth());
-        if (nextBirthday.isBefore(today)) {
-            nextBirthday = nextBirthday.plusYears(1);
-            age++; // Tuổi sẽ đạt được vào sinh nhật tiếp theo
-        }
-
-        // Tính số ngày còn lại
-        long daysUntil = ChronoUnit.DAYS.between(today, nextBirthday);
-        boolean isToday = daysUntil == 0;
-
-        return CustomerBirthdayResponse.builder()
-                .id(Long.valueOf(customer.getId()))
-                .customerId(customer.getId())
-                .name(customer.getName())
-                .email(customer.getEmail())
-                .phone(customer.getPhone())
-                .dateOfBirth(birthDate)
-                .birthdayDisplay(String.format("%02d/%02d/%d",
-                        birthDate.getDayOfMonth(),
-                        birthDate.getMonthValue(),
-                        birthDate.getYear()))
-                .birthMonth(birthDate.getMonthValue())
-                .birthDay(birthDate.getDayOfMonth())
-                .age(age)
-                .daysUntilBirthday(daysUntil)
-                .isBirthdayToday(isToday)
-                .customerType(customer.getCustomerType())
-                .vipTier(customer.getVipTier())
-                .loyaltyPoints(customer.getLoyaltyPoints())
-                .totalSpent(customer.getTotalSpent())
-                .build();
-    }
     @Transactional
-    public void createTierUpgradeNotification(Integer customerId, String tierName, int pointsGap) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
+    public Map<String, Object> sendToCustomers(SendNotificationRequest request) {
 
-        // Kiểm tra xem đã có thông báo tương tự trong 7 ngày chưa
-        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
-        boolean exists = notificationRepository.existsByCustomerIdAndTypeAndCreatedAtBetween(
-                customer.getId(),
-                NotificationType.VIP_TIER_UPGRADE,
-                weekAgo,
-                LocalDateTime.now()
-        );
+        List<Integer> customerIds = request.getCustomerIds();
 
-        if (!exists) {
-            String message;
-            if (pointsGap <= 500) {
-                message = String.format(
-                        "🔥 Bạn chỉ còn thiếu %,d điểm nữa là lên hạng %s! " +
-                                "Hoàn tất một đơn hàng nhỏ để nhận ưu đãi tốt hơn ngay!",
-                        pointsGap, tierName
-                );
-            } else {
-                message = String.format(
-                        "⭐ Bạn sắp đạt hạng %s với %,d điểm nữa! " +
-                                "Tiếp tục mua sắm để tận hưởng nhiều đặc quyền hơn.",
-                        pointsGap, tierName
-                );
-            }
-
-            Notification notification = Notification.builder()
-                    .customer(customer)
-                    .type(NotificationType.VIP_TIER_UPGRADE)
-                    .title("🎯 Bạn sắp lên hạng!")
-                    .message(message)
-                    .isRead(false)
-                    .build();
-
-            notificationRepository.save(notification);
+        NotificationType type;
+        try {
+            type = request.getType() != null
+                    ? NotificationType.valueOf(request.getType())
+                    : NotificationType.SYSTEM;
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Loại notification không hợp lệ: " + request.getType());
         }
-    }
 
-    /**
-     * Tạo thông báo lên VIP
-     */
-    @Transactional
-    public void createUpgradeToVipNotification(Integer customerId, int pointsNeeded) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
+        int success = 0;
+        int failed = 0;
 
-        // Chỉ gửi nếu khách hàng chưa phải VIP
-        if (customer.getCustomerType() == CustomerType.REGULAR) {
-            LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
-            boolean exists = notificationRepository.existsByCustomerIdAndTypeAndCreatedAtBetween(
-                    customer.getId(),
-                    NotificationType.VIP_TIER_UPGRADE,
-                    weekAgo,
-                    LocalDateTime.now()
-            );
-
-            if (!exists) {
-                String message = String.format(
-                        "👑 Chỉ còn %,d điểm nữa, bạn sẽ trở thành khách hàng VIP! " +
-                                "Khách VIP được giảm giá cao hơn, ưu đãi độc quyền và nhiều đặc quyền khác. " +
-                                "Mua sắm ngay để nâng cấp!",
-                        pointsNeeded
-                );
-
-                Notification notification = Notification.builder()
-                        .customer(customer)
-                        .type(NotificationType.VIP_TIER_UPGRADE)
-                        .title("👑 Sắp trở thành VIP!")
-                        .message(message)
-                        .isRead(false)
-                        .build();
-
-                notificationRepository.save(notification);
+        for (Integer customerId : customerIds) {
+            try {
+                createAndSaveNotification(
+                        customerId,
+                        type,
+                        request.getTitle(),
+                        request.getMessage());
+                success++;
+            } catch (Exception ex) {
+                failed++;
             }
         }
+
+        return Map.of(
+                "total", customerIds.size(),
+                "success", success,
+                "failed", failed,
+                "type", type.name());
     }
 
-    /**
-     * Tự động kiểm tra và gửi thông báo lên hạng
-     * (Gọi định kỳ hoặc sau mỗi giao dịch)
-     */
+    // =========================================================
+    // BIRTHDAY LOGIC
+    // =========================================================
+
+    private Promotion ensureBirthdayVoucherExists() {
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endDate = now.plusDays(BIRTHDAY_VALID_DAYS);
+
+        Optional<Promotion> existing = promotionRepository.findByCode(BIRTHDAY_VOUCHER_CODE);
+
+        if (existing.isPresent()) {
+            Promotion p = existing.get();
+            if (p.getIsActive() && p.getEndDate().isAfter(now)) {
+                return p;
+            }
+            p.setStartDate(now);
+            p.setEndDate(endDate);
+            p.setIsActive(true);
+            return promotionRepository.save(p);
+        }
+
+        Promotion voucher = Promotion.builder()
+                .code(BIRTHDAY_VOUCHER_CODE)
+                .name("🎂 Voucher sinh nhật — Giảm 250.000đ")
+                .description("Giảm 250.000đ cho đơn từ 1.000.000đ. Hiệu lực 7 ngày.")
+                .discountType("AMOUNT")
+                .discountValue(BIRTHDAY_DISCOUNT_AMOUNT)
+                .minOrderAmount(BIRTHDAY_MIN_ORDER)
+                .priority(10)
+                .stackable(false)
+                .startDate(now)
+                .endDate(endDate)
+                .isActive(true)
+                .createdAt(now)
+                .build();
+
+        Promotion saved = promotionRepository.save(voucher);
+
+        PromotionRedemption redemption = new PromotionRedemption();
+        redemption.setPromotionId(saved.getId());
+        redemption.setUsedCount(0L);
+        redemption.setUpdatedAt(now);
+        promotionRedemptionRepository.save(redemption);
+
+        return saved;
+    }
+
     @Transactional
-    public void checkAndSendTierUpgradeNotifications() {
-        // Tìm khách hàng sắp lên hạng (trong 20% cuối)
-        List<Customer> customers = customerRepository.findAll().stream()
-                .filter(Customer::getIsActive)
-                .toList();
+    public void sendBirthdayNotifications() {
+
+        List<Customer> customers = customerRepository.findCustomersWithBirthdayToday();
 
         for (Customer customer : customers) {
-            int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
-            VipTier currentTier = customer.getVipTier();
+            if (!customer.getIsActive())
+                continue;
 
-            // Kiểm tra lên hạng VIP tier
-            VipTier nextTier = getNextTier(currentTier);
-            if (nextTier != null) {
-                int pointsGap = nextTier.getMinPoints() - currentPoints;
-                int tierRange = currentTier != null
-                        ? nextTier.getMinPoints() - currentTier.getMinPoints()
-                        : nextTier.getMinPoints();
+            LocalDateTime yearStart = LocalDate.now().withDayOfYear(1).atStartOfDay();
+            LocalDateTime yearEnd = yearStart.plusYears(1);
 
-                double progress = tierRange > 0
-                        ? (double)(tierRange - pointsGap) / tierRange * 100
-                        : 0;
+            boolean exists = notificationRepository
+                    .existsByCustomerIdAndTypeAndCreatedAtBetween(
+                            customer.getId(),
+                            NotificationType.BIRTHDAY,
+                            yearStart,
+                            yearEnd);
 
-                // Nếu đã hoàn thành >= 80% (trong 20% cuối)
-                if (progress >= 80 && pointsGap > 0) {
-                    createTierUpgradeNotification(customer.getId(), nextTier.getDisplayName(), pointsGap);
+            if (exists)
+                continue;
+
+            Promotion voucher = ensureBirthdayVoucherExists();
+
+            String expiryDisplay = voucher.getEndDate()
+                    .toLocalDate()
+                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+            String message = String.format(
+                    "🎉 Sinh nhật vui vẻ %s!\n\n" +
+                            "🎁 Mã: %s\n" +
+                            "💰 Giảm: 250.000đ\n" +
+                            "🛒 Đơn tối thiểu: 1.000.000đ\n" +
+                            "⏳ Hết hạn: %s",
+                    customer.getName(),
+                    BIRTHDAY_VOUCHER_CODE,
+                    expiryDisplay);
+
+            createAndSaveNotification(
+                    customer.getId(),
+                    NotificationType.BIRTHDAY,
+                    "🎂 Chúc mừng sinh nhật!",
+                    message);
+        }
+    }
+
+    @Transactional
+    public void createTierUpgradeNotification(
+            Integer customerId,
+            String nextTierName,
+            int pointsGap) {
+
+        String message = String.format(
+                "🔥 Bạn chỉ còn thiếu %,d điểm để đạt hạng %s!\n\n" +
+                        "Tiếp tục mua sắm để thăng hạng và nhận ưu đãi hấp dẫn!",
+                pointsGap,
+                nextTierName);
+
+        createAndSaveNotification(
+                customerId,
+                NotificationType.VIP_TIER_UPGRADE,
+                "🎯 Bạn sắp lên hạng!",
+                message);
+    }
+
+    @Transactional
+    public void createUpgradeToVipNotification(
+            Integer customerId,
+            int pointsGap) {
+
+        String message = String.format(
+                "👑 Bạn chỉ còn thiếu %,d điểm để trở thành khách hàng VIP!\n\n" +
+                        "Đạt 5.000 điểm để mở khóa quyền lợi VIP đặc biệt!",
+                pointsGap);
+
+        createAndSaveNotification(
+                customerId,
+                NotificationType.VIP_TIER_UPGRADE,
+                "👑 Sắp trở thành khách hàng VIP!",
+                message);
+    }
+
+    // =========================================================
+    // PURCHASE REMINDER
+    // =========================================================
+
+    @Transactional
+    public void sendPurchaseReminders() {
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime upperBound = now.minusDays(30);
+        LocalDateTime lowerBound = now.minusDays(60);
+        LocalDateTime recentCutoff = now.minusDays(7);
+
+        List<Customer> customers = customerRepository
+                .findCustomersForPurchaseReminder(
+                        upperBound,
+                        lowerBound,
+                        recentCutoff);
+
+        for (Customer customer : customers) {
+            createAndSaveNotification(
+                    customer.getId(),
+                    NotificationType.PURCHASE_REMINDER,
+                    "🛒 Bạn đã lâu chưa mua sắm!",
+                    "Chúng tôi nhớ bạn! Quay lại mua sắm để nhận thêm ưu đãi hấp dẫn 🎁");
+        }
+    }
+
+    // =========================================================
+    // SPIN EXPIRY
+    // =========================================================
+
+    @Transactional
+    public void sendSpinExpiryWarnings() {
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime threshold = now.plusHours(24);
+
+        List<SpinWheelHistory> expiringBonuses = notificationRepository.findExpiringUnusedBonuses(now,
+                threshold);
+
+        for (SpinWheelHistory spin : expiringBonuses) {
+
+            Customer customer = spin.getCustomer();
+            if (!customer.getIsActive())
+                continue;
+
+            createAndSaveNotification(
+                    customer.getId(),
+                    NotificationType.SPIN_EXPIRY_WARNING,
+                    "🎡 Ưu đãi vòng quay sắp hết hạn!",
+                    String.format(
+                            "Bonus giảm %s%% của bạn sẽ hết hạn vào %s.",
+                            spin.getDiscountBonus(),
+                            spin.getExpiresAt().toLocalDate()));
+        }
+    }
+
+    // =========================================================
+    // WELCOME ZERO ORDER
+    // =========================================================
+
+    @Transactional
+    public void sendWelcomeToZeroOrderCustomers() {
+
+        LocalDateTime registeredBefore = LocalDateTime.now().minusDays(7);
+        List<Customer> customers = customerRepository.findZeroOrderCustomers(registeredBefore);
+
+        for (Customer customer : customers) {
+
+            boolean alreadySent = notificationRepository
+                    .existsByCustomerIdAndTypeAndCreatedAtAfter(
+                            customer.getId(),
+                            NotificationType.WELCOME,
+                            LocalDateTime.now().minusDays(30));
+
+            if (alreadySent)
+                continue;
+
+            createAndSaveNotification(
+                    customer.getId(),
+                    NotificationType.WELCOME,
+                    "🎉 Chào mừng bạn đến với cửa hàng!",
+                    "Bạn đã đăng ký nhưng chưa mua hàng. Nhận ngay ưu đãi đặc biệt cho đơn đầu tiên!");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<Notification> getBirthdayNotificationHistory(LocalDateTime from, LocalDateTime to) {
+        return notificationRepository
+                .findByTypeAndCreatedAtBetweenOrderByCreatedAtDesc(
+                        NotificationType.BIRTHDAY, from, to);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Notification> getBirthdayNotificationHistory() {
+        return notificationRepository
+                .findByTypeOrderByCreatedAtDesc(NotificationType.BIRTHDAY);
+    }
+
+    // =========================================================
+    // ADMIN - SEND CUSTOM BIRTHDAY GREETING
+    // =========================================================
+
+    @Transactional
+    public void sendCustomBirthdayGreeting(Integer customerId, String message) {
+        createAndSaveNotification(
+                customerId,
+                NotificationType.BIRTHDAY,
+                "🎂 Lời chúc sinh nhật từ cửa hàng",
+                message);
+    }
+
+    // =========================================================
+    // ADMIN - CHECK AND SEND TIER UPGRADE NOTIFICATIONS
+    // =========================================================
+
+    @Transactional
+    public void checkAndSendTierUpgradeNotifications() {
+
+        List<Customer> customers = customerRepository.findAll();
+
+        for (Customer customer : customers) {
+            if (!customer.getIsActive())
+                continue;
+
+            Integer points = customer.getLoyaltyPoints();
+            if (points == null)
+                continue;
+
+            // Chưa đạt VIP (< 1000 điểm)
+            if (points < 1000) {
+                int pointsGap = 1000 - points;
+                // Chỉ nhắc khi còn thiếu <= 200 điểm
+                if (pointsGap <= 200) {
+                    createUpgradeToVipNotification(customer.getId(), pointsGap);
                 }
+                continue;
             }
 
-            // Kiểm tra lên VIP
-            if (customer.getCustomerType() == CustomerType.REGULAR) {
-                int goldMinPoints = VipTier.GOLD.getMinPoints();
-                if (currentPoints >= goldMinPoints * 0.7 && currentPoints < goldMinPoints) {
-                    // Đã đạt 70% điểm cần thiết để lên VIP
-                    createUpgradeToVipNotification(customer.getId(), goldMinPoints - currentPoints);
-                }
+            VipTier currentTier = VipTier.fromPoints(points);
+            if (currentTier == null)
+                continue;
+
+            // Đã đạt hạng cao nhất
+            Integer nextThreshold = currentTier.getNextTierThreshold();
+            if (nextThreshold == null)
+                continue;
+
+            int pointsGap = nextThreshold - points;
+
+            // Chỉ nhắc khi còn thiếu <= 20% ngưỡng của tier tiếp theo
+            VipTier[] tiers = VipTier.values();
+            VipTier nextTier = tiers[currentTier.ordinal() + 1];
+            int tierRange = nextTier.getMinPoints() - currentTier.getMinPoints();
+            int threshold = (int) (tierRange * 0.2);
+
+            if (pointsGap <= threshold) {
+                createTierUpgradeNotification(customer.getId(), nextTier.getDisplayName(), pointsGap);
             }
         }
     }
 
-    /**
-     * Helper method: Lấy hạng tiếp theo
-     */
-    private VipTier getNextTier(VipTier currentTier) {
-        if (currentTier == null) {
-            return VipTier.BRONZE;
-        }
-
-        VipTier[] tiers = VipTier.values();
-        int currentIndex = currentTier.ordinal();
-
-        if (currentIndex < tiers.length - 1) {
-            return tiers[currentIndex + 1];
-        }
-
-        return null;
-    }
+    // =========================================================
+    // EMAIL
+    // =========================================================
 
     public void sendOrderDeliveredEmail(
             String email,
@@ -499,23 +499,21 @@ public class NotificationService {
         String subject = "Đơn hàng đã giao thành công";
 
         String content = """
-            Xin chào %s,
+                Xin chào %s,
 
-            Đơn hàng %s đã được giao thành công.
+                Đơn hàng %s đã được giao thành công.
 
-            Cảm ơn bạn đã mua hàng!
-            """.formatted(
+                Cảm ơn bạn đã mua hàng!
+                """.formatted(
                 order.getCustomer().getName(),
-                order.getOrderNumber()
-        );
+                order.getOrderNumber());
 
         sendEmailWithAttachment(
                 email,
                 subject,
                 content,
                 pdf,
-                "invoice-" + order.getOrderNumber() + ".pdf"
-        );
+                "invoice-" + order.getOrderNumber() + ".pdf");
     }
 
     public void sendEmailWithAttachment(
@@ -528,7 +526,6 @@ public class NotificationService {
         MimeMessage message = mailSender.createMimeMessage();
 
         try {
-
             MimeMessageHelper helper =
                     new MimeMessageHelper(message, true);
 
@@ -538,8 +535,7 @@ public class NotificationService {
 
             helper.addAttachment(
                     filename,
-                    new ByteArrayResource(file)
-            );
+                    new ByteArrayResource(file));
 
             mailSender.send(message);
 

@@ -2,12 +2,14 @@ package com.retailmanagement.controller;
 
 import com.retailmanagement.dto.request.UpsertPriceRequest;
 import com.retailmanagement.dto.response.ApiResponse;
+import com.retailmanagement.dto.response.PriceHistoryResponse;
 import com.retailmanagement.dto.response.VariantPriceResponse;
 import com.retailmanagement.entity.PriceHistory;
 import com.retailmanagement.service.PricingService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/prices")
@@ -24,7 +26,7 @@ public class PriceController {
      */
     @PostMapping("/variants/{variantId}")
     public ApiResponse<PriceHistory> setVariantPrice(@PathVariable Integer variantId,
-                                                     @RequestBody UpsertPriceRequest req) {
+            @RequestBody UpsertPriceRequest req) {
         PriceHistory ph = pricingService.setVariantPrice(variantId, req, 0);
         return ApiResponse.success(ph);
     }
@@ -51,7 +53,7 @@ public class PriceController {
      * Update price history record
      */
     @PutMapping("/history/{id}")
-    public ApiResponse<PriceHistory> updateLatest(@PathVariable Long id, @RequestBody UpsertPriceRequest req) {
+    public ApiResponse<PriceHistoryResponse> updateLatest(@PathVariable Long id, @RequestBody UpsertPriceRequest req) {
         return ApiResponse.success(pricingService.updateLatestHistory(id, req));
     }
 
@@ -83,5 +85,23 @@ public class PriceController {
             @PathVariable Integer variantId,
             @PathVariable Integer customerId) {
         return ApiResponse.success(pricingService.getEffectivePriceForCustomer(variantId, customerId));
+    }
+
+    // Lịch sử giá của variant
+    @GetMapping("/variants/{variantId}/history")
+    public ApiResponse<List<PriceHistoryResponse>> getPriceHistory(@PathVariable Integer variantId) {
+        return ApiResponse.success(pricingService.getPriceHistory(variantId));
+    }
+
+    // Cảnh báo giá thấp hơn giá nhập
+    @GetMapping("/variants/{variantId}/cost-warning")
+    public ApiResponse<Map<String, Object>> getCostWarning(@PathVariable Integer variantId) {
+        return ApiResponse.success(pricingService.checkPriceBelowCost(variantId));
+    }
+
+    // Dashboard giá & khuyến mãi
+    @GetMapping("/dashboard")
+    public ApiResponse<Map<String, Object>> getDashboard() {
+        return ApiResponse.success(pricingService.getDashboard());
     }
 }

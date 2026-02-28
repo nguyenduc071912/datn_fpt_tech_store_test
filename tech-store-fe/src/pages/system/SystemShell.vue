@@ -22,6 +22,9 @@
           <template #title>Management</template>
           <el-menu-item index="/system/users">Users</el-menu-item>
           <el-menu-item index="/system/customers">Customers</el-menu-item>
+          <el-menu-item index="/system/Toployalcustomers">Toployal customers</el-menu-item>
+           <el-menu-item index="/system/inactive-customers">Inactive-Customers</el-menu-item>
+           <el-menu-item index="/system/Zeroordercustomers">Zero Order-Customers</el-menu-item>
           <el-menu-item index="/system/customer-spending">Customers - Spending</el-menu-item>
           <el-menu-item index="/system/birthday">Birthday Manager</el-menu-item>
           <el-menu-item index="/system/categories">Categories</el-menu-item>
@@ -53,6 +56,7 @@
         <el-menu-item index="/system/pricing">Pricing</el-menu-item>
         <el-menu-item index="/system/payments">Payment</el-menu-item>
         <el-menu-item index="/system/promotions">Promotions</el-menu-item>
+        <el-menu-item index="/system/audit-logs">Audit Logs</el-menu-item>
 
         <el-sub-menu index="settings">
           <template #title>Settings</template>

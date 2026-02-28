@@ -13,6 +13,7 @@ import com.retailmanagement.entity.User;
 import com.retailmanagement.entity.VipTier;
 import com.retailmanagement.repository.CustomRes;
 import com.retailmanagement.repository.LoyaltyLedgerRepository;
+import com.retailmanagement.repository.OrderRepository;
 import com.retailmanagement.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -35,12 +36,14 @@ public class CustomerService {
 
     private final CustomRes customRes;
     private final LoyaltyLedgerRepository loyaltyLedgerRepository;
-    private final UserRepository userRepository; // ✅ NEW: For User lookup
+    private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
-    /**
-     * ✅ UPDATED: Save loyalty ledger with User relationship
-     * @param createdBy User ID (nullable)
-     */
+    @Audit(
+            module = AuditModule.CUSTOMER,
+            action = AuditAction.UPDATE,
+            targetType = TargetType.CUSTOMER
+    )
     private void saveLoyaltyLedger(
             Customer customer,
             int pointsDelta,
@@ -53,7 +56,6 @@ public class CustomerService {
             Long referenceId,
             Integer createdBy) {
 
-        // ✅ Lookup User if createdBy is provided
         User createdByUser = null;
         if (createdBy != null) {
             createdByUser = userRepository.findById(createdBy).orElse(null);
@@ -69,7 +71,7 @@ public class CustomerService {
                 .note(note)
                 .referenceType(referenceType)
                 .referenceId(referenceId)
-                .createdBy(createdByUser) // ✅ CHANGED: Now User object instead of Integer
+                .createdBy(createdByUser)
                 .createdAt(Instant.now())
                 .build();
 
@@ -124,6 +126,7 @@ public class CustomerService {
                 .totalSpent(BigDecimal.ZERO)
                 .loyaltyPoints(0)
                 .isActive(true)
+                .vipNote(customerRequest.getVipNote())
                 .build();
 
         Customer saved = customRes.save(customer);
@@ -135,6 +138,7 @@ public class CustomerService {
         int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
 
         Integer pointsToNext = 0;
+        int orderCount = (int) orderRepository.countByCustomerId(customer.getId());
 
         if (currentTier == null) {
             pointsToNext = VipTier.BRONZE.getMinPoints() - currentPoints;
@@ -170,11 +174,25 @@ public class CustomerService {
                 .isActive(customer.getIsActive())
                 .createdAt(customer.getCreatedAt())
                 .updatedAt(customer.getUpdatedAt())
+                .vipNote(customer.getVipNote())
+                .orderCount(orderCount)
                 .build();
     }
 
+    // ================================================================
+    // OVERLOAD: gọi từ chỗ không có orderId (backward compatible)
+    // ================================================================
     @Transactional
     public void addLoyaltyPoints(Integer customerId, BigDecimal orderTotal) {
+        addLoyaltyPoints(customerId, orderTotal, null);
+    }
+
+    // ================================================================
+    // MAIN: gọi từ PaymentService khi thanh toán thành công
+    //       truyền orderId để lưu referenceId vào loyalty ledger
+    // ================================================================
+    @Transactional
+    public void addLoyaltyPoints(Integer customerId, BigDecimal orderTotal, Long orderId) {
         Customer customer = customRes.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
@@ -210,7 +228,7 @@ public class CustomerService {
                 "PURCHASE",
                 "Cộng điểm từ thanh toán: " + formatMoney(orderTotal),
                 "orders",
-                null,
+                orderId,  // ✅ lưu orderId để hiển thị "orders: #123"
                 null
         );
 
@@ -278,6 +296,10 @@ public class CustomerService {
             }
             customer.setEmail(customerRequest.getEmail());
         }
+        if (customerRequest.getVipNote() != null) {
+            customer.setVipNote(customerRequest.getVipNote());
+        }
+
 
         String oldPhone = customer.getPhone();
         if (customerRequest.getPhone() != null && !customerRequest.getPhone().equals(oldPhone)) {
@@ -302,24 +324,22 @@ public class CustomerService {
     }
 
     public CustomerResponse findByEmail(String email) {
-        System.out.println("DEBUG Service: Đang tìm khách hàng với email: " + email);
-
+        // 1. Tìm theo email
         Optional<Customer> customerOpt = customRes.findByEmail(email.trim());
+        if (customerOpt.isPresent()) return mapToResponse(customerOpt.get());
 
-        if (customerOpt.isEmpty()) {
-            System.out.println("DEBUG Service: Không tìm thấy với email: " + email);
-            customerOpt = customRes.findByName(email.trim());
+        // 2. Tìm theo name
+        customerOpt = customRes.findByName(email.trim());
+        if (customerOpt.isPresent()) return mapToResponse(customerOpt.get());
 
-            if (customerOpt.isEmpty()) {
-                System.out.println("DEBUG Service: Cũng không tìm thấy với username: " + email);
-                return null;
-            }
+        // 3. Tìm theo username → lấy userId → tìm customer ← THÊM
+        Optional<User> userOpt = userRepository.findByUsername(email.trim());
+        if (userOpt.isPresent()) {
+            customerOpt = customRes.findByUserId(userOpt.get().getId());
+            if (customerOpt.isPresent()) return mapToResponse(customerOpt.get());
         }
 
-        Customer customer = customerOpt.get();
-        System.out.println("DEBUG Service: Tìm thấy khách hàng: " + customer.getName() + ", email: " + customer.getEmail());
-
-        return mapToResponse(customer);
+        return null;
     }
 
     public List<CustomerResponse> findActiveInLast30Days() {
@@ -340,14 +360,12 @@ public class CustomerService {
         int pointsBefore = customer.getLoyaltyPoints() == null ? 0 : customer.getLoyaltyPoints();
         VipTier tierBefore = customer.getVipTier();
 
-        // ✅ Calculate points to deduct (no penalty multiplication)
         int pointsToDeduct = orderTotal.divide(BigDecimal.valueOf(10000)).intValue();
         if (pointsToDeduct <= 0) return;
 
         int newTotalPoints = Math.max(0, pointsBefore - pointsToDeduct);
         customer.setLoyaltyPoints(newTotalPoints);
 
-        // ✅ Always subtract from total spent when canceling/returning
         BigDecimal currentSpent = customer.getTotalSpent() == null ? BigDecimal.ZERO : customer.getTotalSpent();
         BigDecimal newSpent = currentSpent.subtract(orderTotal);
         customer.setTotalSpent(newSpent.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newSpent);
@@ -363,13 +381,12 @@ public class CustomerService {
 
         customRes.save(customer);
 
-        // ✅ Determine transaction type (no more PENALTY type)
         String transactionType = "DEDUCT";
         String note = getDeductNote(reason, orderTotal);
 
         saveLoyaltyLedger(
                 customer,
-                -pointsToDeduct,  // ✅ Simple negative points (no penalty)
+                -pointsToDeduct,
                 transactionType,
                 tierBefore,
                 newTier,
@@ -380,7 +397,6 @@ public class CustomerService {
                 null
         );
 
-        // Handle tier downgrade if applicable
         if (tierBefore != newTier) {
             String note2 = String.format("⚠️ Hạ hạng từ %s → %s do trừ điểm (Điểm còn: %d)",
                     tierBefore != null ? tierBefore.getDisplayName() : "Member",
@@ -527,6 +543,48 @@ public class CustomerService {
         ));
         stats.put("spendingRanges", spendingRanges);
 
+        return stats;
+    }
+    public List<CustomerResponse> findInactiveTransactionDays(int days) {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(days);
+        return customRes.findCustomersInactiveTransaction(cutoff)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+    @Transactional
+    public CustomerResponse updateVipNote(Integer id, String vipNote) {
+        Customer customer = customRes.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng: " + id));
+        customer.setVipNote(vipNote);
+        return mapToResponse(customRes.save(customer));
+    }
+    /**
+     * Lấy danh sách khách hàng chưa phát sinh đơn hàng nào
+     * @param minDaysSinceRegistered chỉ lấy khách đã đăng ký >= X ngày (tránh khách mới toanh)
+     */
+    public List<CustomerResponse> findZeroOrderCustomers(int minDaysSinceRegistered) {
+        LocalDateTime registeredBefore = LocalDateTime.now().minusDays(minDaysSinceRegistered);
+        return customRes.findZeroOrderCustomers(registeredBefore)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Thống kê zero-order customers
+     */
+    public Map<String, Object> getZeroOrderStats() {
+        Map<String, Object> stats = new HashMap<>();
+
+        long total3Days  = customRes.countZeroOrderCustomers(LocalDateTime.now().minusDays(3));
+        long total7Days  = customRes.countZeroOrderCustomers(LocalDateTime.now().minusDays(7));
+        long total30Days = customRes.countZeroOrderCustomers(LocalDateTime.now().minusDays(30));
+
+        stats.put("registeredOver3Days",  total3Days);
+        stats.put("registeredOver7Days",  total7Days);
+        stats.put("registeredOver30Days", total30Days);
+        stats.put("generatedAt", LocalDateTime.now());
         return stats;
     }
 }

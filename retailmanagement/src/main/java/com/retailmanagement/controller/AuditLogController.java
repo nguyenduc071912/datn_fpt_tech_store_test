@@ -120,6 +120,44 @@ public class AuditLogController {
         writer.flush();
     }
 
+    @PostMapping("export/advanced")
+    public void exportAdvanced(
+            @RequestBody AuditLogFilterRequest request,
+            HttpServletResponse response
+    ) throws IOException {
+
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=audit_logs.csv");
+
+        List<AuditLog> logs = auditLogService.searchForExport(request);
+
+        try (PrintWriter writer = response.getWriter()) {
+
+            // ⭐ Excel UTF8 fix (rất quan trọng)
+            writer.write('\uFEFF');
+
+            writer.println(
+                    "id,user_id,module,action,target_type,target_id,details_json,ip_address,created_at"
+            );
+
+            for (AuditLog log : logs) {
+                writer.printf(
+                        "%d,%s,%s,%s,%s,%s,%s,%s,%s%n",
+                        log.getId(),
+                        safe(log.getUser() != null ? log.getUser().getId() : ""),
+                        safe(log.getModule()),
+                        safe(log.getAction()),
+                        safe(log.getTargetType()),
+                        safe(log.getTargetId()),
+                        safe(log.getDetailsJson()),
+                        safe(log.getIpAddress()),
+                        safe(log.getCreatedAt())
+                );
+            }
+        }
+    }
+
     private String safe(Object value) {
         if (value == null) return "";
         String s = value.toString().replace("\"", "\"\"");

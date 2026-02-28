@@ -3,6 +3,9 @@ package com.retailmanagement.controller;
 import com.retailmanagement.dto.request.SetDefaultCurrencyRequest;
 import com.retailmanagement.dto.response.ApiResponse;
 import com.retailmanagement.service.SettingService;
+
+import java.util.Map;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,5 +27,10 @@ public class SettingController {
     public ApiResponse<String> setDefaultCurrency(@RequestBody SetDefaultCurrencyRequest req) {
         settingService.setDefaultCurrency(req.getCurrencyCode());
         return ApiResponse.success("OK");
+    }
+
+    @GetMapping
+    public ApiResponse<Map<String, String>> getAllSettings() {
+        return ApiResponse.success(settingService.getAllSettings());
     }
 }
