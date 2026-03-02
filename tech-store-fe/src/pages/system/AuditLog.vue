@@ -165,8 +165,17 @@ async function fetchLogs() {
     filter.endDate = null;
   }
 
+  const payload = {
+    userId: filter.userId || null,
+    modules: filter.module ? [filter.module] : null,
+    actions: filter.action ? [filter.action] : null,
+    keyword: filter.keyword || null,
+    startDate: filter.startDate || null,
+    endDate: filter.endDate || null
+  };
+
   try {
-    const res = await http.post("/api/auth/audit-log/search", filter, {
+    const res = await http.post("/api/auth/audit-log/search", payload, {
       params: {
         page: page.value - 1,
         size: size.value,
