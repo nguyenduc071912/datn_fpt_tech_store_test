@@ -81,6 +81,11 @@ public class OrderService {
     // ================================================================
     private DiscountCalculation calculateDiscount(Customer customer, BigDecimal subtotal) {
         DiscountCalculation result = new DiscountCalculation();
+        System.out.println("🔍 DEBUG calculateDiscount:");
+        System.out.println("   customerId = " + customer.getId());
+        System.out.println("   spinDiscountBonus = " + customer.getSpinDiscountBonus());
+        System.out.println("   vipTier = " + customer.getVipTier());
+        System.out.println("   subtotal = " + subtotal);
 
         // ── 1. VIP discount ──────────────────────────────────────────
         BigDecimal vipDiscount  = BigDecimal.ZERO;
@@ -201,6 +206,8 @@ public class OrderService {
 
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
+        System.out.println("🔍 Customer fetched: id=" + customer.getId()
+                + ", spinBonus=" + customer.getSpinDiscountBonus());
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -221,6 +228,7 @@ public class OrderService {
         order.setOrderNumber(generateOrderNumber());
         order.setCreatedAt(Instant.now());
         order.setUpdatedAt(Instant.now());
+
         order = orderRepository.save(order);
 
 
@@ -322,6 +330,8 @@ public class OrderService {
         order.setTotalAmount(
                 subtotal.subtract(discountCalc.getTotalDiscount()).add(order.getShippingFee())
         );
+        order.setSpinDiscountRate(discountCalc.getSpinDiscountRate());
+        order.setSpinDiscount(discountCalc.getSpinDiscount());
 
         // ── Ghi chú chiết khấu ───────────────────────────────────────
         StringBuilder notes = new StringBuilder();

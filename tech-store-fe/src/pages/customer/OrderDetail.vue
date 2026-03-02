@@ -164,22 +164,28 @@
 
             <el-divider />
 
-            <div class="d-flex justify-content-between fs-5">
-              <span><strong>Tổng cộng:</strong></span>
-              <strong class="text-primary">{{ formatMoney(detail.totalAmount) }}</strong>
-            </div>
+          <div class="d-flex justify-content-between fs-5 align-items-start">
+  <span><strong>Tổng cộng:</strong></span>
 
-            <!-- Tổng ước tính sau spin - CHỈ hiện khi đơn CHƯA có spin discount được áp -->
-            <div
-              v-if="spinStatus.hasActiveBonus && estimatedSpinDiscount > 0 && !(detail.spinDiscountRate > 0)"
-              class="estimated-total-row"
-            >
-              <div class="d-flex justify-content-between">
-                <span class="estimated-total-label">🎡 Ước tính sau giảm Spin:</span>
-                <strong class="estimated-total-value">{{ formatMoney(detail.totalAmount - estimatedSpinDiscount) }}</strong>
-              </div>
-              <div class="estimated-total-note">* Giá ước tính, sẽ được tính chính xác khi xử lý thanh toán</div>
-            </div>
+  <!-- Khi có spin bonus chưa áp: gạch giá gốc, hiện giá ước tính -->
+  <div
+    v-if="spinStatus.hasActiveBonus && estimatedSpinDiscount > 0 && !(detail.spinDiscountRate > 0)"
+    class="text-end"
+  >
+    <div class="text-muted text-decoration-line-through" style="font-size: 14px;">
+      {{ formatMoney(detail.totalAmount) }}
+    </div>
+    <strong class="text-primary" style="font-size: 20px;">
+      {{ formatMoney(detail.totalAmount - estimatedSpinDiscount) }}
+    </strong>
+    <div class="estimated-total-note mt-1">
+      🎡 Ước tính sau giảm Spin {{ spinStatus.bonusRate }}% · Sẽ tính chính xác khi thanh toán
+    </div>
+  </div>
+
+  <!-- Bình thường -->
+  <strong v-else class="text-primary">{{ formatMoney(detail.totalAmount) }}</strong>
+</div>
           </div>
         </div>
       </div>

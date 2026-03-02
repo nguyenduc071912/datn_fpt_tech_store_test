@@ -42,36 +42,10 @@ public class PaymentService {
             throw new RuntimeException("Chỉ có thể thanh toán đơn hàng ở trạng thái PENDING");
         }
 
-        // ✅ Áp spin discount nếu customer có bonus
+        // ✅ Spin đã được tính vào order.totalAmount từ lúc tạo đơn (OrderService)
+        // KHÔNG trừ thêm — chỉ lấy finalAmount = order.totalAmount
         BigDecimal finalAmount = order.getTotalAmount();
-        BigDecimal spinDiscount = BigDecimal.ZERO;
-
         Customer customer = order.getCustomer();
-        if (customer != null
-                && customer.getSpinDiscountBonus() != null
-                && customer.getSpinDiscountBonus().compareTo(BigDecimal.ZERO) > 0) {
-
-            spinDiscount = order.getSubtotal()
-                    .multiply(customer.getSpinDiscountBonus().divide(BigDecimal.valueOf(100)))
-                    .setScale(0, RoundingMode.HALF_UP);
-
-            finalAmount = finalAmount.subtract(spinDiscount);
-            if (finalAmount.compareTo(BigDecimal.ZERO) < 0) finalAmount = BigDecimal.ZERO;
-            // Cập nhật lại order
-            order.setDiscountTotal(order.getDiscountTotal().add(spinDiscount));
-            order.setTotalAmount(finalAmount);
-
-            // Ghi chú spin vào notes
-            String existingNotes = order.getNotes() != null ? order.getNotes() : "";
-            if (!existingNotes.contains("Spin:")) {
-                order.setNotes(existingNotes + " | Spin: -"
-                        + String.format("%.0f%%", customer.getSpinDiscountBonus())
-                        + " (-" + String.format("%,d", spinDiscount.longValue()) + ")");
-            }
-
-            // Đánh dấu đã dùng spin
-            spinWheelService.useBonus(customer.getId(), order.getId());
-        }
 
         if (finalAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Số tiền đơn hàng không hợp lệ");
@@ -79,7 +53,7 @@ public class PaymentService {
 
         Payment payment = Payment.builder()
                 .order(order)
-                .amount(finalAmount)   // ✅ Dùng finalAmount đã trừ spin
+                .amount(finalAmount)
                 .method(request.getMethod())
                 .transactionRef(request.getTransactionRef())
                 .status("SUCCESS")
@@ -102,7 +76,6 @@ public class PaymentService {
                     Instant.now().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
             );
         }
-
         orderRepository.save(order);
         return mapToResponse(payment);
     }

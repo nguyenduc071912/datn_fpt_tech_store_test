@@ -157,7 +157,6 @@ public class Order {
     @ColumnDefault("0")
     @Column(name = "vip_discount", precision = 15, scale = 2)
     private BigDecimal vipDiscount = BigDecimal.ZERO;
-    
     @NotNull
     @ColumnDefault("sysdatetime()")
     @Column(name = "updated_at", nullable = false)

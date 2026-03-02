@@ -81,6 +81,5 @@ public class Customer {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public void setSpinDiscountBonus(BigDecimal discountBonus) {
-    }
+
 }

@@ -143,8 +143,7 @@ public class SpinWheelService {
 
         spinWheelHistoryRepository.save(spinHistory);
 
-        customer.setSpinDiscountBonus(discountBonus);
-        customerRepository.save(customer);
+        customerRepository.updateSpinBonus(customerId, discountBonus);
 
         Map<String, Object> result = new HashMap<>();
         result.put("success",       true);
@@ -212,8 +211,7 @@ public class SpinWheelService {
             bonus.setUsedOrderId(orderId);
             spinWheelHistoryRepository.save(bonus);
 
-            customer.setSpinDiscountBonus(BigDecimal.ZERO);
-            customerRepository.save(customer);
+            customerRepository.updateSpinBonus(customerId, BigDecimal.ZERO);
         }
     }
 
@@ -241,8 +239,7 @@ public class SpinWheelService {
         spin.setUsedOrderId(null);
         spinWheelHistoryRepository.save(spin);
 
-        customer.setSpinDiscountBonus(spin.getDiscountBonus());
-        customerRepository.save(customer);
+        customerRepository.updateSpinBonus(spin.getCustomer().getId(), spin.getDiscountBonus());
     }
 
     // ================================================================

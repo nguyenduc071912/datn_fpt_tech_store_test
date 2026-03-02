@@ -773,8 +773,9 @@
       <div v-else-if="selectedPayment" class="payment-detail">
         <el-descriptions :column="2" border class="mb-3">
           <el-descriptions-item label="Mã GD"><span class="fw-bold">{{ selectedPayment.transactionRef }}</span></el-descriptions-item>
-          <el-descriptions-item label="Số tiền"><span class="fw-bold text-success">{{ formatCurrency(selectedPayment.amount) }}</span></el-descriptions-item>
-          <el-descriptions-item label="Phương thức"><el-tag size="small">{{ getPaymentMethodLabel(selectedPayment.method) }}</el-tag></el-descriptions-item>
+<el-descriptions-item label="Số tiền">
+  <span class="fw-bold text-success">{{ formatCurrency(selectedPayment.amount) }}</span>
+</el-descriptions-item>          <el-descriptions-item label="Phương thức"><el-tag size="small">{{ getPaymentMethodLabel(selectedPayment.method) }}</el-tag></el-descriptions-item>
           <el-descriptions-item label="Trạng thái"><el-tag :type="getPaymentStatusType(selectedPayment.status)">{{ selectedPayment.status }}</el-tag></el-descriptions-item>
           <el-descriptions-item label="Thời gian">{{ formatDateTime(selectedPayment.paidAt) }}</el-descriptions-item>
         </el-descriptions>
@@ -798,12 +799,24 @@
             </el-table-column>
           </el-table>
           <div class="payment-totals">
-            <div class="d-flex justify-content-between mb-2"><span>Tạm tính:</span><strong>{{ formatCurrency(selectedPayment.subtotal) }}</strong></div>
-            <div class="d-flex justify-content-between mb-2 text-success"><span>Giảm giá:</span><strong>-{{ formatCurrency(selectedPayment.discountTotal) }}</strong></div>
-            <div class="d-flex justify-content-between mb-2"><span>Phí ship:</span><strong>{{ formatCurrency(selectedPayment.shippingFee) }}</strong></div>
-            <el-divider />
-            <div class="d-flex justify-content-between fs-5"><span class="fw-bold">Tổng cộng:</span><strong class="text-primary">{{ formatCurrency(selectedPayment.totalAmount) }}</strong></div>
-          </div>
+  <div class="d-flex justify-content-between mb-2">
+    <span>Tạm tính:</span>
+    <strong>{{ formatCurrency(selectedPayment.subtotal) }}</strong>
+  </div>
+  <div class="d-flex justify-content-between mb-2 text-success" v-if="selectedPayment.discountTotal > 0">
+    <span>Giảm giá (VIP + Spin):</span>
+    <strong>-{{ formatCurrency(selectedPayment.discountTotal) }}</strong>
+  </div>
+  <div class="d-flex justify-content-between mb-2">
+    <span>Phí ship:</span>
+    <strong>{{ formatCurrency(selectedPayment.shippingFee) }}</strong>
+  </div>
+  <el-divider />
+  <div class="d-flex justify-content-between fs-5">
+    <span class="fw-bold">Tổng cộng:</span>
+    <strong class="text-primary">{{ formatCurrency(selectedPayment.amount) }}</strong>
+  </div>
+</div>
         </div>
       </div>
       <template #footer>

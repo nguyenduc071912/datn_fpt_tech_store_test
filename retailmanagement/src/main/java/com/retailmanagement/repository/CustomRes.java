@@ -8,6 +8,7 @@
     import org.springframework.data.domain.Pageable;
     import org.springframework.data.jpa.repository.JpaRepository;
     import org.springframework.data.jpa.repository.Lock;
+    import org.springframework.data.jpa.repository.Modifying;
     import org.springframework.data.jpa.repository.Query;
     import org.springframework.data.repository.query.*;
     import org.springframework.stereotype.Repository;
@@ -247,4 +248,8 @@
         long countZeroOrderCustomers(
                 @Param("registeredBefore") LocalDateTime registeredBefore
         );
+        // SpinWheelHistoryRepository hoặc CustomRes
+        @Modifying
+        @Query("UPDATE Customer c SET c.spinDiscountBonus = :bonus WHERE c.id = :customerId")
+        void updateSpinBonus(@Param("customerId") Integer customerId, @Param("bonus") BigDecimal bonus);
     }
