@@ -167,8 +167,8 @@ public class OrderDetailResponse {
         int closeParen = s.lastIndexOf(')');
         if (openParen >= 0 && closeParen > openParen) {
             String raw = s.substring(openParen + 2, closeParen)
-                    .replace(",", "")
-                    .replace(".", "")
+                    .replace(".", "")   // ✅ thêm: xóa dấu chấm (locale châu Âu)
+                    .replace(",", "")   // xóa dấu phẩy
                     .trim();
             return parseSafe(raw);
         }
@@ -177,7 +177,10 @@ public class OrderDetailResponse {
 
     private BigDecimal parseSafe(String s) {
         try {
-            return new BigDecimal(s.trim());
+            // Xóa hết ký tự không phải số
+            String cleaned = s.trim().replaceAll("[^0-9]", "");
+            if (cleaned.isEmpty()) return BigDecimal.ZERO;
+            return new BigDecimal(cleaned);
         } catch (NumberFormatException e) {
             return BigDecimal.ZERO;
         }

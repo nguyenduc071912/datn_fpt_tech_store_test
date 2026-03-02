@@ -223,6 +223,7 @@ public class OrderService {
         order.setUpdatedAt(Instant.now());
         order = orderRepository.save(order);
 
+
         // ── Pass 1: tính subtotal ────────────────────────────────────
         BigDecimal subtotal = BigDecimal.ZERO;
         for (CreateOrderItemRequest itemReq : request.getItems()) {
@@ -404,9 +405,9 @@ public class OrderService {
 
     private String formatMoney(BigDecimal amount) {
         if (amount == null) return "0";
-        return String.format("%,d", amount.longValue());
+        // Dùng Locale.US đ ể đảm bảo luôn dùng dấu phẩy, không phụ thuộc JVM locale
+        return String.format(java.util.Locale.US, "%,d", amount.longValue());
     }
-
     // ================================================================
     // UPDATE ORDER — GIỮ NGUYÊN
     // ================================================================

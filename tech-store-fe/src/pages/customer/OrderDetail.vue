@@ -549,14 +549,13 @@ async function confirmPayment() {
     });
     toast("✅ Thanh toán thành công!", "success");
     showPaymentDialog.value = false;
-    await reload();
+    await reload(); // ✅ Reload để lấy totalAmount mới đã trừ spin
   } catch (e) {
     toast(e?.response?.data?.message || "Lỗi thanh toán", "error");
   } finally {
     paymentLoading.value = false;
   }
 }
-
 async function confirmCancel() {
   cancelLoading.value = true;
   try {
