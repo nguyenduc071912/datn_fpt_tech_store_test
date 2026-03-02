@@ -142,7 +142,21 @@ public class Order {
     @ColumnDefault("sysdatetime()")
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+    @ColumnDefault("0")
+    @Column(name = "spin_discount_rate", precision = 5, scale = 2)
+    private BigDecimal spinDiscountRate = BigDecimal.ZERO;
 
+    @ColumnDefault("0")
+    @Column(name = "spin_discount", precision = 15, scale = 2)
+    private BigDecimal spinDiscount = BigDecimal.ZERO;
+
+    @ColumnDefault("0")
+    @Column(name = "vip_discount_rate", precision = 5, scale = 2)
+    private BigDecimal vipDiscountRate = BigDecimal.ZERO;
+
+    @ColumnDefault("0")
+    @Column(name = "vip_discount", precision = 15, scale = 2)
+    private BigDecimal vipDiscount = BigDecimal.ZERO;
     @NotNull
     @ColumnDefault("sysdatetime()")
     @Column(name = "updated_at", nullable = false)

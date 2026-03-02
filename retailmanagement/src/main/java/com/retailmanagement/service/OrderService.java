@@ -60,6 +60,7 @@ public class OrderService {
     private final SpinWheelService           spinWheelService;
     private final EmailService               emailService;
     private final OrderEmailService          orderEmailService;
+    private final LoyaltyResetService loyaltyResetService;
     // ✅ THÊM MỚI
     private final PromotionRepository        promotionRepository;
     private final PromotionService           promotionService;
@@ -81,6 +82,11 @@ public class OrderService {
     // ================================================================
     private DiscountCalculation calculateDiscount(Customer customer, BigDecimal subtotal) {
         DiscountCalculation result = new DiscountCalculation();
+        System.out.println("🔍 DEBUG calculateDiscount:");
+        System.out.println("   customerId = " + customer.getId());
+        System.out.println("   spinDiscountBonus = " + customer.getSpinDiscountBonus());
+        System.out.println("   vipTier = " + customer.getVipTier());
+        System.out.println("   subtotal = " + subtotal);
 
         // ── 1. VIP discount ──────────────────────────────────────────
         BigDecimal vipDiscount  = BigDecimal.ZERO;
@@ -201,6 +207,8 @@ public class OrderService {
 
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
+        System.out.println("🔍 Customer fetched: id=" + customer.getId()
+                + ", spinBonus=" + customer.getSpinDiscountBonus());
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -221,7 +229,9 @@ public class OrderService {
         order.setOrderNumber(generateOrderNumber());
         order.setCreatedAt(Instant.now());
         order.setUpdatedAt(Instant.now());
+
         order = orderRepository.save(order);
+
 
         // ── Pass 1: tính subtotal ────────────────────────────────────
         BigDecimal subtotal = BigDecimal.ZERO;
@@ -321,6 +331,8 @@ public class OrderService {
         order.setTotalAmount(
                 subtotal.subtract(discountCalc.getTotalDiscount()).add(order.getShippingFee())
         );
+        order.setSpinDiscountRate(discountCalc.getSpinDiscountRate());
+        order.setSpinDiscount(discountCalc.getSpinDiscount());
 
         // ── Ghi chú chiết khấu ───────────────────────────────────────
         StringBuilder notes = new StringBuilder();
@@ -404,9 +416,9 @@ public class OrderService {
 
     private String formatMoney(BigDecimal amount) {
         if (amount == null) return "0";
-        return String.format("%,d", amount.longValue());
+        // Dùng Locale.US đ ể đảm bảo luôn dùng dấu phẩy, không phụ thuộc JVM locale
+        return String.format(java.util.Locale.US, "%,d", amount.longValue());
     }
-
     // ================================================================
     // UPDATE ORDER — GIỮ NGUYÊN
     // ================================================================

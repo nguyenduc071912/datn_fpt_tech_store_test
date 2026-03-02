@@ -336,14 +336,41 @@ function fixImageUrl(url) {
   if (url.startsWith("http")) return url;
   return `http://localhost:8080${url}`;
 }
-
 async function loadSpinExpiryBonuses() {
   if (!isCustomer.value) return;
   try {
-    const res = await http.get("/api/spin-wheel/spin-expiry/preview?hours=24");
-    const bonuses = res.data?.bonuses || [];
-    spinExpiryBonuses.value = bonuses.filter(b => !spinExpiryDismissed.value.has(b.customerId));
-  } catch (err) { console.error(err); }
+    // Lấy customerId của người đang đăng nhập
+    const customerId = auth.user?.customerId || auth.customerId;
+    if (!customerId) return;
+
+    const res = await http.get(`/api/spin-wheel/status/${customerId}`);
+    const data = res.data?.data ?? res.data ?? res;
+
+    const bonus = Number(data?.currentBonus ?? data?.spinDiscountBonus ?? 0);
+    const expiresAt = data?.bonusExpiresAt ?? data?.spinBonusExpiresAt ?? null;
+
+    if (bonus > 0 && expiresAt) {
+      const expiresDate = new Date(expiresAt);
+      const now = new Date();
+      const hoursLeft = Math.floor((expiresDate - now) / (1000 * 60 * 60));
+
+      // Chỉ hiện nếu còn dưới 24 giờ
+      if (hoursLeft > 0 && hoursLeft <= 24) {
+        spinExpiryBonuses.value = [{
+          customerId,
+          discountBonus: bonus,
+          hoursLeft,
+          expiresAt,
+        }];
+      } else {
+        spinExpiryBonuses.value = [];
+      }
+    } else {
+      spinExpiryBonuses.value = [];
+    }
+  } catch (err) {
+    spinExpiryBonuses.value = [];
+  }
 }
 
 function dismissSpinExpiry(customerId) {
