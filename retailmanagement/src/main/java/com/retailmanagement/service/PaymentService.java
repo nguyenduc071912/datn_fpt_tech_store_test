@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +29,9 @@ public class PaymentService {
     // ============================================================
     // PAYMENT CREATION & PROCESSING
     // ============================================================
+    // Thêm dependency
+    private final CustomRes customerRepository;
+    private final SpinWheelService spinWheelService;
 
     @Transactional
     public PaymentResponse createPayment(PaymentRequest request, Integer userId) {
@@ -38,21 +42,23 @@ public class PaymentService {
             throw new RuntimeException("Chỉ có thể thanh toán đơn hàng ở trạng thái PENDING");
         }
 
-        BigDecimal paymentAmount = order.getTotalAmount();
-        if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+        // ✅ Spin đã được tính vào order.totalAmount từ lúc tạo đơn (OrderService)
+        // KHÔNG trừ thêm — chỉ lấy finalAmount = order.totalAmount
+        BigDecimal finalAmount = order.getTotalAmount();
+        Customer customer = order.getCustomer();
+
+        if (finalAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Số tiền đơn hàng không hợp lệ");
         }
 
         Payment payment = Payment.builder()
                 .order(order)
-                .amount(paymentAmount)
+                .amount(finalAmount)
                 .method(request.getMethod())
                 .transactionRef(request.getTransactionRef())
                 .status("SUCCESS")
                 .paidAt(Instant.now())
                 .createdAt(Instant.now())
-                .deletedAt(null)
-                .deletedBy(null)
                 .build();
 
         payment = paymentRepository.save(payment);
@@ -60,22 +66,17 @@ public class PaymentService {
         order.setPaymentStatus("PAID");
         order.setStatus("PAID");
         order.setPaidAt(Instant.now());
+        order.setUpdatedAt(Instant.now());
 
         processStockExport(order, userId);
 
-        if (order.getCustomer() != null) {
-            customerService.addLoyaltyPoints(
-                    order.getCustomer().getId(),
-                    order.getTotalAmount()
-            );
-            order.getCustomer().setLastOrderAt(
+        if (customer != null) {
+            customerService.addLoyaltyPoints(customer.getId(), finalAmount);
+            customer.setLastOrderAt(
                     Instant.now().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
             );
         }
-
-        order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
-
         return mapToResponse(payment);
     }
 
