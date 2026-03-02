@@ -40,7 +40,6 @@ import Spinwheel from "../pages/customer/Spinwheel.vue";
 // ===== INVENTORY =====
 
 import InventoryShell from "../pages/inventory/InventoryShell.vue";
-import InventoryOrders from "../pages/inventory/InventoryOrders.vue";
 import InventoryOrderDetail from "../pages/inventory/InventoryOrderDetail.vue";
 import InventoryOrdersPaid from "../pages/inventory/InventoryOrdersPaid.vue";
 import InventoryOrdersProcessing from "../pages/inventory/InventoryOrdersProcessing.vue";
@@ -287,12 +286,6 @@ const routes = [
     component: InventoryShell,
     meta: { portal: "inventory", requiresAuth: true },
     children: [
-      {
-        path: "orders",
-        name: "Inventory Orders",
-        component: InventoryOrders,
-        meta: { title: "Inventory Orders" },
-      },
       {
         path: "orders/paid",
         name: "Inventory Orders Paid",

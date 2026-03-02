@@ -1,30 +1,38 @@
 <template>
-  <div>
-    <h2>Paid Orders</h2>
+  <div class="container-xl">
+    <el-card shadow="never">
 
-    <el-table :data="orders" border>
+      <div class="mb-3">
+        <div class="kicker">Inventory</div>
+        <div class="title">Paid Orders</div>
+        <div class="muted">Waiting warehouse processing</div>
+      </div>
 
-      <el-table-column prop="orderNumber" label="Order"/>
-      <el-table-column prop="status" label="Status"/>
+      <el-table :data="orders" border stripe>
 
-      <el-table-column label="Actions">
-        <template #default="{ row }">
+        <el-table-column prop="orderNumber" label="Order"/>
+        <el-table-column prop="status" label="Status"/>
 
-          <el-button
-            type="warning"
-            @click="markProcessing(row.orderId)"
-          >
-            Processing
-          </el-button>
+        <el-table-column label="Actions">
+          <template #default="{ row }">
 
-          <el-button @click="goDetail(row.orderId)">
-            Detail
-          </el-button>
+            <el-button
+              type="warning"
+              @click="markProcessing(row.orderId)"
+            >
+              Processing
+            </el-button>
 
-        </template>
-      </el-table-column>
+            <el-button @click="goDetail(row.orderId)">
+              Detail
+            </el-button>
 
-    </el-table>
+          </template>
+        </el-table-column>
+
+      </el-table>
+
+    </el-card>
   </div>
 </template>
 
