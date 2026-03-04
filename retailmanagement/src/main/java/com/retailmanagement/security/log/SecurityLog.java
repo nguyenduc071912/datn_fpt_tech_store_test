@@ -61,8 +61,12 @@ public class SecurityLog {
     @Column(name = "description")
     private String description;
 
-    @ColumnDefault("getdate()")
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = Instant.now();
+    }
 
 }

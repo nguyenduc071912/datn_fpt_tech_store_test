@@ -149,12 +149,27 @@ public class AuditLogService {
             String sortDir
     ) {
 
-        Sort sort = Sort.by(
-                Sort.Direction.fromString(sortDir),
-                sortBy
-        );
+        size = Math.min(size, 100);
 
-        Pageable pageable = PageRequest.of(page, size, sort);
+        List<String> allowedSortFields =
+                List.of("createdAt", "module", "action", "ipAddress");
+
+        if (!allowedSortFields.contains(sortBy)) {
+            sortBy = "createdAt";
+        }
+
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDir);
+        } catch (Exception e) {
+            direction = Sort.Direction.DESC;
+        }
+
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                size,
+                Sort.by(direction, sortBy)
+        );
 
         return auditLogRepository.findAll(
                 AuditLogSpecification.filter(request),
