@@ -13,6 +13,7 @@ import com.retailmanagement.entity.User;
 import com.retailmanagement.repository.UserRepository;
 import com.retailmanagement.security.log.ActionType;
 import com.retailmanagement.security.log.SensitiveOperation;
+import com.retailmanagement.security.log.SeverityLevel;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +28,12 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @SensitiveOperation(
+            action = ActionType.CREATE_OPERATION,
+            entity = "USER",
+            description = "Create new user",
+            severity = SeverityLevel.MEDIUM
+    )
     @Audit(
             module = AuditModule.USER,
             action = AuditAction.CREATE,
@@ -55,6 +62,12 @@ public class UserService {
         return userRepository.findAll().stream().map(this::toResponse).toList();
     }
 
+    @SensitiveOperation(
+            action = ActionType.UPDATE_OPERATION,
+            entity = "USER",
+            description = "Update user info",
+            severity = SeverityLevel.MEDIUM
+    )
     @Audit(
             module = AuditModule.USER,
             action = AuditAction.UPDATE,
@@ -78,6 +91,12 @@ public class UserService {
         return toResponse(userRepository.save(user));
     }
 
+    @SensitiveOperation(
+            action = ActionType.CHANGE_PASSWORD,
+            entity = "USER",
+            description = "User changed their passsword",
+            severity = SeverityLevel.HIGH
+    )
     @Audit(
             module = AuditModule.USER,
             action = AuditAction.CHANGE_PASSWORD,
@@ -105,16 +124,26 @@ public class UserService {
     @SensitiveOperation(
             action = ActionType.ROLE_CHANGE,
             entity = "USER",
-            description = "Change user role"
+            description = "Change user role",
+            severity = SeverityLevel.HIGH
     )
     @Transactional
     public UserResponse updateUserRole(UpdateUserRoleRequest request, Integer id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
 
-        user.setRole(request.getRole());
+        String oldRole = user.getRole();
+        String newRole = request.getRole();
 
-        return toResponse(userRepository.save(user));
+        if (oldRole.equals(newRole)) {
+            throw new RuntimeException("Role không thay đổi");
+        }
+
+        user.setRole(newRole);
+
+        User savedUser = userRepository.save(user);
+
+        return toResponse(savedUser);
     }
 
     @Audit(
@@ -125,7 +154,8 @@ public class UserService {
     @SensitiveOperation(
             action = ActionType.DELETE_OPERATION,
             entity = "USER",
-            description = "Delete user"
+            description = "Delete user",
+            severity = SeverityLevel.HIGH
     )
     @Transactional
     public UserResponse deleteUser(Integer id) {
