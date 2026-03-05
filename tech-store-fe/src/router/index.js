@@ -40,6 +40,7 @@ import Spinwheel from "../pages/customer/Spinwheel.vue";
 // ===== Audit =====
 import AuditLog from "../pages/audit/AuditLog.vue";
 import AuditReportDashboard from "../pages/audit/AuditReportDashboard.vue";
+import SecurityLog from "../pages/audit/SecurityLog.vue";
 
 
 // ===== INVENTORY =====
@@ -52,6 +53,7 @@ import InactiveCustomers from "../pages/system/InactiveCustomers.vue";
 import Toployalcustomers from "../pages/system/Toployalcustomers.vue";
 import Zeroordercustomers from "../pages/system/Zeroordercustomers.vue";
 import Loyaltysummaryadmin from "../pages/system/Loyaltysummaryadmin.vue";
+
 const routes = [
   // ===== CUSTOMER PORTAL =====
   {
@@ -294,6 +296,13 @@ const routes = [
         name: "system-audit-report",
         component: AuditReportDashboard,
         meta: { title: "Audit Report Dashboard" }
+      },
+      // Security log
+      {
+        path: "security-logs",
+        name: "system-security-logs",
+        component: SecurityLog,
+        meta: { title: "Security logs" }
       }
     ],
   },

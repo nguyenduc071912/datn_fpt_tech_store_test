@@ -14,7 +14,7 @@
       <el-form :inline="true" class="filter-form">
         <el-input
           v-model="filter.keyword"
-          placeholder="Keyword"
+          placeholder="Description"
           style="width: 180px"
         />
 
