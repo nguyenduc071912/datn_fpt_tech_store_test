@@ -31,15 +31,12 @@ public class PromotionService {
         this.redemptionRepo = redemptionRepo;
     }
 
-    // =========================
-    // JSON models
-    // =========================
     public static class Applicability {
-        public String scope; // ALL / PRODUCT / VARIANT
+        public String scope;
         public List<Integer> product_ids;
         public List<Integer> variant_ids;
-        public List<String> customer_types; // REGULAR, VIP
-        public List<String> vip_tiers; // BRONZE, SILVER, GOLD, PLATINUM, DIAMOND
+        public List<String> customer_types;
+        public List<String> vip_tiers;
     }
 
     public static class Rules {
@@ -60,7 +57,6 @@ public class PromotionService {
             a.product_ids = req.getProductIds();
             a.variant_ids = req.getVariantIds();
 
-            // ✅ ADD VIP SUPPORT
             a.customer_types = req.getCustomerTypes();
             a.vip_tiers = req.getVipTiers();
 
@@ -129,9 +125,6 @@ public class PromotionService {
         }
     }
 
-    // =========================
-    // Duplicate/overlap checks
-    // =========================
     private boolean dateOverlap(LocalDateTime s1, LocalDateTime e1, LocalDateTime s2, LocalDateTime e2) {
         return !s1.isAfter(e2) && !e1.isBefore(s2);
     }
@@ -198,9 +191,6 @@ public class PromotionService {
         }
     }
 
-    // =========================
-    // CRUD
-    // =========================
     @Transactional
     public Promotion create(PromotionRequest req, Integer createdBy) {
         if (req == null)
@@ -359,9 +349,6 @@ public class PromotionService {
         promoRepo.save(p);
     }
 
-    // =========================
-    // Pricing logic with customer group support
-    // =========================
 
     /**
      * Find best promotion for variant without customer context (backwards
@@ -387,22 +374,17 @@ public class PromotionService {
         for (Promotion p : active) {
             Applicability app = parseApplicability(p.getApplicabilityJson());
 
-            // Check product/variant applicability
             if (!isApplicable(app, v))
                 continue;
 
-            // Check customer group applicability
             if (!isApplicableToCustomer(app, customer))
                 continue;
 
-            // Check usage limit
             if (!isUsableByLimit(p))
                 continue;
 
             BigDecimal finalPrice = computeEffectiveUnitPrice(base, p);
 
-            // Priority mechanism: lower price wins, if equal then higher priority number
-            // wins
             if (finalPrice.compareTo(bestFinal) < 0) {
                 bestFinal = finalPrice;
                 best = p;
@@ -419,17 +401,14 @@ public class PromotionService {
      * Check if promotion is applicable to specific customer group
      */
     private boolean isApplicableToCustomer(Applicability app, Customer customer) {
-        // If no customer restrictions, apply to all
         if (app.customer_types == null && app.vip_tiers == null) {
             return true;
         }
 
-        // If no customer provided but promotion has restrictions, don't apply
         if (customer == null) {
             return app.customer_types == null && app.vip_tiers == null;
         }
 
-        // Check customer type
         if (app.customer_types != null && !app.customer_types.isEmpty()) {
             String customerTypeStr = customer.getCustomerType() != null
                     ? customer.getCustomerType().name()
@@ -439,7 +418,6 @@ public class PromotionService {
             }
         }
 
-        // Check VIP tier
         if (app.vip_tiers != null && !app.vip_tiers.isEmpty()) {
             String tierStr = customer.getVipTier() != null
                     ? customer.getVipTier().name()
@@ -515,9 +493,6 @@ public class PromotionService {
         return r.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : money(r);
     }
 
-    // =========================
-    // Usage limit
-    // =========================
     public boolean isUsableByLimit(Promotion p) {
         if (p == null)
             return false;
@@ -613,7 +588,6 @@ public class PromotionService {
         }).count();
         report.put("usageLimitedCount", usageLimitedCount);
 
-        // Tổng lượt đã dùng
         long totalUsed = all.stream().mapToLong(p -> redemptionRepo.findByPromotionId(p.getId())
                 .map(PromotionRedemption::getUsedCount).orElse(0L)).sum();
         report.put("totalRedemptions", totalUsed);
@@ -621,9 +595,6 @@ public class PromotionService {
         return report;
     }
 
-    // ================================================================
-    // ✅ THÊM: Public accessor cho Rules — dùng bởi PricingService
-    // ================================================================
     public Rules parseRulesPublic(String json) {
         return parseRules(json);
     }

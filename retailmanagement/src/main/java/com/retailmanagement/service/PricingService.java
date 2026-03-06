@@ -134,9 +134,6 @@ public class PricingService {
         }).toList();
     }
 
-    // ================================================================
-    // ✅ Helper build VariantPriceResponse đầy đủ field
-    // ================================================================
     private VariantPriceResponse buildVariantPriceResponse(ProductVariant v, BigDecimal basePrice, Promotion best) {
         VariantPriceResponse r = new VariantPriceResponse();
         r.setVariantId(v.getId());
@@ -149,9 +146,8 @@ public class PricingService {
 
         if (best != null) {
             r.setPromotionCode(best.getCode());
-            r.setPromotionName(best.getName());                                       // ✅ thêm
+            r.setPromotionName(best.getName());
             r.setFinalPrice(promotionService.computeEffectiveUnitPrice(basePrice, best));
-            // ✅ Combo info
             PromotionService.Rules rules = promotionService.parseRulesPublic(best.getRulesJson());
             if (rules != null && rules.combo != null
                     && rules.combo.buy_qty != null && rules.combo.get_qty != null) {
@@ -258,9 +254,6 @@ public class PricingService {
         return result;
     }
 
-    // ================================================================
-    // ✅ THÊM MỚI: Danh sách tất cả variant có giá < giá nhập (1.9)
-    // ================================================================
     public List<Map<String, Object>> getAllConflictsBelowCost() {
         return variantRepo.findAll().stream()
                 .filter(v -> v.getCostPrice() != null
@@ -280,11 +273,6 @@ public class PricingService {
                 .collect(Collectors.toList());
     }
 
-    // ================================================================
-    // ✅ THÊM MỚI: Tính giá cuối cho nhiều items (3.4)
-    //   Input: List<{variantId, quantity}>
-    //   Output: tổng subtotal, discountTotal, finalTotal + breakdown
-    // ================================================================
     public Map<String, Object> calculateOrderPrice(List<Map<String, Object>> items, Integer customerId) {
         Customer customer = customerId != null
                 ? customerRepository.findById(customerId).orElse(null)
@@ -309,7 +297,6 @@ public class PricingService {
                     ? promotionService.computeEffectiveUnitPrice(basePrice, best)
                     : basePrice;
 
-            // Xử lý combo: số lượng tặng miễn phí
             int freeQty = 0;
             PromotionService.Rules rules = best != null
                     ? promotionService.parseRulesPublic(best.getRulesJson())
@@ -373,18 +360,13 @@ public class PricingService {
                 .count();
         dashboard.put("expiringIn3Days", expiringIn3Days);
 
-        // ✅ THÊM: conflict count
         dashboard.put("conflictCount", getAllConflictsBelowCost().size());
 
-        // ✅ THÊM: promotion conflicts
         dashboard.put("promotionConflicts", promotionService.detectConflicts().size());
 
         return dashboard;
     }
 
-    // ================================================================
-    // Helpers
-    // ================================================================
     private PriceHistoryResponse toPriceHistoryResponse(PriceHistory ph) {
         PriceHistoryResponse dto = new PriceHistoryResponse();
         dto.setId(ph.getId());

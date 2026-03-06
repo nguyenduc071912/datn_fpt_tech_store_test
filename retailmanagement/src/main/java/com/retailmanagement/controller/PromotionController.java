@@ -22,19 +22,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/promotions")
-@RequiredArgsConstructor // ✅ FIX 1: dùng Lombok inject — không cần constructor thủ công
+@RequiredArgsConstructor
 public class PromotionController {
 
-    // ✅ FIX 2: khai báo đủ 3 field để @RequiredArgsConstructor inject
     private final PromotionService promotionService;
     private final PromotionRepository promotionRepository;
-    private final CustomRes customerRepository; // ✅ FIX 3: dùng CustomRes (entity repo) thay CustomerService để lấy
-                                                // Customer entity
+    private final CustomRes customerRepository;
     private final UserRepository userRepository;
-
-    // ================================================================
-    // ADMIN CRUD
-    // ================================================================
 
     @PostMapping
     public ApiResponse<Promotion> create(@RequestBody PromotionRequest req) {
@@ -63,7 +57,6 @@ public class PromotionController {
         return ApiResponse.success(promotionService.list(activeOnly));
     }
 
-   // ✅ FIX: dùng promoRepo.findById thay vì list().stream().filter()
     @GetMapping("/{id}")
     public ApiResponse<Promotion> getById(@PathVariable Integer id) {
         return ApiResponse.success(
@@ -113,11 +106,7 @@ public class PromotionController {
         return ApiResponse.success("Redemption recorded");
     }
 
-    // ================================================================
-    // ✅ VALIDATE MÃ — FE gọi trước khi tạo đơn / thanh toán
-    // GET /api/promotions/validate?code=BIRTHDAY250K&orderTotal=1500000
-    // ================================================================
-    @GetMapping("/validate") // ✅ FIX: bỏ prefix "/api/promotions" thừa (class đã có @RequestMapping)
+    @GetMapping("/validate")
     public ResponseEntity<Map<String, Object>> validateCode(
             @RequestParam String code,
             @RequestParam(defaultValue = "0") BigDecimal orderTotal) {
@@ -167,20 +156,10 @@ public class PromotionController {
         }
     }
 
-    // ================================================================
-    // ✅ CLAIM VOUCHER — Khách bấm "Nhận voucher"
-    // POST /api/promotions/claim (được map qua /api/auth/... ở Security config)
-    // Body: { "code": "BIRTHDAY250K" }
-    // ================================================================
-
-    // ================================================================
-    // HELPER
-    // ================================================================
     private Customer getCurrentCustomer() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated())
             return null;
-        // ✅ FIX: customerRepository.findByEmail() trả về Customer entity trực tiếp
         return customerRepository.findByEmail(auth.getName()).orElse(null);
     }
 }
