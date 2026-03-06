@@ -16,16 +16,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -38,18 +36,20 @@ public class AuthService {
     private final ModelMapper modelMapper;
     private final AuthenticationManager authenticationManager;
     private final UserLoginLogService userLoginLogService;
-    private final Map<String, Integer> failedAttempts = new ConcurrentHashMap<>();
 
+    // ========================= REGISTER =========================
     @Transactional
     public AuthResponse register(RegisterRequest req) {
+
         if (userRepository.existsByUsername(req.getUsername())) {
             throw new RuntimeException("Username đã tồn tại");
         }
+
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new RuntimeException("Email đã tồn tại");
         }
 
-        // 1) Create USER
+        // 1️⃣ Create USER
         User user = User.builder()
                 .username(req.getUsername())
                 .email(req.getEmail())
@@ -60,36 +60,33 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        // 2) Create/ensure CUSTOMER with same email, is_active=true
+        // 2️⃣ Create or Update CUSTOMER
         Optional<Customer> existingCus = customerRepository.findByEmail(req.getEmail());
+
         if (existingCus.isEmpty()) {
+
             Customer customer = Customer.builder()
                     .name(req.getUsername())
                     .email(req.getEmail())
-                    .phone(null)
-                    .dateOfBirth(null)
                     .customerType(CustomerType.REGULAR)
-                    .vipTier(null)
-                    .segmentsJson(null)
                     .loyaltyPoints(0)
                     .totalSpent(BigDecimal.ZERO)
-                    .address(null)
-                    .notes(null)
                     .isActive(true)
-                    .lastLoginAt(LocalDateTime.now()) // ✅ Set initial login time
+                    .lastLoginAt(LocalDateTime.now())
                     .build();
 
             customerRepository.save(customer);
+
         } else {
+
             Customer customer = existingCus.get();
             customer.setIsActive(true);
+            customer.setLastLoginAt(LocalDateTime.now());
+
             if (customer.getName() == null || customer.getName().isBlank()) {
                 customer.setName(req.getUsername());
             }
-            if (customer.getEmail() == null || customer.getEmail().isBlank()) {
-                customer.setEmail(req.getEmail());
-            }
-            customer.setLastLoginAt(LocalDateTime.now()); // ✅ Update login time
+
             customerRepository.save(customer);
         }
 
@@ -103,48 +100,49 @@ public class AuthService {
                 .build();
     }
 
+    // ========================= LOGIN =========================
     public AuthResponse login(LoginRequest req, HttpServletRequest request) {
-        User user = userRepository.findByUsernameOrEmail(req.getIdentifier(), req.getIdentifier())
+
+        User user = userRepository
+                .findByUsernameOrEmail(req.getIdentifier(), req.getIdentifier())
                 .orElseThrow(() -> {
-                    userLoginLogService.logLoginFail(
-                            req.getIdentifier(),
-                            request
-                    );
+                    userLoginLogService.logLoginFail(req.getIdentifier(), request);
                     return new RuntimeException("Sai tài khoản hoặc mật khẩu");
                 });
 
         if (Boolean.FALSE.equals(user.getIsActive())) {
-            userLoginLogService.logLoginFail(
-                    user.getUsername(),
-                    request
-            );
+            userLoginLogService.logLoginFail(user.getUsername(), request);
             throw new RuntimeException("Tài khoản đã bị khóa");
         }
 
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getUsername(), req.getPassword())
-        );
+        try {
 
-        if (!auth.isAuthenticated()) {
-            userLoginLogService.logLoginFail(
-                    user.getUsername(),
-                    request
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            user.getUsername(),
+                            req.getPassword()
+                    )
             );
+
+        } catch (BadCredentialsException ex) {
+
+            userLoginLogService.logLoginFail(user.getUsername(), request);
             throw new RuntimeException("Sai tài khoản hoặc mật khẩu");
         }
 
+        // ✅ LOGIN SUCCESS
         userLoginLogService.logLoginSuccess(
                 user.getId(),
                 user.getUsername(),
                 request
         );
 
-        // ✅✅✅ THÊM CODE NÀY - Update last_login_at cho customer
-        customerRepository.findByEmail(user.getEmail()).ifPresent(customer -> {
-            customer.setLastLoginAt(LocalDateTime.now());
-            customerRepository.save(customer);
-            System.out.println("✅ Updated last_login_at for customer: " + user.getEmail());
-        });
+        // ✅ Update last_login_at cho customer
+        customerRepository.findByEmail(user.getEmail())
+                .ifPresent(customer -> {
+                    customer.setLastLoginAt(LocalDateTime.now());
+                    customerRepository.save(customer);
+                });
 
         String token = jwtService.generateToken(user);
         UserResponse userRes = modelMapper.map(user, UserResponse.class);
@@ -156,9 +154,12 @@ public class AuthService {
                 .build();
     }
 
+    // ========================= LOGOUT =========================
     public void logout() {
+
         Integer userId = SecurityUtil.getCurrentUserId();
-        if(userId != null) {
+
+        if (userId != null) {
             userLoginLogService.logLogout(userId);
         }
     }

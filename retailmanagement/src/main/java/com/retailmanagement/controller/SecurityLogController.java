@@ -1,12 +1,13 @@
 package com.retailmanagement.controller;
 
 import com.retailmanagement.security.log.SecurityLog;
+import com.retailmanagement.security.log.SecurityLogFilterRequest;
 import com.retailmanagement.security.log.SecurityLogRepository;
+import com.retailmanagement.security.log.SecurityLogService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -16,10 +17,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityLogController {
 
-    private final SecurityLogRepository securityLogRepository;
+    private final SecurityLogService securityLogService;
 
-    @GetMapping
-    public List<SecurityLog> getAll() {
-        return securityLogRepository.findAll();
+    @PostMapping("search")
+    public Page<SecurityLog> filterLogs(
+            @RequestBody SecurityLogFilterRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        return securityLogService.filterLogs(
+                request, page, size, sortBy, sortDir
+        );
     }
 }
