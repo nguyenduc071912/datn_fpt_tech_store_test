@@ -11,7 +11,6 @@ import java.util.Optional;
 
 public interface PromotionRedemptionRepository extends JpaRepository<PromotionRedemption, Long> {
 
-    // ✅ FIX: dùng PESSIMISTIC_WRITE để tránh race condition khi nhiều đơn áp cùng lúc
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM PromotionRedemption r WHERE r.promotionId = :promotionId")
     Optional<PromotionRedemption> findByPromotionId(@Param("promotionId") Integer promotionId);

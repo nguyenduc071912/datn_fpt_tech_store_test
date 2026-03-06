@@ -28,18 +28,15 @@ public class OrderDetailResponse {
 
     private String notes;
 
-    // Discount breakdown fields
     private BigDecimal vipDiscountRate  = BigDecimal.ZERO;
     private BigDecimal vipDiscount      = BigDecimal.ZERO;
     private BigDecimal spinDiscountRate = BigDecimal.ZERO;
     private BigDecimal spinDiscount     = BigDecimal.ZERO;
 
-    // ✅ THÊM: Promotion code discount
     private String     promoCode        = null;
     private BigDecimal promoDiscount    = BigDecimal.ZERO;
 
-    // ✅ THÊM: Combo info (parse từ appliedPromotionJson)
-    private String     comboInfo        = null;  // e.g. "Mua 2 tặng 1"
+    private String     comboInfo        = null;
 
     private BigDecimal subtotal;
     private BigDecimal discountTotal;
@@ -50,9 +47,6 @@ public class OrderDetailResponse {
     private Instant createdAt;
     private List<CreateOrderResponse.Item> items;
 
-    // ================================================================
-    // Constructor (backward compatible) — used by OrderService
-    // ================================================================
     public OrderDetailResponse(
             Long orderId,
             String orderNumber,
@@ -95,9 +89,6 @@ public class OrderDetailResponse {
         parseDiscountFromNotes();
     }
 
-    // ================================================================
-    // Constructor đầy đủ với promoCode + appliedPromotionJson
-    // ================================================================
     public OrderDetailResponse(
             Long orderId,
             String orderNumber,
@@ -127,15 +118,10 @@ public class OrderDetailResponse {
         this.comboInfo = parseComboInfo(appliedPromotionJson);
     }
 
-    // ================================================================
-    // Parse combo info từ appliedPromotionJson
-    // Format JSON: {"code":"X","discountType":"COMBO","buyQty":2,"getQty":1,...}
-    // ================================================================
     private String parseComboInfo(String json) {
         if (json == null || json.isBlank()) return null;
         try {
             if (json.contains("\"buy_qty\"") || json.contains("buyQty")) {
-                // Tìm buy_qty
                 Integer buy = extractJsonInt(json, "buy_qty");
                 if (buy == null) buy = extractJsonInt(json, "buyQty");
                 Integer get = extractJsonInt(json, "get_qty");
@@ -162,9 +148,6 @@ public class OrderDetailResponse {
         try { return Integer.parseInt(json.substring(start, end)); } catch (Exception e) { return null; }
     }
 
-    // ================================================================
-    // Parse discount breakdown từ notes
-    // ================================================================
     private void parseDiscountFromNotes() {
         this.vipDiscountRate  = BigDecimal.ZERO;
         this.vipDiscount      = BigDecimal.ZERO;
@@ -179,7 +162,6 @@ public class OrderDetailResponse {
         for (String seg : segments) {
             String s = seg.trim();
 
-            // ── VIP segment ──────────────────────────────────────────
             if (s.startsWith("VIP ") && !s.contains("không áp dụng")) {
                 if (s.contains("%")) {
                     int pctIdx = s.indexOf('%');
@@ -200,7 +182,6 @@ public class OrderDetailResponse {
                 }
             }
 
-            // ── Spin segment ─────────────────────────────────────────
             if (s.startsWith("Spin:")) {
                 if (s.contains("%")) {
                     int pctIdx = s.indexOf('%');
@@ -213,8 +194,6 @@ public class OrderDetailResponse {
                 }
             }
 
-            // ── Promo code segment ───────────────────────────────────
-            // Format: "Mã: SUMMER10: -50,000"
             if (s.startsWith("Mã:")) {
                 int lastDash = s.lastIndexOf('-');
                 if (lastDash >= 0) {
@@ -222,8 +201,7 @@ public class OrderDetailResponse {
                             .replace(",", "").replace(".", "");
                     this.promoDiscount = parseSafe(amtStr);
                 }
-                // Extract code between "Mã: " and ":"
-                String after = s.substring(3).trim(); // remove "Mã:"
+                String after = s.substring(3).trim();
                 int colonIdx = after.indexOf(':');
                 if (colonIdx > 0) {
                     this.promoCode = after.substring(0, colonIdx).trim();
