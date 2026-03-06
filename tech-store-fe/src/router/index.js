@@ -37,10 +37,11 @@ import Birthday from "../pages/system/BirthdayManager.vue";
 import Customerspendinganalytics from "../pages/system/Customerspendinganalytics.vue";
 import Spinwheel from "../pages/customer/Spinwheel.vue";
 
+import ReportDashboard from "../pages/system/ReportDashboard.vue";
+
 // ===== Audit =====
 import AuditLog from "../pages/audit/AuditLog.vue";
 import AuditReportDashboard from "../pages/audit/AuditReportDashboard.vue";
-
 
 // ===== INVENTORY =====
 
@@ -162,13 +163,13 @@ const routes = [
         component: Toployalcustomers,
         meta: { title: "Toployal - customers" },
       },
-    {
+      {
         path: "Zeroordercustomers",
         name: "Customers with zero oder",
         component: Zeroordercustomers,
         meta: { title: "Zero oder - customers" },
       },
-       {
+      {
         path: "inactive-customers",
         name: "system-customers-inactive",
         component: InactiveCustomers,
@@ -286,15 +287,21 @@ const routes = [
       {
         path: "audit-logs",
         name: "system-audit-logs",
-       component: AuditLog,
-      meta: { title: "Audit Logs" },
+        component: AuditLog,
+        meta: { title: "Audit Logs" },
       },
       {
         path: "audit-report",
         name: "system-audit-report",
         component: AuditReportDashboard,
-        meta: { title: "Audit Report Dashboard" }
-      }
+        meta: { title: "Audit Report Dashboard" },
+      },
+      {
+        path: "reports",
+        name: "reports",
+        component: ReportDashboard,
+        meta: { title: "Report Dashboard" },
+      },
     ],
   },
 
