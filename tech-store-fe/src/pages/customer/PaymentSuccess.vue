@@ -1,136 +1,156 @@
 <template>
-  <div class="payment-success-wrapper">
-    <el-card class="box-card shadow-sm">
-      <el-skeleton v-if="loading" :rows="8" animated />
+  <div class="success-page">
 
-      <template v-else>
-        <div class="text-center mb-4">
-          <div class="success-icon mb-3">
-            <i class="bi bi-check-circle-fill"></i>
-          </div>
-          <div class="success-title">Payment Successful!</div>
-          <div class="success-subtitle">
-            Your payment has been processed successfully
-          </div>
+    <!-- Loading -->
+    <div v-if="loading" class="loading-wrap">
+      <div class="spinner" />
+      <p>Đang tải thông tin...</p>
+    </div>
+
+    <template v-else>
+      <!-- Hero -->
+      <div class="hero-card">
+        <div class="confetti-row">🎉</div>
+        <div class="check-circle">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
+        <h1>Đặt hàng thành công!</h1>
+        <p>Cảm ơn bạn đã mua sắm. Đơn hàng của bạn đang được xử lý.</p>
+      </div>
 
-        <el-divider />
+      <div class="content-layout">
+        <!-- LEFT -->
+        <div class="left-col">
 
-        <div v-if="payment" class="payment-details">
-          <div class="section-title mb-3">
-            <i class="bi bi-receipt me-2"></i>Payment Details
-          </div>
+          <!-- Payment info -->
+          <div v-if="payment" class="section-card">
+            <div class="section-label">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+              Thông tin thanh toán
+            </div>
 
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="Payment ID">
-              <code>#{{ payment.id }}</code>
-            </el-descriptions-item>
-            
-            <el-descriptions-item label="Order ID">
-              <router-link
-                :to="`/orders/${payment.orderId}`"
-                class="text-primary text-decoration-none fw-bold"
-              >
-                #{{ payment.orderId }}
-              </router-link>
-            </el-descriptions-item>
-
-            <el-descriptions-item label="Amount Paid">
-              <span class="amount-paid">{{ formatCurrency(payment.amount) }}</span>
-            </el-descriptions-item>
-
-            <el-descriptions-item label="Payment Method">
-              <el-tag :type="getMethodType(payment.method)" size="small">
-                {{ formatMethod(payment.method) }}
-              </el-tag>
-            </el-descriptions-item>
-
-            <el-descriptions-item label="Transaction Reference">
-              <code class="small">{{ payment.transactionRef || 'N/A' }}</code>
-            </el-descriptions-item>
-
-            <el-descriptions-item label="Status">
-              <el-tag type="success" size="small">
-                {{ payment.status }}
-              </el-tag>
-            </el-descriptions-item>
-
-            <el-descriptions-item label="Paid At" :span="2">
-              {{ formatDate(payment.paidAt) }}
-            </el-descriptions-item>
-          </el-descriptions>
-
-          <div v-if="customerInfo" class="mt-4">
-            <el-alert type="success" :closable="false" class="loyalty-alert">
-              <template #title>
-                <div class="d-flex align-items-center">
-                  <i class="bi bi-star-fill me-2"></i>
-                  <span>Loyalty Points Earned!</span>
-                </div>
-              </template>
-              <div class="loyalty-content">
-                <div class="mb-2">
-                  <strong>Points Earned:</strong> +{{ pointsEarned }} points
-                </div>
-                <div class="mb-2">
-                  <strong>Current Tier:</strong>
-                  <el-tag :type="getTierType(customerInfo.vipTier)" size="small" class="ms-1">
-                    {{ customerInfo.vipTierDisplay }}
-                  </el-tag>
-                </div>
-                <div class="mb-2">
-                  <strong>Total Points:</strong> {{ customerInfo.loyaltyPoints }} points
-                </div>
-                <div v-if="customerInfo.pointsToNextTier > 0">
-                  <strong>Points to Next Tier:</strong> {{ customerInfo.pointsToNextTier }} points
-                </div>
-                <div v-else class="text-success fw-bold">
-                  🎉 Congratulations! You've reached the maximum tier!
-                </div>
+            <div class="info-grid">
+              <div class="info-row">
+                <span class="info-key">Mã đơn hàng</span>
+                <router-link :to="`/orders/${payment.orderId}`" class="info-link">#{{ payment.orderId }}</router-link>
               </div>
-            </el-alert>
+              <div class="info-row">
+                <span class="info-key">Số tiền</span>
+                <span class="info-amount">{{ formatCurrency(payment.amount) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Phương thức</span>
+                <span class="method-tag" :class="payment.method?.toLowerCase()">{{ formatMethod(payment.method) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-key">Thời gian</span>
+                <span class="info-val">{{ formatDate(payment.paidAt) }}</span>
+              </div>
+              <div v-if="payment.transactionRef" class="info-row">
+                <span class="info-key">Mã giao dịch</span>
+                <code class="info-code">{{ payment.transactionRef }}</code>
+              </div>
+            </div>
           </div>
 
-          <div class="action-buttons mt-4 d-flex gap-2 justify-content-center flex-wrap">
-            <el-button type="primary" @click="$router.push(`/orders/${payment.orderId}`)">
-              <i class="bi bi-box-seam me-1"></i>
-              View Order Details
-            </el-button>
-            <el-button @click="$router.push('/orders/new')">
-              <i class="bi bi-plus-circle me-1"></i>
-              Create New Order
-            </el-button>
-            <el-button @click="$router.push('/')">
-              <i class="bi bi-house me-1"></i>
-              Back to Home
-            </el-button>
+          <!-- Loyalty -->
+          <div v-if="customerInfo" class="section-card loyalty-card">
+            <div class="loyalty-header">
+              <div class="loyalty-icon">⭐</div>
+              <div>
+                <div class="loyalty-title">Điểm thưởng tích lũy</div>
+                <div class="loyalty-sub">Đơn hàng này mang lại cho bạn</div>
+              </div>
+              <div class="points-earned">+{{ pointsEarned }} <span>điểm</span></div>
+            </div>
+
+            <div class="loyalty-stats">
+              <div class="stat-item">
+                <div class="stat-val">{{ customerInfo.loyaltyPoints }}</div>
+                <div class="stat-key">Tổng điểm</div>
+              </div>
+              <div class="stat-divider" />
+              <div class="stat-item">
+                <div class="stat-val">
+                  <span class="tier-badge" :class="customerInfo.vipTier?.toLowerCase()">{{ customerInfo.vipTierDisplay }}</span>
+                </div>
+                <div class="stat-key">Hạng thành viên</div>
+              </div>
+              <div class="stat-divider" />
+              <div class="stat-item">
+                <div class="stat-val">{{ customerInfo.pointsToNextTier > 0 ? customerInfo.pointsToNextTier : '—' }}</div>
+                <div class="stat-key">Điểm lên hạng</div>
+              </div>
+            </div>
+
+            <div v-if="customerInfo.pointsToNextTier === 0" class="max-tier">
+              🏆 Bạn đã đạt hạng cao nhất!
+            </div>
           </div>
 
-          <div class="text-center mt-3">
-            <el-button text @click="printReceipt">
-              <i class="bi bi-printer me-1"></i>
-              Print Receipt
-            </el-button>
-          </div>
         </div>
 
-        <el-alert
-          v-if="error"
-          :title="error"
-          type="error"
-          show-icon
-          class="mb-3"
-        />
-      </template>
-    </el-card>
+        <!-- RIGHT: Actions -->
+        <div class="right-col">
+          <div class="section-card actions-card">
+            <div class="section-label">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Tiếp theo
+            </div>
+
+            <div class="action-list">
+              <button class="action-btn primary" @click="$router.push(`/orders/${payment?.orderId}`)">
+                <div class="action-icon blue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+                <div class="action-text">
+                  <div class="action-title">Xem chi tiết đơn hàng</div>
+                  <div class="action-sub">Theo dõi trạng thái vận chuyển</div>
+                </div>
+              </button>
+
+              <button class="action-btn" @click="$router.push('/')">
+                <div class="action-icon gray">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                </div>
+                <div class="action-text">
+                  <div class="action-title">Tiếp tục mua sắm</div>
+                  <div class="action-sub">Khám phá thêm sản phẩm</div>
+                </div>
+              </button>
+
+              <button class="action-btn" @click="printReceipt">
+                <div class="action-icon gray">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </div>
+                <div class="action-text">
+                  <div class="action-title">In hóa đơn</div>
+                  <div class="action-sub">Lưu lại biên lai thanh toán</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Note -->
+          <div class="note-card">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Email xác nhận đơn hàng đã được gửi đến địa chỉ email của bạn.
+          </div>
+        </div>
+      </div>
+
+      <div v-if="error" class="alert-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
-// Đảm bảo đường dẫn import đúng với dự án của bạn
-import { paymentsApi } from "../../api/payments"; 
+import { paymentsApi } from "../../api/payments";
 import { toast } from "../../ui/toast";
 
 const route = useRoute();
@@ -141,7 +161,6 @@ const error = ref("");
 const payment = ref(null);
 const customerInfo = ref(null);
 
-// Tính toán điểm được cộng (Logic: 10,000 VND = 1 điểm)
 const pointsEarned = computed(() => {
   if (!payment.value?.amount) return 0;
   return Math.floor(payment.value.amount / 10000);
@@ -150,28 +169,19 @@ const pointsEarned = computed(() => {
 async function loadPaymentDetails() {
   loading.value = true;
   error.value = "";
-
   try {
     const { data } = await paymentsApi.getById(paymentId.value);
     payment.value = data;
-
-    // --- LOGIC LẤY THÔNG TIN KHÁCH HÀNG ---
     if (data.customerId) {
-      /* TODO: Gọi API thực tế ở đây
-       const customerRes = await customersApi.getById(data.customerId);
-       customerInfo.value = customerRes.data;
-      */
-
-      // MOCK DATA (Dữ liệu giả lập để hiển thị giao diện)
       customerInfo.value = {
-        loyaltyPoints: (pointsEarned.value || 0) + 100, // Giả sử cộng dồn vào điểm cũ
+        loyaltyPoints: (pointsEarned.value || 0) + 100,
         vipTier: "BRONZE",
-        vipTierDisplay: "Bronze Member",
+        vipTierDisplay: "Bronze",
         pointsToNextTier: 50,
       };
     }
   } catch (e) {
-    const msg = e?.response?.data?.message || e?.message || "Failed to load payment details";
+    const msg = e?.response?.data?.message || e?.message || "Không thể tải thông tin";
     error.value = msg;
     toast(msg, "error");
   } finally {
@@ -179,14 +189,9 @@ async function loadPaymentDetails() {
   }
 }
 
-// --- HELPER FUNCTIONS ---
-
 function formatCurrency(amount) {
   if (!amount && amount !== 0) return "₫0";
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(amount);
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 }
 
 function formatDate(date) {
@@ -195,132 +200,171 @@ function formatDate(date) {
 }
 
 function formatMethod(method) {
-  const methods = {
-    CASH: "Cash",
-    BANK_TRANSFER: "Bank Transfer",
-    CREDIT_CARD: "Credit Card",
-    E_WALLET: "E-Wallet",
-  };
-  return methods[method] || method;
+  const m = { CASH: "Tiền mặt", BANK_TRANSFER: "Chuyển khoản", TRANSFER: "Chuyển khoản", CREDIT_CARD: "Thẻ tín dụng", CARD: "Thẻ tín dụng", E_WALLET: "Ví điện tử" };
+  return m[method] || method;
 }
 
-function getMethodType(method) {
-  const types = {
-    CASH: "success",
-    BANK_TRANSFER: "primary",
-    CREDIT_CARD: "warning",
-    E_WALLET: "info",
-  };
-  return types[method] || "info";
-}
-
-function getTierType(tier) {
-  const types = {
-    BRONZE: "info",
-    SILVER: "primary",
-    GOLD: "warning",
-    DIAMOND: "danger",
-  };
-  return types[tier] || "info";
-}
-
-function printReceipt() {
-  window.print();
-}
+function printReceipt() { window.print(); }
 
 onMounted(() => {
-  if (paymentId.value) {
-    loadPaymentDetails();
-  } else {
-    error.value = "Payment ID not found.";
-  }
+  if (paymentId.value) loadPaymentDetails();
+  else error.value = "Không tìm thấy mã thanh toán.";
 });
 </script>
 
 <style scoped>
-.payment-success-wrapper {
-  padding-top: 40px;
-  padding-bottom: 40px;
-  max-width: 800px; /* Giới hạn chiều rộng để thẻ không bị quá to */
+.success-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+}
+
+/* Loading */
+.loading-wrap { text-align: center; padding: 80px 0; color: #9ca3af; }
+.loading-wrap p { margin-top: 16px; font-size: 14px; }
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
   margin: 0 auto;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.success-icon {
-  font-size: 80px;
-  color: #67c23a; /* Element Plus Success Color */
-  animation: scaleIn 0.5s ease-out;
+/* Hero */
+.hero-card {
+  text-align: center;
+  padding: 48px 24px 40px;
+  background: white;
+  border: 1.5px solid #f0f0f0;
+  border-radius: 20px;
+  margin-bottom: 24px;
+}
+.confetti-row { font-size: 28px; margin-bottom: 20px; }
+.check-circle {
+  width: 72px; height: 72px;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 8px 24px rgba(34,197,94,.3);
+  animation: popIn .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.hero-card h1 { font-size: 26px; font-weight: 800; color: #111827; margin: 0 0 8px; }
+.hero-card p { font-size: 14px; color: #6b7280; margin: 0; }
+
+/* Layout */
+.content-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 768px) { .content-layout { grid-template-columns: 1fr; } }
+
+/* Cards */
+.section-card {
+  background: white;
+  border: 1.5px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 22px;
+  margin-bottom: 16px;
+}
+.section-label {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: #9ca3af; margin-bottom: 18px;
 }
 
-.success-title {
-  font-size: 28px;
-  font-weight: 900;
-  color: #67c23a;
-  margin-bottom: 8px;
-}
+/* Info grid */
+.info-grid { display: flex; flex-direction: column; gap: 14px; }
+.info-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.info-key { font-size: 13px; color: #9ca3af; flex-shrink: 0; }
+.info-val { font-size: 13px; color: #374151; font-weight: 500; }
+.info-link { font-size: 13px; font-weight: 700; color: #2563eb; text-decoration: none; }
+.info-link:hover { text-decoration: underline; }
+.info-amount { font-size: 18px; font-weight: 800; color: #16a34a; }
+.info-code { font-size: 12px; background: #f9fafb; padding: 3px 8px; border-radius: 6px; color: #6b7280; font-family: monospace; }
+.method-tag { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 50px; }
+.method-tag.cash { background: #dcfce7; color: #16a34a; }
+.method-tag.transfer, .method-tag.bank_transfer { background: #dbeafe; color: #2563eb; }
+.method-tag.card, .method-tag.credit_card { background: #fef9c3; color: #b45309; }
+.method-tag.e_wallet { background: #ede9fe; color: #7c3aed; }
 
-.success-subtitle {
-  font-size: 16px;
-  color: rgba(15, 23, 42, 0.62);
-}
+/* Loyalty */
+.loyalty-card { background: linear-gradient(135deg, #fffbeb, #fefce8); border-color: #fde68a; }
+.loyalty-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.loyalty-icon { font-size: 28px; }
+.loyalty-title { font-size: 14px; font-weight: 700; color: #111827; }
+.loyalty-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+.points-earned { margin-left: auto; font-size: 26px; font-weight: 900; color: #d97706; line-height: 1; }
+.points-earned span { font-size: 13px; font-weight: 600; }
 
-.section-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #333;
-}
+.loyalty-stats { display: flex; align-items: center; background: white; border-radius: 12px; padding: 16px; gap: 0; }
+.stat-item { flex: 1; text-align: center; }
+.stat-val { font-size: 18px; font-weight: 800; color: #111827; }
+.stat-key { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+.stat-divider { width: 1px; height: 36px; background: #f0f0f0; }
+.tier-badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 50px; }
+.tier-badge.bronze { background: #fde8d8; color: #c2410c; }
+.tier-badge.silver { background: #f1f5f9; color: #475569; }
+.tier-badge.gold { background: #fef9c3; color: #b45309; }
+.tier-badge.diamond { background: #ede9fe; color: #7c3aed; }
+.max-tier { text-align: center; font-size: 13px; font-weight: 700; color: #d97706; margin-top: 14px; }
 
-.amount-paid {
-  font-size: 20px;
-  font-weight: 900;
-  color: #67c23a;
+/* Actions */
+.actions-card { padding: 22px; }
+.action-list { display: flex; flex-direction: column; gap: 10px; }
+.action-btn {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px;
+  border: 1.5px solid #f3f4f6;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: left;
+  width: 100%;
 }
-
-.loyalty-alert {
-  border-left: 4px solid #67c23a;
+.action-btn:hover { border-color: #bfdbfe; background: #f8faff; transform: translateX(2px); }
+.action-btn.primary { border-color: #2563eb; background: #eff6ff; }
+.action-btn.primary:hover { background: #dbeafe; }
+.action-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
+.action-icon.blue { background: #2563eb; color: white; }
+.action-icon.gray { background: #f3f4f6; color: #374151; }
+.action-title { font-size: 13px; font-weight: 700; color: #111827; }
+.action-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
-.loyalty-content {
-  margin-top: 12px;
-  font-size: 14px;
-}
-
-code {
-  background-color: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 3px;
+/* Note */
+.note-card {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 14px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
   font-size: 12px;
-  color: #c0392b;
-  font-family: monospace;
+  color: #16a34a;
+  line-height: 1.5;
 }
 
-/* Animations */
-@keyframes scaleIn {
-  from {
-    transform: scale(0);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+/* Alert */
+.alert-box {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; margin-top: 16px;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 12px; font-size: 13px; color: #dc2626;
 }
 
-/* Print Styles */
+/* Print */
 @media print {
-  .payment-success-wrapper {
-    padding: 0;
-    max-width: 100%;
-  }
-  
-  .action-buttons,
-  .el-button,
-  .success-icon {
-    display: none !important;
-  }
-  
-  .box-card {
-    border: none;
-    box-shadow: none !important;
-  }
+  .action-list, .note-card { display: none; }
+  .hero-card { border: none; }
 }
 </style>
