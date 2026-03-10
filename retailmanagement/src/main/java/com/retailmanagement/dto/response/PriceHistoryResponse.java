@@ -16,4 +16,8 @@ public class PriceHistoryResponse {
     private Instant effectiveTo;
     private String createdByUsername;
     private Instant createdAt;
+
+    // Cảnh báo giá bán < giá nhập — trả về kèm response để frontend hiển thị
+    private Boolean belowCost;
+    private String warningMessage;
 }
