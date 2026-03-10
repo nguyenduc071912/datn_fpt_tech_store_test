@@ -45,15 +45,21 @@
             </el-button>
 
             <el-button
-              v-if="
-                detail?.status === 'PENDING' ||
-                detail?.status === 'PAID' 
-              "
+              v-if="detail?.status === 'PENDING' || detail?.status === 'PAID'"
               type="danger"
               @click="showCancelDialog = true"
             >
               <el-icon class="me-1"><Close /></el-icon>
               Hủy đơn
+            </el-button>
+
+            <el-button
+              v-if="detail?.status === 'SHIPPING'"
+              type="success"
+              :loading="deliveredLoading"
+              @click="confirmDelivered"
+            >
+              Đã nhận hàng
             </el-button>
 
             <el-button
@@ -581,6 +587,7 @@ import { spinWheelApi } from "../../api/spinWheel.api";
 import { useAuthStore } from "../../stores/auth";
 import { toast } from "../../ui/toast";
 import { Close, CreditCard, RefreshLeft } from "@element-plus/icons-vue";
+import { ElMessageBox } from "element-plus";
 
 const route = useRoute();
 const router = useRouter();
@@ -882,6 +889,45 @@ async function submitReturn() {
     toast("Lỗi khi gửi yêu cầu", "error");
   }
 }
+
+const deliveredLoading = ref(false);
+
+const confirmDelivered = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `
+      <p><strong>Bạn đã nhận được hàng?</strong></p>
+      <p>Sau khi xác nhận:</p>
+      <ul style="padding-left:18px;margin:6px 0">
+        <li> Đơn hàng sẽ hoàn tất</li>
+        <li> Người bán sẽ nhận được thanh toán</li>
+        <li> Bạn vẫn có thể gửi yêu cầu trả hàng nếu cần</li>
+      </ul>
+      `,
+      "Xác nhận nhận hàng",
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: "Xác nhận",
+        cancelButtonText: "Hủy",
+        type: "warning",
+      },
+    );
+
+    deliveredLoading.value = true;
+
+    await ordersApi.markAsDelivered(orderId.value);
+
+    toast("Đã xác nhận nhận hàng", "success");
+
+    await reload();
+  } catch (err) {
+    if (err !== "cancel") {
+      toast("Không thể cập nhật trạng thái đơn hàng", "error");
+    }
+  } finally {
+    deliveredLoading.value = false;
+  }
+};
 
 function isReturned(status) {
   return ["PARTIALLY_RETURNED", "RETURNED"].includes(status);
