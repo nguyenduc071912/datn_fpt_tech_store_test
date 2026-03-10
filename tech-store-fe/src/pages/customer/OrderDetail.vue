@@ -48,7 +48,7 @@
               </button>
 
               <button
-                v-if="['PENDING','PAID','SHIPPING'].includes(detail?.status)"
+                v-if="detail?.status === 'PENDING' || detail?.status === 'PAID'"
                 class="glass-btn danger"
                 @click="showCancelDialog = true"
               >
@@ -495,7 +495,7 @@ const timelineSteps = computed(() => {
   }
   steps.push(
     { key: 'processing', label: 'Chuẩn bị hàng', statuses: ['PROCESSING','SHIPPING','DELIVERED'] },
-    { key: 'shipping', label: 'Đang giao', statuses: ['SHIPPING','DELIVERED'] },
+    { key: 'shipping', label: 'Đang chờ nhận hàng', statuses: ['SHIPPING','DELIVERED'] },
     { key: 'delivered', label: 'Đã giao', statuses: ['DELIVERED'] },
   );
 
