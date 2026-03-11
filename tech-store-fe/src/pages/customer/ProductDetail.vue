@@ -116,7 +116,8 @@
         <el-tabs v-model="activeTab" class="product-tabs">
           <el-tab-pane label="Đặc điểm nổi bật" name="description">
             <div class="p-3" style="white-space: pre-wrap; line-height: 1.8; color: #475569;">
-              {{ product.description || 'Chưa có bài viết mô tả cho sản phẩm này.' }}
+              <!-- Đã thay đổi hiển thị để dùng biến mô tả sạch (đã cắt thông số) -->
+              {{ displayDescription }}
             </div>
           </el-tab-pane>
           
@@ -162,6 +163,15 @@ const activeTab = ref('description');
 const currentStock = computed(() => {
   if (!selectedVariant.value) return 0;
   return selectedVariant.value.stockQuantity || 0;
+});
+
+// TỰ ĐỘNG CẮT BỎ THÔNG SỐ KỸ THUẬT KHỎI PHẦN MÔ TẢ
+const displayDescription = computed(() => {
+  if (!product.value || !product.value.description) {
+    return 'Chưa có bài viết mô tả cho sản phẩm này.';
+  }
+  // Tách chuỗi tại chữ "--- THÔNG SỐ KỸ THUẬT ---" và chỉ lấy phần đằng trước nó
+  return product.value.description.split('--- THÔNG SỐ KỸ THUẬT ---')[0].trim();
 });
 
 // Hàm format tiền tệ
@@ -219,11 +229,10 @@ async function loadProductData() {
       }
     }
 
-    // Lấy danh sách Biến thể (Variants) - Nếu API getById trả về kèm variants thì lấy luôn, nếu không thì gọi API rời (dự phòng)
+    // Lấy danh sách Biến thể (Variants)
     if (data.variants && data.variants.length > 0) {
         variants.value = data.variants.filter(v => v.isActive);
     } else {
-        // Fallback: Nếu backend ko nhúng sẵn variant vào product detail, ta gọi lấy rời (giống bên Admin)
         const varRes = await fetch(`http://localhost:8080/api/products/${productId}/variants`).then(r => r.json());
         variants.value = (varRes || []).filter(v => v.isActive);
     }

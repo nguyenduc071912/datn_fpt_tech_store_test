@@ -46,6 +46,7 @@ public class ProductService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final TagRepository tagRepository;
     private final ProductTagRepository productTagRepository;
+    private final ProductSerialRepository productSerialRepository;
 
     private final String UPLOAD_DIR = "uploads/";
 
@@ -76,23 +77,6 @@ public class ProductService {
         String finalDescription = request.getDescription();
 
         if (request.getAttributes() != null && !request.getAttributes().isEmpty()) {
-            try {
-                List<AttributeRequest> attrList = objectMapper.readValue(
-                        request.getAttributes(),
-                        new TypeReference<List<AttributeRequest>>(){}
-                );
-
-                StringBuilder attrStr = new StringBuilder();
-                attrStr.append("\n\n--- THÔNG SỐ KỸ THUẬT ---\n");
-                for (AttributeRequest attr : attrList) {
-                    attrStr.append("- ").append(attr.getName())
-                            .append(": ").append(attr.getValue()).append("\n");
-                }
-                finalDescription += attrStr.toString();
-
-            } catch (Exception e) {
-                System.err.println("Lỗi parse attributes JSON: " + e.getMessage());
-            }
         }
         product.setDescription(finalDescription);
 
@@ -170,21 +154,6 @@ public class ProductService {
 
         String finalDescription = request.getDescription();
         if (request.getAttributes() != null && !request.getAttributes().isEmpty()) {
-            try {
-                List<AttributeRequest> attrList = objectMapper.readValue(
-                        request.getAttributes(),
-                        new TypeReference<List<AttributeRequest>>(){}
-                );
-                StringBuilder attrStr = new StringBuilder();
-                attrStr.append("\n\n--- THÔNG SỐ KỸ THUẬT ---\n");
-                for (AttributeRequest attr : attrList) {
-                    attrStr.append("- ").append(attr.getName())
-                            .append(": ").append(attr.getValue()).append("\n");
-                }
-                finalDescription += attrStr.toString();
-            } catch (Exception e) {
-                System.err.println("Lỗi JSON: " + e.getMessage());
-            }
         }
         product.setDescription(finalDescription);
         product.setAttributesJson(request.getAttributes());
@@ -230,9 +199,6 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    /**
-     * Hàm lấy danh sách sản phẩm với các bộ lọc và sắp xếp hoàn chỉnh
-     */
     public Page<ProductResponse> getProducts(int page, List<Integer> categoryIds, String keyword, String sortBy, boolean inStockOnly, Integer tagId, LocalDateTime startDate, LocalDateTime endDate, Boolean isNew, Boolean isFaulty) {
         Sort sortObj = Sort.by(Sort.Direction.DESC, "id");
         if (sortBy != null) {
@@ -257,7 +223,6 @@ public class ProductService {
 
         Pageable pageable = PageRequest.of(page, 20, sortObj);
 
-        // 3. Chuẩn bị các tham số cho Repository
         String searchKey = (keyword != null && !keyword.trim().isEmpty()) ? "%" + keyword.trim() + "%" : null;
         boolean hasCategory = (categoryIds != null && !categoryIds.isEmpty());
         List<Integer> filterIds = hasCategory ? categoryIds : List.of(-1);
@@ -331,7 +296,6 @@ public class ProductService {
         dto.setAttributes(product.getAttributesJson());
         dto.setIsNew(product.getIsNew());
         dto.setIsFaulty(product.getIsFaulty());
-        dto.setCreatedAt(product.getCreatedAt());
 
         List<Image> images = imageRepository.findByProductId(product.getId());
         if (images != null) {
@@ -381,7 +345,15 @@ public class ProductService {
 
         int totalStock = productVariantRepository.findByProduct_Id(product.getId()).stream()
                 .filter(v -> Boolean.TRUE.equals(v.getIsActive()))
-                .mapToInt(v -> v.getStockQuantity() != null ? v.getStockQuantity() : 0)
+                .mapToInt(v -> {
+                    int actualStock = productSerialRepository.countByVariantIdAndStatus(v.getId(), "IN_STOCK");
+                    if (v.getStockQuantity() == null || v.getStockQuantity() != actualStock) {
+                        v.setStockQuantity(actualStock);
+                        productVariantRepository.save(v);
+                    }
+
+                    return actualStock;
+                })
                 .sum();
         dto.setTotalStock(totalStock);
         dto.setInStock(totalStock > 0);
