@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.retailmanagement.dto.request.PromotionRequest;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.*;
+import com.retailmanagement.service.PromotionService.Rules;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,8 +22,6 @@ public class PromotionService {
     private final ProductVariantRepository variantRepo;
     private final PromotionRedemptionRepository redemptionRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-
 
     public PromotionService(PromotionRepository promoRepo,
             ProductVariantRepository variantRepo,
@@ -135,44 +135,52 @@ public class PromotionService {
         boolean aHasTiers = a.vip_tiers != null && !a.vip_tiers.isEmpty();
         boolean bHasTiers = b.vip_tiers != null && !b.vip_tiers.isEmpty();
 
-        // Cả 2 đều không giới hạn nhóm → overlap
-        if (!aHasTypes && !bHasTypes && !aHasTiers && !bHasTiers) return true;
+        boolean aRestricted = aHasTypes || aHasTiers;
+        boolean bRestricted = bHasTypes || bHasTiers;
 
-        // Check customer_types: nếu cả 2 đều có types và disjoint → không overlap
+        // Một trong hai không giới hạn nhóm (ALL) → luôn overlap về segment
+        if (!aRestricted || !bRestricted)
+            return true;
+
+        // Cả 2 đều có customer_types → chỉ overlap nếu có phần tử chung
         if (aHasTypes && bHasTypes) {
-            if (Collections.disjoint(a.customer_types, b.customer_types)) return false;
+            if (!Collections.disjoint(a.customer_types, b.customer_types))
+                return true;
         }
 
-        // Check vip_tiers: nếu cả 2 đều có tiers và disjoint → không overlap
+        // Cả 2 đều có vip_tiers → chỉ overlap nếu có phần tử chung
         if (aHasTiers && bHasTiers) {
-            if (Collections.disjoint(a.vip_tiers, b.vip_tiers)) return false;
+            if (!Collections.disjoint(a.vip_tiers, b.vip_tiers))
+                return true;
         }
 
-        // Một bên có vip_tiers, bên kia có customer_types "REGULAR"/"NEW" (không phải VIP)
-        // → VIP tier KM không áp dụng cho non-VIP customer_types
+        // Một bên có vip_tiers, bên kia có customer_types
+        // VIP tier KM không overlap với REGULAR/NEW customer_types
         if (aHasTiers && bHasTypes) {
-            boolean bTargetsNonVip = b.customer_types.stream()
-                    .anyMatch(t -> !"VIP".equalsIgnoreCase(t));
-            if (bTargetsNonVip && !b.customer_types.contains("VIP")) return false;
+            if (b.customer_types.contains("VIP"))
+                return true;
         }
         if (bHasTiers && aHasTypes) {
-            boolean aTargetsNonVip = a.customer_types.stream()
-                    .anyMatch(t -> !"VIP".equalsIgnoreCase(t));
-            if (aTargetsNonVip && !a.customer_types.contains("VIP")) return false;
+            if (a.customer_types.contains("VIP"))
+                return true;
         }
 
-        return true;
+        // Một bên chỉ có types, bên kia chỉ có tiers, và không có VIP cross → không
+        // overlap
+        return false;
     }
 
     private boolean applicabilityOverlap(Applicability a, Applicability b) {
         // --- 1. Check customer segment overlap trước ---
         // Nếu 2 KM target khác nhóm khách hàng hoàn toàn → không xung đột
-        if (!customerSegmentOverlap(a, b)) return false;
+        if (!customerSegmentOverlap(a, b))
+            return false;
 
         // --- 2. Check scope/product/variant như cũ ---
         String sa = (a.scope == null) ? "ALL" : a.scope.toUpperCase();
         String sb = (b.scope == null) ? "ALL" : b.scope.toUpperCase();
-        if ("ALL".equals(sa) || "ALL".equals(sb)) return true;
+        if ("ALL".equals(sa) || "ALL".equals(sb))
+            return true;
 
         Set<Integer> aProducts = a.product_ids == null ? Set.of() : new HashSet<>(a.product_ids);
         Set<Integer> bProducts = b.product_ids == null ? Set.of() : new HashSet<>(b.product_ids);
@@ -384,7 +392,6 @@ public class PromotionService {
         p.setIsActive(false);
         promoRepo.save(p);
     }
-
 
     /**
      * Find best promotion for variant without customer context (backwards
@@ -610,9 +617,8 @@ public class PromotionService {
         List<Promotion> all = promoRepo.findActiveInPeriod(from, now);
 
         // Đếm số KM đang thực sự active tại thời điểm hiện tại
-        long activeCount = all.stream().filter(p ->
-                !p.getStartDate().isAfter(now) && !p.getEndDate().isBefore(now)
-        ).count();
+        long activeCount = all.stream().filter(p -> !p.getStartDate().isAfter(now) && !p.getEndDate().isBefore(now))
+                .count();
 
         long comboCount = all.stream().filter(p -> {
             Rules r = parseRules(p.getRulesJson());
@@ -624,14 +630,12 @@ public class PromotionService {
             return r != null && r.usage_limit != null;
         }).count();
 
-        long totalUsed = all.stream().mapToLong(p ->
-                redemptionRepo.findByPromotionId(p.getId())
-                        .map(PromotionRedemption::getUsedCount).orElse(0L)
-        ).sum();
+        long totalUsed = all.stream().mapToLong(p -> redemptionRepo.findByPromotionId(p.getId())
+                .map(PromotionRedemption::getUsedCount).orElse(0L)).sum();
 
         Map<String, Object> report = new HashMap<>();
         report.put("total", all.size());
-        report.put("activeCount", activeCount);   // ← thêm mới
+        report.put("activeCount", activeCount); // ← thêm mới
         report.put("period", period == null ? "month" : period);
         report.put("comboCount", comboCount);
         report.put("usageLimitedCount", usageLimitedCount);

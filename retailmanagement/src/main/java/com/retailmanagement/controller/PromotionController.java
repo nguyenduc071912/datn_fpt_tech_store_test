@@ -5,6 +5,7 @@ import com.retailmanagement.dto.response.ApiResponse;
 import com.retailmanagement.entity.Customer;
 import com.retailmanagement.entity.Promotion;
 import com.retailmanagement.entity.User;
+import com.retailmanagement.repository.OrderRepository;
 import com.retailmanagement.repository.PromotionRepository;
 import com.retailmanagement.repository.CustomRes;
 import com.retailmanagement.repository.UserRepository;
@@ -14,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import java.util.LinkedHashMap;
+import com.retailmanagement.entity.Order;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,6 +32,7 @@ public class PromotionController {
     private final PromotionRepository promotionRepository;
     private final CustomRes customerRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     @PostMapping
     public ApiResponse<Promotion> create(@RequestBody PromotionRequest req) {
@@ -162,5 +166,28 @@ public class PromotionController {
         if (auth == null || !auth.isAuthenticated())
             return null;
         return customerRepository.findByEmail(auth.getName()).orElse(null);
+    }
+
+    @GetMapping("/{id}/redemption-details")
+    public ApiResponse<List<Map<String, Object>>> getRedemptionDetails(@PathVariable Integer id) {
+        Promotion promo = promotionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Promotion not found: " + id));
+
+        List<Order> orders = orderRepository.findByAppliedPromotionCodeOrderByCreatedAtDesc(promo.getCode());
+
+        List<Map<String, Object>> result = orders.stream().map(o -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("orderId", o.getId());
+            row.put("orderNumber", o.getOrderNumber());
+            row.put("customerName", o.getCustomer() != null ? o.getCustomer().getName() : "—");
+            row.put("customerId", o.getCustomer() != null ? o.getCustomer().getId() : null);
+            row.put("discountTotal", o.getDiscountTotal());
+            row.put("totalAmount", o.getTotalAmount());
+            row.put("usedAt", o.getCreatedAt());
+            row.put("status", o.getStatus());
+            return row;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ApiResponse.success(result);
     }
 }

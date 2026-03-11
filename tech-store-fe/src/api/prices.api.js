@@ -1,3 +1,4 @@
+// src\api\prices.api.js
 import http from "./http";
 
 export const pricesApi = {
@@ -20,10 +21,14 @@ export const pricesApi = {
     return http.get(`/api/prices/variants/${variantId}/effective`);
   },
   getEffectiveForCustomer(variantId, customerId) {
-    return http.get(`/api/prices/variants/${variantId}/effective/customer/${customerId}`);
+    return http.get(
+      `/api/prices/variants/${variantId}/effective/customer/${customerId}`,
+    );
   },
-  getVariantHistory(variantId) {
-    return http.get(`/api/prices/variants/${variantId}/history`);
+  getVariantHistory(variantId, page = 0, size = 20) {
+    return http.get(`/api/prices/variants/${variantId}/history`, {
+      params: { page, size },
+    });
   },
   getCostWarning(variantId) {
     return http.get(`/api/prices/variants/${variantId}/cost-warning`);
@@ -36,5 +41,8 @@ export const pricesApi = {
   },
   getDashboard() {
     return http.get("/api/prices/dashboard");
+  },
+  getVariantsByProduct(productId) {
+    return http.get(`/api/products/${productId}/variants`);
   },
 };

@@ -1,3 +1,4 @@
+<!-- src\pages\system\SettingsCurrency.vue -->
 <template>
   <div class="container-xl">
     <el-card shadow="never">
