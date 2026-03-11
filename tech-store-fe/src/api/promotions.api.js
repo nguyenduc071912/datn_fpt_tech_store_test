@@ -41,4 +41,7 @@ export const promotionsApi = {
   getSummaryReport(period = "month") {
     return http.get("/api/reports/promotions/summary", { params: { period } });
   },
+  getRedemptionDetails(id) {
+    return http.get(`/api/promotions/${id}/redemption-details`);
+  },
 };

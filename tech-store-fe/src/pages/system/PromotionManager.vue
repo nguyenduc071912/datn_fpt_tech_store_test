@@ -324,15 +324,20 @@
             </div>
             <div class="prm-rstat-l">Giới hạn lượt</div>
           </div>
-          <div class="prm-rstat prm-rstat-r">
-            <div class="prm-rstat-n">
+          <div
+            class="prm-rstat prm-rstat-r"
+            style="cursor: pointer"
+            title="Click để xem chi tiết"
+            @click="openRedemptionAllDetail()"
+          >
+            <div class="prm-rstat-n" style="text-decoration: underline dotted">
               {{
                 summaryReportData?.totalRedemptions ??
                 reportData?.totalRedemptions ??
                 0
               }}
             </div>
-            <div class="prm-rstat-l">Tổng lượt dùng</div>
+            <div class="prm-rstat-l">Tổng lượt dùng 🔍</div>
           </div>
         </div>
 
@@ -541,6 +546,13 @@
                   </button>
                   <button class="prm-xs prm-xs-b" @click="openPreview(row)">
                     Preview
+                  </button>
+                  <button
+                    class="prm-xs"
+                    style="background: #6366f1; color: #fff; border: none"
+                    @click="openRedemptionDetail(row.id, row.code)"
+                  >
+                    Lượt dùng
                   </button>
                   <button class="prm-xs prm-xs-d" @click="remove(row)">
                     Xóa
@@ -873,6 +885,157 @@
               dlg.mode === "create" ? "Tạo mới" : "Lưu thay đổi"
             }}</span
             ><span v-else class="prm-spin"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Redemption Detail Modal -->
+    <div
+      v-if="redemptionModal.open"
+      class="prm-overlay"
+      @click.self="redemptionModal.open = false"
+    >
+      <div class="prm-dialog" style="max-width: 1100px; width: 95%">
+        <div class="prm-dlg-head">
+          <span>
+            Chi tiết lượt dùng —
+            <span class="prm-code">{{ redemptionModal.promotionCode }}</span>
+          </span>
+          <span class="prm-tag prm-tag-r" style="margin-left: 8px">
+            {{ redemptionModal.rows.length }} lượt
+          </span>
+          <button class="prm-dlg-close" @click="redemptionModal.open = false">
+            ✕
+          </button>
+        </div>
+        <div class="prm-dlg-body">
+          <div
+            v-if="redemptionModal.loading"
+            style="text-align: center; padding: 32px"
+          >
+            <span class="prm-spin"></span> Đang tải...
+          </div>
+          <div v-else-if="!redemptionModal.rows.length" class="prm-ok-msg">
+            Chưa có lượt dùng nào
+          </div>
+          <div v-else class="prm-tw">
+            <table class="prm-tbl">
+              <thead>
+                <tr>
+                  <th style="width: 36px">#</th>
+                  <th>Mã đơn</th>
+                  <th>Khách hàng</th>
+                  <th style="text-align: right">Giảm được</th>
+                  <th style="text-align: right">Tổng đơn</th>
+                  <th style="text-align: center">Thời gian</th>
+                  <th style="text-align: center">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(r, idx) in redemptionModal.rows" :key="r.orderId">
+                  <td class="mono dim" style="text-align: center">
+                    {{ idx + 1 }}
+                  </td>
+                  <td>
+                    <span class="prm-code">{{ r.orderNumber }}</span>
+                  </td>
+                  <td>
+                    <div
+                      style="display: flex; flex-direction: column; gap: 2px"
+                    >
+                      <span style="font-weight: 600; font-size: 13px">
+                        {{
+                          r.customerName && r.customerName !== "—"
+                            ? r.customerName
+                            : "—"
+                        }}
+                      </span>
+                      <span
+                        v-if="r.customerId"
+                        class="mono dim"
+                        style="font-size: 10px"
+                      >
+                        #{{ r.customerId }}
+                      </span>
+                    </div>
+                  </td>
+                  <td style="text-align: right">
+                    <span class="clr-green bold">{{
+                      fmtMoney(r.discountTotal)
+                    }}</span>
+                  </td>
+                  <td style="text-align: right">
+                    <span style="font-size: 13px; font-weight: 500">{{
+                      fmtMoney(r.totalAmount)
+                    }}</span>
+                  </td>
+                  <td style="text-align: center; white-space: nowrap">
+                    <div
+                      style="
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1px;
+                        align-items: center;
+                      "
+                    >
+                      <span
+                        style="
+                          font-size: 12px;
+                          font-weight: 600;
+                          color: var(--text-primary);
+                        "
+                      >
+                        {{
+                          r.usedAt
+                            ? new Date(r.usedAt).toLocaleTimeString("vi-VN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "—"
+                        }}
+                      </span>
+                      <span class="dim" style="font-size: 10px">
+                        {{
+                          r.usedAt
+                            ? new Date(r.usedAt).toLocaleDateString("vi-VN")
+                            : ""
+                        }}
+                      </span>
+                    </div>
+                  </td>
+                  <td style="text-align: center">
+                    <span
+                      class="prm-status"
+                      :class="
+                        r.status === 'DELIVERED'
+                          ? 'prm-status-on'
+                          : r.status === 'CANCELLED'
+                            ? 'prm-status-off'
+                            : 'prm-status-on'
+                      "
+                      :style="
+                        r.status === 'PENDING'
+                          ? 'background:var(--orange-light);color:var(--orange-text);border-color:var(--orange-border)'
+                          : r.status === 'CANCELLED'
+                            ? 'background:var(--red-light);color:var(--red-text);border-color:var(--red-border)'
+                            : ''
+                      "
+                    >
+                      {{ r.status }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="prm-dlg-foot">
+          <button
+            class="prm-btn prm-btn-ghost"
+            @click="redemptionModal.open = false"
+          >
+            Đóng
           </button>
         </div>
       </div>
@@ -1319,6 +1482,31 @@ function fmtDate(iso) {
 function fmtMoney(val) {
   if (val == null) return "—";
   return Number(val).toLocaleString("vi-VN") + " ₫";
+}
+
+// Redemption detail modal
+const redemptionModal = reactive({
+  open: false,
+  loading: false,
+  promotionCode: "",
+  promotionId: null,
+  rows: [],
+});
+
+async function openRedemptionDetail(promotionId, code) {
+  redemptionModal.open = true;
+  redemptionModal.loading = true;
+  redemptionModal.promotionCode = code;
+  redemptionModal.promotionId = promotionId;
+  redemptionModal.rows = [];
+  try {
+    const r = await promotionsApi.getRedemptionDetails(promotionId);
+    redemptionModal.rows = r?.data?.data ?? r?.data ?? [];
+  } catch {
+    toast("Tải chi tiết lượt dùng thất bại.", "error");
+  } finally {
+    redemptionModal.loading = false;
+  }
 }
 
 function handleQuickNav(actionKey, hint) {

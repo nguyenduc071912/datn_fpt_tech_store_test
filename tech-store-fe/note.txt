@@ -1,4 +1,4 @@
-+ frontend
+* frontend
 src
  ┣ api
  ┃ ┣ audit.api.js
@@ -97,7 +97,7 @@ src
  ┣ App.vue
  ┣ main.js
  ┗ style.css
-+ backend
+* backend
 retailmanagement
  ┣ audit
  ┃ ┣ Audit.java
@@ -308,6 +308,7 @@ retailmanagement
  ┃ ┣ PaymentService.java
  ┃ ┣ PdfService.java
  ┃ ┣ PricingService.java
+ ┃ ┣ ProductSerialService.java
  ┃ ┣ ProductService.java
  ┃ ┣ ProductVariantService.java
  ┃ ┣ PromotionHistoryService.java

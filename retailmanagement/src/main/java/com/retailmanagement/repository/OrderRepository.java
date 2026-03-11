@@ -101,5 +101,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             ORDER BY COUNT(o.id) DESC
             """)
     List<Object[]> ordersByStaff();
+
+    List<Order> findByAppliedPromotionCodeOrderByCreatedAtDesc(String appliedPromotionCode);
 }
 
