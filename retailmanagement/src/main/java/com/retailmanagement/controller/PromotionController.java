@@ -64,9 +64,8 @@ public class PromotionController {
     @GetMapping("/{id}")
     public ApiResponse<Promotion> getById(@PathVariable Integer id) {
         return ApiResponse.success(
-            promotionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Promotion not found: " + id))
-        );
+                promotionRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Promotion not found: " + id)));
     }
 
     @PutMapping("/{id}")
@@ -181,7 +180,11 @@ public class PromotionController {
             row.put("orderNumber", o.getOrderNumber());
             row.put("customerName", o.getCustomer() != null ? o.getCustomer().getName() : "—");
             row.put("customerId", o.getCustomer() != null ? o.getCustomer().getId() : null);
-            row.put("discountTotal", o.getDiscountTotal());
+            BigDecimal promoDiscount = o.getDiscountTotal() != null ? o.getDiscountTotal() : BigDecimal.ZERO;
+            BigDecimal vipDiscount = o.getVipDiscount() != null ? o.getVipDiscount() : BigDecimal.ZERO;
+            BigDecimal spinDiscount = o.getSpinDiscount() != null ? o.getSpinDiscount() : BigDecimal.ZERO;
+            BigDecimal netPromoDiscount = promoDiscount.subtract(vipDiscount).subtract(spinDiscount).abs();
+            row.put("discountTotal", netPromoDiscount);
             row.put("totalAmount", o.getTotalAmount());
             row.put("usedAt", o.getCreatedAt());
             row.put("status", o.getStatus());
