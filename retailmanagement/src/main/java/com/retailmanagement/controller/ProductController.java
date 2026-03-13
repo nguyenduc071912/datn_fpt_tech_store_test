@@ -58,6 +58,17 @@ public class ProductController {
         return ResponseEntity.ok("Đã ẩn sản phẩm thành công (Soft Delete)");
     }
 
+    @PostMapping("/batch-delete")
+    public ResponseEntity<?> batchDeleteProducts(@RequestBody List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest().body("Danh sách ID trống");
+        }
+        for (Integer id : ids) {
+            productService.softDeleteProduct(id);
+        }
+        return ResponseEntity.ok("Đã xóa (ẩn) hàng loạt thành công");
+    }
+
     @GetMapping("/trash")
     public ResponseEntity<Page<ProductResponse>> getTrash(@RequestParam(defaultValue = "0") int page) {
         return ResponseEntity.ok(productService.getTrashProducts(page));
@@ -79,5 +90,37 @@ public class ProductController {
     public ResponseEntity<?> setPrimaryImage(@PathVariable Integer id, @PathVariable Long imageId) {
         productService.setPrimaryImage(id, imageId);
         return ResponseEntity.ok("Đã đặt làm ảnh đại diện thành công");
+    }
+
+    public static class BatchUpdateRequest {
+        public List<Integer> ids;
+        public Boolean isVisible;
+        public Boolean isNew;
+        public Boolean isFaulty;
+        public List<Integer> tagIds;
+    }
+
+    @PutMapping("/batch-update")
+    public ResponseEntity<?> batchUpdateProducts(@RequestBody BatchUpdateRequest request) {
+        productService.batchUpdateProducts(
+                request.ids,
+                request.isVisible,
+                request.isNew,
+                request.isFaulty,
+                request.tagIds
+        );
+        return ResponseEntity.ok("Cập nhật hàng loạt thành công");
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.retailmanagement.repository.ProductHistoryLogRepository productHistoryLogRepository;
+    @GetMapping("/{id}/history")
+    public ResponseEntity<?> getProductHistory(@PathVariable Integer id) {
+        List<com.retailmanagement.entity.ProductHistoryLog> logs = productHistoryLogRepository.findByTargetEntityAndTargetIdOrderByCreatedAtDesc(
+                "PRODUCT",
+                String.valueOf(id)
+        );
+
+        return ResponseEntity.ok(logs);
     }
 }

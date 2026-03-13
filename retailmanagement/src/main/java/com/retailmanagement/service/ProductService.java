@@ -203,6 +203,9 @@ public class ProductService {
         Sort sortObj = Sort.by(Sort.Direction.DESC, "id");
         if (sortBy != null) {
             switch (sortBy) {
+                case "recently_updated":
+                    sortObj = Sort.by(Sort.Direction.DESC, "updated_at");
+                    break;
                 case "oldest":
                     sortObj = Sort.by(Sort.Direction.ASC, "id");
                     break;
@@ -402,5 +405,49 @@ public class ProductService {
             }
         }
         imageRepository.saveAll(images);
+    }
+
+    @SensitiveOperation(
+            action = ActionType.UPDATE_OPERATION,
+            entity = "PRODUCT",
+            description = "Batch update products",
+            severity = SeverityLevel.MEDIUM
+    )
+    @Audit(
+            module = AuditModule.PRODUCT,
+            action = AuditAction.UPDATE,
+            targetType = TargetType.PRODUCT
+    )
+    @Transactional
+    public void batchUpdateProducts(List<Integer> ids, Boolean isVisible, Boolean isNew, Boolean isFaulty, List<Integer> tagIds) {
+        List<Product> products = productRepository.findAllById(ids);
+
+        for (Product product : products) {
+            if (isVisible != null) product.setIsVisible(isVisible);
+            if (isNew != null) product.setIsNew(isNew);
+            if (isFaulty != null) product.setIsFaulty(isFaulty);
+
+            product.setUpdatedAt(LocalDateTime.now());
+
+            if (tagIds != null) {
+                productTagRepository.deleteByProduct_Id(product.getId());
+                productTagRepository.flush();
+
+                for (Integer tagId : tagIds) {
+                    ProductTag pt = new ProductTag();
+                    ProductTagId ptId = new ProductTagId();
+                    ptId.setProductId(product.getId());
+                    ptId.setTagId(tagId);
+
+                    pt.setId(ptId);
+                    pt.setProduct(product);
+                    pt.setTag(tagRepository.getReferenceById(tagId));
+                    pt.setCreatedAt(Instant.now());
+
+                    productTagRepository.save(pt);
+                }
+            }
+        }
+        productRepository.saveAll(products);
     }
 }

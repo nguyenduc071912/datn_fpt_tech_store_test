@@ -67,15 +67,16 @@
         </div>
 
         <div class="col-12 col-md-3">
-            <el-select v-model="sortBy" placeholder="Sắp xếp" @change="onFilter" style="width: 100%">
+          <el-select v-model="sortBy" placeholder="Sắp xếp" @change="onFilter" style="width: 100%">
+            <el-option label="Mới cập nhật (Recently Updated)" value="recently_updated" />
             <el-option label="Ngày nhập mới nhất" value="newest_arrival" />
             <el-option label="Mới nhất" value="newest" />
             <el-option label="Cũ nhất" value="oldest" />
             <el-option label="Bán chạy nhất" value="best_selling" />
-            <el-option label="Giá: Thấp -> Cao" value="price_asc" />
-            <el-option label="Giá: Cao -> Thấp" value="price_desc" />
-            <el-option label="Tên: A -> Z" value="name_asc" />
-            <el-option label="Tên: Z -> A" value="name_desc" />
+            <el-option label="Giá: Thấp → Cao" value="price_asc" />
+            <el-option label="Giá: Cao → Thấp" value="price_desc" />
+            <el-option label="Tên: A → Z" value="name_asc" />
+            <el-option label="Tên: Z → A" value="name_desc" />
           </el-select>
         </div>
 
@@ -114,8 +115,23 @@
 
       <el-divider v-if="viewMode === 'active'" />
 
+      <!-- THANH CÔNG CỤ BATCH UPDATE/DELETE -->
+      <div v-if="selectedIds.length > 0 && viewMode === 'active'" class="mb-3 p-2 bg-light border rounded d-flex justify-content-between align-items-center">
+        <span class="fw-bold text-primary px-2">Đã chọn {{ selectedIds.length }} sản phẩm</span>
+        <div class="d-flex gap-2">
+          <el-button type="primary" size="small" icon="Edit" @click="openBatchUpdateDialog">Sửa hàng loạt</el-button>
+          <el-popconfirm title="Bạn có chắc chắn muốn xóa (ẩn) các sản phẩm này?" @confirm="handleBatchDelete">
+            <template #reference>
+              <el-button type="danger" size="small" icon="Delete" :loading="isBatchDeleting">Xóa hàng loạt</el-button>
+            </template>
+          </el-popconfirm>
+        </div>
+      </div>
+
       <!-- DANH SÁCH SẢN PHẨM -->
-      <el-table :data="rows" border :loading="loading" style="width: 100%">
+      <el-table :data="rows" border :loading="loading" style="width: 100%" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" align="center" v-if="viewMode === 'active'" />
+
         <el-table-column prop="id" label="ID" width="70" align="center" />
         
         <el-table-column label="Image" width="100" align="center">
@@ -168,11 +184,23 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="isVisible" label="Trạng thái" width="100" align="center">
+        <!-- MERGED: el-switch khi active, tag tĩnh khi trash -->
+        <el-table-column prop="isVisible" label="Trạng thái" width="150" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.isVisible ? 'success' : 'info'" size="small">
-              {{ row.isVisible ? "Hoạt động" : "Trong thùng rác" }}
-            </el-tag>
+            <div v-if="viewMode === 'active'">
+              <el-switch
+                v-model="row.isVisible"
+                :active-value="true"
+                :inactive-value="false"
+                inline-prompt
+                active-text="ON"
+                inactive-text="OFF"
+                @change="toggleProductStatus(row)"
+              />
+            </div>
+            <div v-else>
+              <el-tag type="info" size="small">Trong thùng rác</el-tag>
+            </div>
           </template>
         </el-table-column>
 
@@ -216,6 +244,40 @@
       </div>
     </el-card>
 
+    <!-- DIALOG BATCH UPDATE -->
+    <el-dialog v-model="batchDlg.open" :title="'Cập nhật ' + selectedIds.length + ' sản phẩm'" width="500px">
+      <el-alert title="Chỉ những trường có dữ liệu mới được áp dụng. Bỏ trống nếu không muốn thay đổi." type="info" show-icon class="mb-3" :closable="false"/>
+      <el-form label-position="top">
+        <el-form-item label="Trạng thái hiển thị (Status)">
+          <el-select v-model="batchDlg.form.isVisible" placeholder="Không thay đổi" clearable style="width: 100%">
+            <el-option label="Bật hiển thị (ON)" :value="true" />
+            <el-option label="Tắt hiển thị (OFF)" :value="false" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Nhãn hàng mới (New Arrival)">
+          <el-select v-model="batchDlg.form.isNew" placeholder="Không thay đổi" clearable style="width: 100%">
+            <el-option label="Đánh dấu là Hàng Mới (NEW)" :value="true" />
+            <el-option label="Gỡ nhãn Mới" :value="false" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Trạng thái Lỗi (Faulty)">
+          <el-select v-model="batchDlg.form.isFaulty" placeholder="Không thay đổi" clearable style="width: 100%">
+            <el-option label="Đánh dấu bị Lỗi (FAULTY)" :value="true" />
+            <el-option label="Hàng Tốt" :value="false" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Gắn chung Tags">
+          <el-select v-model="batchDlg.form.tagIds" multiple placeholder="Không thay đổi" style="width: 100%">
+            <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchDlg.open = false">Hủy</el-button>
+        <el-button type="primary" :loading="batchDlg.loading" @click="submitBatchUpdate">Áp dụng thay đổi</el-button>
+      </template>
+    </el-dialog>
+
     <!-- DRAWER VARIANTS -->
     <el-drawer v-model="vr.open" :title="'Quản lý biến thể: ' + vr.productName" size="60%" destroy-on-close>
       <div class="mb-4">
@@ -231,7 +293,6 @@
           </el-table-column>
           <el-table-column label="Hành động" width="180" align="center">
             <template #default="{ row }">
-              <!-- NÚT MỚI: QUẢN LÝ SỐ SERI -->
               <el-button type="warning" link size="small" @click="openSerialDialog(row)">Số Seri</el-button>
               <el-button type="primary" link size="small" @click="editVariant(row)">Sửa</el-button>
               <el-popconfirm title="Xóa biến thể?" @confirm="deleteVariant(row.id)">
@@ -251,7 +312,6 @@
           <div class="col-md-6"><el-form-item label="SKU" required><el-input v-model="vr.form.sku" /></el-form-item></div>
           <div class="col-md-6"><el-form-item label="Giá (VND)" required><el-input-number v-model="vr.form.price" style="width: 100%" :min="0"/></el-form-item></div>
           
-          <!-- KHÓA Ô TỒN KHO - ÉP ĐẾM BẰNG SERI -->
           <div class="col-md-6">
             <el-form-item label="Số lượng tồn (tự động bởi Seri)" required>
               <el-input-number v-model="vr.form.stockQuantity" style="width: 100%" :min="0" disabled />
@@ -261,7 +321,7 @@
           <div class="col-12 mt-2">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <label class="small fw-bold">Dynamic Attributes</label>
-              <el-button size="small" icon="Plus" @click="addVariantAttr">Add</el-button>
+              <el-button size="small" icon="Plus" @click="addVariantAttr">Thêm</el-button>
             </div>
             <div v-for="(attr, index) in vr.attrsList" :key="index" class="d-flex gap-2 mb-2">
               <el-input v-model="attr.key" placeholder="Key (e.g. Color)" size="small" />
@@ -280,34 +340,21 @@
       </div>
     </el-drawer>
 
-    <!-- DIALOG SERIAL NUMBERS (GIAO DIỆN ĐÃ SỬA LỖI ẨN NÚT) -->
+    <!-- DIALOG SERIAL NUMBERS -->
     <el-dialog v-model="serialDlg.open" :title="'Quản lý số Seri: ' + serialDlg.variantName" width="650px" append-to-body>
       <div class="mb-3 d-flex align-items-center gap-3">
-  <div>
-    <label class="fw-bold small mb-1 d-block">Số lượng cần nhập kho</label>
-    <el-input-number
-      v-model="serialDlg.genQuantity"
-      :min="1"
-      :max="500"
-      style="width: 160px"
-    />
-  </div>
-  <div style="padding-top: 22px">
-    <el-button
-      type="primary"
-      :loading="serialDlg.adding"
-      icon="MagicStick"
-      @click="generateSerials(serialDlg.genQuantity)"
-    >
-      Gen Serial tự động
-    </el-button>
-  </div>
-</div>
+        <div>
+          <label class="fw-bold small mb-1 d-block">Số lượng cần nhập kho</label>
+          <el-input-number v-model="serialDlg.genQuantity" :min="1" :max="500" style="width: 160px" />
+        </div>
+        <div style="padding-top: 22px">
+          <el-button type="primary" :loading="serialDlg.adding" icon="MagicStick" @click="generateSerials(serialDlg.genQuantity)">
+            Gen Serial tự động
+          </el-button>
+        </div>
+      </div>
       <el-divider />
       <div class="fw-bold small mb-2 text-muted">Danh sách máy trong kho:</div>
-      
-      <!-- Bỏ fixed height="300" để bảng tự giãn, thêm max-height để vẫn có thanh cuộn nếu quá nhiều -->
-      <!-- Tăng width của cột Hành động lên 100 để không bị lẹm -->
       <el-table :data="serialDlg.list" border size="small" v-loading="serialDlg.loading" max-height="400">
          <el-table-column type="index" width="50" align="center" />
          <el-table-column prop="serialNumber" label="Số Seri / IMEI" min-width="150" />
@@ -322,7 +369,6 @@
            <template #default="{ row }">
              <el-popconfirm title="Xóa seri này?" @confirm="deleteSerial(row.id)">
                <template #reference>
-                 <!-- Sửa icon thành chữ cho rõ ràng và dễ bấm hơn -->
                  <el-button type="danger" size="small" :disabled="row.status !== 'IN_STOCK'">Xóa</el-button>
                </template>
              </el-popconfirm>
@@ -331,90 +377,143 @@
       </el-table>
     </el-dialog>
 
-    <!-- DIALOG PRODUCT -->
-    <el-dialog v-model="dlg.open" :title="dlg.isEdit ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm'" width="850px">
+    <!-- DIALOG PRODUCT (có Tabs + Lịch sử thao tác) -->
+    <el-dialog v-model="dlg.open" :title="dlg.isEdit ? 'Thông tin sản phẩm' : 'Thêm sản phẩm mới'" width="850px" top="5vh">
       <el-alert v-if="dlg.alert" :title="dlg.alert" type="error" show-icon class="mb-3" />
 
-      <el-form :model="dlg.form" label-position="top" class="row g-3">
-        <div class="col-md-6"><el-form-item label="Tên sản phẩm" required><el-input v-model="dlg.form.name" /></el-form-item></div>
-        <div class="col-md-6"><el-form-item label="SKU chính" required><el-input v-model="dlg.form.sku" /></el-form-item></div>
+      <el-tabs v-model="dlg.activeTab" class="custom-tabs">
+        <!-- TAB 1: THÔNG TIN CƠ BẢN -->
+        <el-tab-pane label="Thông tin cơ bản" name="info">
+          <el-form :model="dlg.form" label-position="top" class="row g-3 mt-2">
+            <div class="col-md-6"><el-form-item label="Tên sản phẩm" required><el-input v-model="dlg.form.name" /></el-form-item></div>
+            <div class="col-md-6"><el-form-item label="SKU chính" required><el-input v-model="dlg.form.sku" /></el-form-item></div>
 
-        <!-- Yêu cầu 4, 5: Công tắc đánh dấu Mới và Lỗi -->
-        <div class="col-md-3">
-          <el-form-item label="Đánh dấu Mới">
-            <el-switch v-model="dlg.form.isNew" active-text="Mới" inactive-text="Bình thường" />
-          </el-form-item>
-        </div>
-        <div class="col-md-3">
-          <el-form-item label="Đánh dấu Lỗi (Ẩn)">
-            <el-switch v-model="dlg.form.isFaulty" active-color="#ff4949" active-text="Lỗi" inactive-text="Tốt" />
-          </el-form-item>
-        </div>
-
-        <div class="col-md-6">
-            <el-form-item label="Danh mục">
-            <el-select v-model="dlg.form.categoryIds" multiple placeholder="Chọn danh mục" style="width: 100%">
-              <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-          </el-form-item>
-        </div>
-
-        <div class="col-md-6">
-            <el-form-item label="Thẻ chiến dịch">
-            <el-select v-model="dlg.form.tagIds" multiple placeholder="Chọn thẻ" style="width: 100%">
-              <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
-            </el-select>
-          </el-form-item>
-        </div>
-
-        <div class="col-md-12">
-            <el-form-item label="Mô tả">
-            <el-input v-model="dlg.form.description" type="textarea" :rows="3" />
-          </el-form-item>
-        </div>
-
-        <div class="col-12">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-              <label class="fw-bold">Thông số kỹ thuật (Thuộc tính)</label>
-              <el-button size="small" icon="Plus" @click="addAttribute">Thêm</el-button>
-          </div>
-          <div v-for="(attr, index) in dlg.attributesList" :key="index" class="d-flex gap-2 mb-2">
-            <el-input v-model="attr.name" placeholder="Label (e.g. RAM)" />
-            <el-input v-model="attr.value" placeholder="Value" />
-            <el-button type="danger" icon="Delete" circle @click="removeAttribute(index)" />
-          </div>
-        </div>
-
-        <!-- Gallery -->
-        <div class="col-12" v-if="dlg.isEdit && dlg.existingImages.length > 0">
-          <label class="fw-bold mb-2">Thư viện ảnh</label>
-          <div class="d-flex gap-2 flex-wrap p-3 border rounded bg-light">
-            <div v-for="img in dlg.existingImages" :key="img.id" class="position-relative text-center" style="width: 110px;">
-              <el-image 
-                :src="fixImageUrl(img.url)" 
-                style="width: 100px; height: 100px; border-radius: 8px; border: 2px solid"
-                :style="{ borderColor: img.isPrimary ? '#67c23a' : '#dcdfe6' }"
-                fit="cover"
-              />
-              <div class="d-flex justify-content-center gap-2 mt-2">
-                 <el-button v-if="!img.isPrimary" type="warning" icon="Star" circle size="small" @click="setPrimaryImage(img.id)" />
-                 <el-button type="danger" icon="Delete" circle size="small" @click="markImageForDelete(img.id)" />
-              </div>
-              <div v-if="img.isPrimary" class="position-absolute top-0 start-0 bg-success text-white px-2 small rounded-start">MAIN</div>
+            <div class="col-md-3">
+              <el-form-item label="Đánh dấu Mới">
+                <el-switch v-model="dlg.form.isNew" active-text="Mới" inactive-text="Bình thường" />
+              </el-form-item>
             </div>
-          </div>
-        </div>
+            <div class="col-md-3">
+              <el-form-item label="Đánh dấu Lỗi (Ẩn)">
+                <el-switch v-model="dlg.form.isFaulty" active-color="#ff4949" active-text="Lỗi" inactive-text="Tốt" />
+              </el-form-item>
+            </div>
 
-        <div class="col-12">
-          <el-form-item label="Upload New Media">
-            <input type="file" multiple accept="image/*" class="form-control" @change="onPickFiles" />
-          </el-form-item>
-        </div>
-      </el-form>
+            <div class="col-md-6">
+              <el-form-item label="Danh mục">
+                <el-select v-model="dlg.form.categoryIds" multiple placeholder="Chọn danh mục" style="width: 100%">
+                  <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+                </el-select>
+              </el-form-item>
+            </div>
+
+            <div class="col-md-6">
+              <el-form-item label="Thẻ chiến dịch">
+                <el-select v-model="dlg.form.tagIds" multiple placeholder="Chọn thẻ" style="width: 100%">
+                  <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
+                </el-select>
+              </el-form-item>
+            </div>
+
+            <div class="col-md-12">
+              <el-form-item label="Mô tả">
+                <el-input v-model="dlg.form.description" type="textarea" :rows="3" />
+              </el-form-item>
+            </div>
+
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="fw-bold">Thông số kỹ thuật (Thuộc tính)</label>
+                <el-button size="small" icon="Plus" @click="addAttribute">Thêm</el-button>
+              </div>
+              <div v-for="(attr, index) in dlg.attributesList" :key="index" class="d-flex gap-2 mb-2">
+                <el-input v-model="attr.name" placeholder="Label (e.g. RAM)" />
+                <el-input v-model="attr.value" placeholder="Value" />
+                <el-button type="danger" icon="Delete" circle @click="removeAttribute(index)" />
+              </div>
+            </div>
+
+            <div class="col-12" v-if="dlg.isEdit && dlg.existingImages.length > 0">
+              <label class="fw-bold mb-2">Thư viện ảnh</label>
+              <div class="d-flex gap-2 flex-wrap p-3 border rounded bg-light">
+                <div v-for="img in dlg.existingImages" :key="img.id" class="position-relative text-center" style="width: 110px;">
+                  <el-image 
+                    :src="fixImageUrl(img.url)" 
+                    style="width: 100px; height: 100px; border-radius: 8px; border: 2px solid"
+                    :style="{ borderColor: img.isPrimary ? '#67c23a' : '#dcdfe6' }"
+                    fit="cover"
+                  />
+                  <div class="d-flex justify-content-center gap-2 mt-2">
+                     <el-button v-if="!img.isPrimary" type="warning" icon="Star" circle size="small" @click="setPrimaryImage(img.id)" />
+                     <el-button type="danger" icon="Delete" circle size="small" @click="markImageForDelete(img.id)" />
+                  </div>
+                  <div v-if="img.isPrimary" class="position-absolute top-0 start-0 bg-success text-white px-2 small rounded-start">MAIN</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <el-form-item label="Upload ảnh mới">
+                <input type="file" multiple accept="image/*" class="form-control" @change="onPickFiles" />
+              </el-form-item>
+            </div>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- TAB 2: LỊCH SỬ THAO TÁC -->
+        <el-tab-pane label="Lịch sử thay đổi" name="history" v-if="dlg.isEdit">
+          <div class="history-container mt-3">
+            <div v-if="dlg.historyLoading" class="history-loading text-center py-5">
+               <el-icon class="is-loading" :size="30" color="#409eff"><Loading /></el-icon>
+               <div class="mt-2 text-muted">Đang tải dữ liệu lịch sử...</div>
+            </div>
+            
+            <el-empty v-else-if="dlg.history.length === 0" description="Chưa có bản ghi thay đổi nào" :image-size="80" />
+            
+            <el-timeline v-else class="custom-history-timeline">
+              <el-timeline-item
+                v-for="(log, index) in dlg.history"
+                :key="index"
+                :timestamp="formatDate(log.createdAt)" 
+                :type="getLogType(log.severity)"
+                placement="top"
+              >
+                <div class="history-log-item">
+                  <div class="log-item-header">
+                    <div class="log-item-user">
+                      <el-avatar :size="24" class="bg-primary-light me-2">
+                        {{ (log.username || 'S').charAt(0).toUpperCase() }}
+                      </el-avatar>
+                      <span class="user-name">{{ log.username || 'System' }}</span>
+                    </div>
+                    <el-tag 
+                      size="small" 
+                      :type="getLogType(log.severity)" 
+                      effect="light" 
+                      round
+                      class="log-action-tag"
+                    >
+                      {{ log.actionType || 'UPDATE' }}
+                    </el-tag>
+                  </div>
+                  
+                  <div class="log-item-content mt-2">
+                    <p class="log-desc">{{ log.description }}</p>
+                  </div>
+
+                  <div class="log-item-footer mt-2 d-flex align-items-center text-muted small">
+                    <span class="ip-address"><el-icon class="me-1"><Monitor /></el-icon> IP: {{ log.ipAddress || 'N/A' }}</span>
+                  </div>
+                </div>
+              </el-timeline-item>
+            </el-timeline>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
 
       <template #footer>
         <el-button @click="dlg.open = false">Hủy</el-button>
-        <el-button type="primary" :loading="dlg.loading" @click="submitForm">
+        <el-button v-if="dlg.activeTab === 'info'" type="primary" :loading="dlg.loading" @click="submitForm">
           {{ dlg.isEdit ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm' }}
         </el-button>
       </template>
@@ -444,7 +543,9 @@ const categoryIds = ref([]);
 const sortBy = ref("newest_arrival");
 const inStockOnly = ref(false);
 
-// Biến bộ lọc nâng cao
+const selectedIds = ref([]);
+const isBatchDeleting = ref(false);
+
 const dateRange = ref([]);
 const filterIsNew = ref(null);
 const filterIsFaulty = ref(null);
@@ -482,16 +583,11 @@ async function loadTags() {
     tags.value = res.data?.data || res.data || [];
   } catch (e) { console.error("Lỗi lấy tag:", e); }
 }
+
 const serialDlg = reactive({
-  open: false,
-  variantId: null,
-  variantName: "",
-  list: [],
-  inputText: "",
-  genQuantity: 1,  // ← thêm
-  loading: false,
-  adding: false
+  open: false, variantId: null, variantName: "", list: [], inputText: "", genQuantity: 1, loading: false, adding: false
 });
+
 async function load() {
   loading.value = true;
   try {
@@ -500,11 +596,8 @@ async function load() {
         res = await axios.get(`${BASE_URL_API}/trash`, { params: { page: page.value } });
     } else {
         const params = {
-          page: page.value,
-          keyword: keyword.value || undefined,
-          sortBy: sortBy.value || undefined,
-          inStockOnly: inStockOnly.value,
-          tagId: filterTagId.value || undefined,
+          page: page.value, keyword: keyword.value || undefined, sortBy: sortBy.value || undefined,
+          inStockOnly: inStockOnly.value, tagId: filterTagId.value || undefined,
           startDate: dateRange.value?.[0] ? `${dateRange.value[0]}T00:00:00` : undefined,
           endDate: dateRange.value?.[1] ? `${dateRange.value[1]}T23:59:59` : undefined,
           isNew: filterIsNew.value === null ? undefined : filterIsNew.value,
@@ -526,6 +619,73 @@ async function load() {
 
 function onFilter() { page.value = 0; load(); }
 function onPageChange(val) { page.value = val - 1; load(); }
+
+function handleSelectionChange(val) {
+  selectedIds.value = val.map(item => item.id);
+}
+
+async function handleBatchDelete() {
+  if (selectedIds.value.length === 0) return;
+  isBatchDeleting.value = true;
+  try {
+    await productsApi.batchDelete(selectedIds.value);
+    toast(`Đã chuyển ${selectedIds.value.length} sản phẩm vào thùng rác`, "success");
+    selectedIds.value = []; 
+    await load(); 
+  } catch (e) {
+    toast("Lỗi khi xóa hàng loạt", "error");
+  } finally {
+    isBatchDeleting.value = false;
+  }
+}
+
+async function toggleProductStatus(row) {
+  try {
+    if (row.isVisible) {
+      await axios.put(`${BASE_URL_API}/${row.id}/restore`);
+      toast(`Đã bật hiển thị: ${row.name}`, "success");
+    } else {
+      await axios.delete(`${BASE_URL_API}/${row.id}`);
+      toast(`Đã tắt (ẩn) sản phẩm: ${row.name}`, "warning");
+    }
+  } catch (e) {
+    toast("Lỗi cập nhật trạng thái", "error");
+    row.isVisible = !row.isVisible; 
+  }
+}
+
+const batchDlg = reactive({
+  open: false,
+  loading: false,
+  form: { isVisible: null, isNew: null, isFaulty: null, tagIds: [] }
+});
+
+function openBatchUpdateDialog() {
+  batchDlg.form = { isVisible: null, isNew: null, isFaulty: null, tagIds: [] };
+  batchDlg.open = true;
+}
+
+async function submitBatchUpdate() {
+  batchDlg.loading = true;
+  try {
+    const payload = {
+      ids: selectedIds.value,
+      isVisible: batchDlg.form.isVisible,
+      isNew: batchDlg.form.isNew,
+      isFaulty: batchDlg.form.isFaulty,
+      tagIds: batchDlg.form.tagIds.length > 0 ? batchDlg.form.tagIds : null
+    };
+    await productsApi.batchUpdate(payload);
+    toast("Cập nhật hàng loạt thành công!", "success");
+    batchDlg.open = false;
+    selectedIds.value = [];
+    await load();
+  } catch (e) {
+    toast("Lỗi cập nhật hàng loạt", "error");
+  } finally {
+    batchDlg.loading = false;
+  }
+}
 
 // --- Variant Logic ---
 const vr = reactive({
@@ -589,10 +749,7 @@ async function deleteVariant(id) {
   catch { toast("Thất bại", "error"); } 
 }
 
-// ==========================================
-// LOGIC QUẢN LÝ SỐ SERI MỚI (YÊU CẦU THÊM)
-// ==========================================
-
+// LOGIC QUẢN LÝ SỐ SERI
 async function openSerialDialog(row) {
   serialDlg.variantId = row.id;
   serialDlg.variantName = row.variantName;
@@ -615,11 +772,8 @@ async function loadSerials() {
 
 async function submitSerials() {
   if (!serialDlg.inputText.trim()) return;
-  
-  // Tách text bằng dấu phẩy hoặc xuống dòng
   const rawSerials = serialDlg.inputText.split(/[\n,]+/);
   const serials = rawSerials.map(s => s.trim()).filter(s => s.length > 0);
-  
   if (serials.length === 0) return;
 
   serialDlg.adding = true;
@@ -628,8 +782,6 @@ async function submitSerials() {
     await axios.post(`http://localhost:8080/api/products/variants/${serialDlg.variantId}/serials`, payload);
     toast("Thêm Seri thành công", "success");
     serialDlg.inputText = "";
-    
-    // Tải lại dữ liệu để đồng bộ Tồn kho (Stock)
     await loadSerials();
     await loadVariants(); 
     await load(); 
@@ -652,6 +804,7 @@ async function deleteSerial(serialId) {
     toast("Xóa thất bại", "error");
   }
 }
+
 async function generateSerials(quantity = 1) {
   try {
     const res = await axios.post(
@@ -667,7 +820,6 @@ async function generateSerials(quantity = 1) {
     toast("Gen serial thất bại", "error");
   }
 }
-// ==========================================
 
 // --- Product Actions ---
 async function onRestore(id) { 
@@ -700,14 +852,22 @@ async function setPrimaryImage(imgId) {
 // --- Dialog Management ---
 const dlg = reactive({
   open: false, isEdit: false, loading: false, alert: "", editId: null, attributesList: [], existingImages: [], idsToDelete: [], 
+  activeTab: 'info', history: [], historyLoading: false, 
   form: { 
     name: "", sku: "", description: "", isVisible: true, categoryIds: [], galleryImages: [], tagIds: [],
     isNew: true, isFaulty: false 
   },
 });
 
+function getLogType(severity) {
+  if (severity === 'HIGH' || severity === 'CRITICAL') return 'danger';
+  if (severity === 'MEDIUM') return 'warning';
+  return 'primary';
+}
+
 function openCreateDialog() {
   dlg.isEdit = false; dlg.editId = null; dlg.attributesList = [{ name: "", value: "" }]; dlg.existingImages = []; dlg.idsToDelete = []; 
+  dlg.activeTab = 'info';
   dlg.form = { 
     name: "", sku: "", description: "", isVisible: true, categoryIds: [], galleryImages: [], tagIds: [],
     isNew: true, isFaulty: false 
@@ -716,10 +876,16 @@ function openCreateDialog() {
 }
 
 async function onEdit(row) {
-  dlg.isEdit = true; dlg.editId = row.id; dlg.idsToDelete = []; dlg.existingImages = []; dlg.open = true; dlg.loading = true; 
+  dlg.isEdit = true; dlg.editId = row.id; dlg.idsToDelete = []; dlg.existingImages = []; 
+  dlg.activeTab = 'info'; dlg.open = true; dlg.loading = true; dlg.historyLoading = true;
+  
   try {
-    const res = await productsApi.get(row.id);
-    const data = res.data?.data || res.data;
+    const [detailRes, historyRes] = await Promise.all([
+      productsApi.get(row.id),
+      productsApi.getHistory(row.id).catch(() => ({ data: [] }))
+    ]);
+
+    const data = detailRes.data?.data || detailRes.data;
     dlg.form = {
       name: data.name, sku: data.sku, description: data.description, isVisible: data.isVisible,
       categoryIds: data.categoryId ? [data.categoryId] : [], galleryImages: [], tagIds: [],
@@ -733,8 +899,15 @@ async function onEdit(row) {
       const attrs = JSON.parse(data.attributes); 
       dlg.attributesList = Array.isArray(attrs) ? attrs : []; 
     } catch { dlg.attributesList = []; }
-  } catch { toast("Load details failed", "error"); } 
-  finally { dlg.loading = false; }
+
+    dlg.history = historyRes.data || [];
+
+  } catch { 
+    toast("Tải dữ liệu thất bại", "error"); 
+  } finally { 
+    dlg.loading = false; 
+    dlg.historyLoading = false;
+  }
 }
 
 function markImageForDelete(imageId) { 
@@ -746,7 +919,7 @@ function removeAttribute(index) { dlg.attributesList.splice(index, 1); }
 function onPickFiles(e) { dlg.form.galleryImages = Array.from(e.target.files); }
 
 async function submitForm() {
-  if (!dlg.form.name || !dlg.form.sku) return toast("Name/SKU required", "warning");
+  if (!dlg.form.name || !dlg.form.sku) return toast("Vui lòng nhập Tên và SKU", "warning");
   dlg.loading = true;
   try {
     const formData = new FormData();
@@ -783,9 +956,9 @@ async function submitForm() {
     }
 
     if (dlg.isEdit) {
-      await axios.put(`${BASE_URL_API}/${dlg.editId}`, formData); 
+      await productsApi.update(dlg.editId, formData); 
     } else {
-      await axios.post(`${BASE_URL_API}`, formData);
+      await productsApi.create(formData);
     }
 
     dlg.open = false; 
@@ -818,4 +991,93 @@ onMounted(async () => {
 .kicker { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
 .title { font-weight: 800; font-size: 20px; color: #1e293b; }
 .muted { color: #64748b; font-size: 13px; margin-top: 2px; }
+
+/* === PREMIUM HISTORY UI === */
+.history-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.custom-history-timeline {
+  margin-left: 10px;
+  padding-top: 15px;
+}
+
+.history-log-item {
+  background: #ffffff;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.history-log-item:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transform: translateX(4px);
+}
+
+.log-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.log-item-user {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 14px;
+}
+
+.bg-primary-light {
+  background-color: #ebf8ff;
+  color: #3182ce;
+}
+
+.log-action-tag {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.log-desc {
+  margin: 0;
+  color: #4a5568;
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.ip-address {
+  background: #f7fafc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #edf2f7;
+}
+
+:deep(.el-timeline-item__timestamp) {
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  color: #718096;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.custom-tabs :deep(.el-tabs__item) {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.custom-tabs :deep(.el-tabs__active-bar) {
+  height: 3px;
+  border-radius: 3px;
+}
 </style>

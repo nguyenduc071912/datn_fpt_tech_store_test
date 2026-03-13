@@ -64,4 +64,16 @@ export const productsApi = {
   deleteSerial(serialId) {
     return http.delete(`/api/products/variants/serials/${serialId}`);
   },
+
+  batchDelete(ids) {
+    return http.post(`/api/products/batch-delete`, ids);
+  },
+
+  batchUpdate(payload) {
+    return http.put(`/api/products/batch-update`, payload);
+  },
+
+  getHistory(productId) {
+    return http.get(`/api/products/${productId}/history`);
+  }
 };
