@@ -3,21 +3,21 @@
     <el-card shadow="never">
       <div class="d-flex align-items-end justify-content-between gap-2 flex-wrap">
         <div>
-          <div class="kicker">Admin</div>
-          <div class="title">Products Management</div>
+          <div class="kicker">Quản trị</div>
+          <div class="title">Quản lý sản phẩm</div>
           <div class="muted">
-            Supports: Variants, Inventory, Multi-Category, Sort, Trash Bin, Tags
+            Hỗ trợ: Biến thể, Tồn kho, Đa danh mục, Sắp xếp, Thùng rác, Thẻ
           </div>
         </div>
         <div class="d-flex gap-2">
           <el-radio-group v-model="viewMode" size="small" @change="load" style="margin-right: 10px;">
-            <el-radio-button label="active">Active</el-radio-button>
-            <el-radio-button label="trash">Trash Bin</el-radio-button>
+            <el-radio-button label="active">Hoạt động</el-radio-button>
+            <el-radio-button label="trash">Thùng rác</el-radio-button>
           </el-radio-group>
 
-          <el-button @click="load" :loading="loading" icon="Refresh">Reload</el-button>
+          <el-button @click="load" :loading="loading" icon="Refresh">Tải lại</el-button>
           
-          <el-button v-if="viewMode === 'active'" type="primary" icon="Plus" @click="openCreateDialog">Add product</el-button>
+          <el-button v-if="viewMode === 'active'" type="primary" icon="Plus" @click="openCreateDialog">Thêm sản phẩm</el-button>
         </div>
       </div>
 
@@ -28,7 +28,7 @@
         <div class="col-12 col-md-2">
           <el-input
             v-model="keyword"
-            placeholder="Search Name/SKU..."
+            placeholder="Tìm kiếm tên/SKU..."
             clearable
             @clear="onFilter"
             @keyup.enter="onFilter"
@@ -46,7 +46,7 @@
             collapse-tags
             collapse-tags-tooltip
             clearable
-            placeholder="Categories"
+            placeholder="Danh mục"
             @change="onFilter"
             style="width: 100%"
           >
@@ -58,7 +58,7 @@
           <el-select
             v-model="filterTagId"
             clearable
-            placeholder="Filter by Tag"
+            placeholder="Lọc theo thẻ"
             @change="onFilter"
             style="width: 100%"
           >
@@ -67,22 +67,22 @@
         </div>
 
         <div class="col-12 col-md-3">
-          <el-select v-model="sortBy" placeholder="Sort by" @change="onFilter" style="width: 100%">
-            <el-option label="Recently Updated (Mới sửa)" value="recently_updated" />
-            <el-option label="Newest Arrival (Ngày nhập)" value="newest_arrival" />
-            <el-option label="Newest (Mới nhất)" value="newest" />
-            <el-option label="Oldest (Cũ nhất)" value="oldest" />
-            <el-option label="Best Selling (Bán chạy)" value="best_selling" />
-            <el-option label="Price: Low -> High" value="price_asc" />
-            <el-option label="Price: High -> Low" value="price_desc" />
-            <el-option label="Name: A -> Z" value="name_asc" />
-            <el-option label="Name: Z -> A" value="name_desc" />
+          <el-select v-model="sortBy" placeholder="Sắp xếp" @change="onFilter" style="width: 100%">
+            <el-option label="Mới cập nhật (Recently Updated)" value="recently_updated" />
+            <el-option label="Ngày nhập mới nhất" value="newest_arrival" />
+            <el-option label="Mới nhất" value="newest" />
+            <el-option label="Cũ nhất" value="oldest" />
+            <el-option label="Bán chạy nhất" value="best_selling" />
+            <el-option label="Giá: Thấp → Cao" value="price_asc" />
+            <el-option label="Giá: Cao → Thấp" value="price_desc" />
+            <el-option label="Tên: A → Z" value="name_asc" />
+            <el-option label="Tên: Z → A" value="name_desc" />
           </el-select>
         </div>
 
         <div class="col-12 col-md-3 d-flex align-items-center">
           <el-checkbox v-model="inStockOnly" @change="onFilter" border>
-            <span class="text-success fw-bold">Only Show In Stock</span>
+            <span class="text-success fw-bold">Chỉ hiển thị còn hàng</span>
           </el-checkbox>
         </div>
 
@@ -91,8 +91,8 @@
           <el-date-picker
             v-model="dateRange"
             type="daterange"
-            start-placeholder="From Date"
-            end-placeholder="To Date"
+            start-placeholder="Từ ngày"
+            end-placeholder="Đến ngày"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD" 
             @change="onFilter"
@@ -100,15 +100,15 @@
           />
         </div>
         <div class="col-12 col-md-2">
-          <el-select v-model="filterIsNew" placeholder="New Arrival?" clearable @change="onFilter" style="width: 100%">
-            <el-option label="Only New Arrivals" :value="true" />
-            <el-option label="Normal Products" :value="false" />
+          <el-select v-model="filterIsNew" placeholder="Sản phẩm mới?" clearable @change="onFilter" style="width: 100%">
+            <el-option label="Chỉ sản phẩm mới" :value="true" />
+            <el-option label="Sản phẩm thường" :value="false" />
           </el-select>
         </div>
         <div class="col-12 col-md-2">
-          <el-select v-model="filterIsFaulty" placeholder="Quality Status" clearable @change="onFilter" style="width: 100%">
-            <el-option label="Faulty (Hidden)" :value="true" />
-            <el-option label="Good Quality" :value="false" />
+          <el-select v-model="filterIsFaulty" placeholder="Trạng thái chất lượng" clearable @change="onFilter" style="width: 100%">
+            <el-option label="Lỗi (Ẩn)" :value="true" />
+            <el-option label="Chất lượng tốt" :value="false" />
           </el-select>
         </div>
       </div>
@@ -145,12 +145,12 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="name" label="Product Info" min-width="250">
+        <el-table-column prop="name" label="Thông tin sản phẩm" min-width="250">
           <template #default="{ row }">
             <div class="d-flex align-items-center gap-2">
               <div class="fw-bold text-primary">{{ row.name }}</div>
-              <el-tag v-if="row.isNew" size="small" type="success" effect="dark">NEW</el-tag>
-              <el-tag v-if="row.isFaulty" size="small" type="danger" effect="dark">FAULTY</el-tag>
+              <el-tag v-if="row.isNew" size="small" type="success" effect="dark">MỚI</el-tag>
+              <el-tag v-if="row.isFaulty" size="small" type="danger" effect="dark">LỖI</el-tag>
             </div>
             <div class="small text-muted mb-1">SKU: {{ row.sku }}</div>
             
@@ -161,16 +161,16 @@
             </div>
             
             <div class="d-flex gap-3 mt-1 align-items-center" style="font-size: 12px">
-               <span v-if="row.minPrice" class="text-danger fw-bold">From: {{ formatCurrency(row.minPrice) }}</span>
+               <span v-if="row.minPrice" class="text-danger fw-bold">Giá từ: {{ formatCurrency(row.minPrice) }}</span>
                
                <el-tag :type="row.inStock ? 'success' : 'danger'" size="small" effect="plain" v-if="viewMode === 'active'">
-                 {{ row.inStock ? `In Stock (${row.totalStock || 0})` : 'Out of Stock' }}
+                 {{ row.inStock ? `Còn hàng (${row.totalStock || 0})` : 'Hết hàng' }}
                </el-tag>
             </div>
           </template>
         </el-table-column>
 
-        <el-table-column label="Description" min-width="200">
+        <el-table-column label="Mô tả" min-width="200">
           <template #default="{ row }">
             <div class="text-truncate-3" style="font-size: 12px; white-space: pre-wrap; color: #666">
               {{ row.description }}
@@ -178,13 +178,14 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Import Date" width="130" align="center">
+        <el-table-column label="Ngày nhập" width="130" align="center">
           <template #default="{ row }">
             <div style="font-size: 11px; color: #666">{{ formatDate(row.createdAt) }}</div>
           </template>
         </el-table-column>
 
-        <el-table-column prop="isVisible" label="Status (Quick Edit)" width="140" align="center">
+        <!-- MERGED: el-switch khi active, tag tĩnh khi trash -->
+        <el-table-column prop="isVisible" label="Trạng thái" width="150" align="center">
           <template #default="{ row }">
             <div v-if="viewMode === 'active'">
               <el-switch
@@ -198,20 +199,20 @@
               />
             </div>
             <div v-else>
-               <el-tag type="info" size="small">In Trash</el-tag>
+              <el-tag type="info" size="small">Trong thùng rác</el-tag>
             </div>
           </template>
         </el-table-column>
 
-        <el-table-column label="Actions" width="220" align="center" fixed="right">
+        <el-table-column label="Hành động" width="220" align="center" fixed="right">
           <template #default="{ row }">
             <div v-if="viewMode === 'active'">
-              <el-button type="success" link size="small" icon="Connection" @click="openVariantDrawer(row)">Variants</el-button>
-              <el-button type="primary" link size="small" icon="Edit" @click="onEdit(row)">Edit</el-button>
+              <el-button type="success" link size="small" icon="Connection" @click="openVariantDrawer(row)">Biến thể</el-button>
+              <el-button type="primary" link size="small" icon="Edit" @click="onEdit(row)">Sửa</el-button>
               
-              <el-popconfirm :title="row.isFaulty ? 'Sản phẩm lỗi. Xóa vĩnh viễn?' : 'Move to Trash Bin?'" @confirm="onDelete(row)">
+              <el-popconfirm :title="row.isFaulty ? 'Sản phẩm lỗi. Xóa vĩnh viễn?' : 'Chuyển vào thùng rác?'" @confirm="onDelete(row)">
                 <template #reference>
-                  <el-button type="danger" link size="small" icon="Delete">{{ row.isFaulty ? 'Kill' : 'Delete' }}</el-button>
+                  <el-button type="danger" link size="small" icon="Delete">{{ row.isFaulty ? 'Xóa hẳn' : 'Xóa' }}</el-button>
                 </template>
               </el-popconfirm>
             </div>
@@ -224,7 +225,7 @@
                 @click="onRestore(row.id)"
                 style="font-weight: bold"
               >
-                Restore Product
+                Khôi phục sản phẩm
               </el-button>
             </div>
           </template>
@@ -278,24 +279,24 @@
     </el-dialog>
 
     <!-- DRAWER VARIANTS -->
-    <el-drawer v-model="vr.open" :title="'Manage Variants: ' + vr.productName" size="60%" destroy-on-close>
+    <el-drawer v-model="vr.open" :title="'Quản lý biến thể: ' + vr.productName" size="60%" destroy-on-close>
       <div class="mb-4">
-        <h6 class="fw-bold mb-3">Existing Variants</h6>
+        <h6 class="fw-bold mb-3">Các biến thể hiện có</h6>
         <el-table :data="vr.variants" border size="small" v-loading="vr.loading">
-          <el-table-column prop="variantName" label="Name" min-width="150" />
+          <el-table-column prop="variantName" label="Tên" min-width="150" />
           <el-table-column prop="sku" label="SKU" width="120" />
-          <el-table-column label="Price / Stock" width="160">
+          <el-table-column label="Giá / Tồn" width="160">
             <template #default="{ row }">
               <div class="text-danger fw-bold">{{ formatCurrency(row.price) }}</div>
-              <div class="small">Stock: <span :class="row.stockQuantity > 0 ? 'text-success fw-bold' : 'text-danger'">{{ row.stockQuantity }}</span></div>
+              <div class="small">Tồn: <span :class="row.stockQuantity > 0 ? 'text-success fw-bold' : 'text-danger'">{{ row.stockQuantity }}</span></div>
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="180" align="center">
+          <el-table-column label="Hành động" width="180" align="center">
             <template #default="{ row }">
-              <el-button type="warning" link size="small" @click="openSerialDialog(row)">Serials</el-button>
-              <el-button type="primary" link size="small" @click="editVariant(row)">Edit</el-button>
-              <el-popconfirm title="Delete variant?" @confirm="deleteVariant(row.id)">
-                <template #reference><el-button type="danger" link size="small">Delete</el-button></template>
+              <el-button type="warning" link size="small" @click="openSerialDialog(row)">Số Seri</el-button>
+              <el-button type="primary" link size="small" @click="editVariant(row)">Sửa</el-button>
+              <el-popconfirm title="Xóa biến thể?" @confirm="deleteVariant(row.id)">
+                <template #reference><el-button type="danger" link size="small">Xóa</el-button></template>
               </el-popconfirm>
             </template>
           </el-table-column>
@@ -305,14 +306,14 @@
       <el-divider />
 
       <div>
-        <h6 class="fw-bold mb-3 text-primary">{{ vr.isEdit ? 'Update Variant' : 'Add New Variant' }}</h6>
+        <h6 class="fw-bold mb-3 text-primary">{{ vr.isEdit ? 'Cập nhật biến thể' : 'Thêm biến thể mới' }}</h6>
         <el-form :model="vr.form" label-position="top" class="row g-2">
-          <div class="col-md-6"><el-form-item label="Variant Name" required><el-input v-model="vr.form.variantName" placeholder="e.g. Red, 16GB..."/></el-form-item></div>
+          <div class="col-md-6"><el-form-item label="Tên biến thể" required><el-input v-model="vr.form.variantName" placeholder="vd: Đỏ, 16GB..."/></el-form-item></div>
           <div class="col-md-6"><el-form-item label="SKU" required><el-input v-model="vr.form.sku" /></el-form-item></div>
-          <div class="col-md-6"><el-form-item label="Price (VND)" required><el-input-number v-model="vr.form.price" style="width: 100%" :min="0"/></el-form-item></div>
+          <div class="col-md-6"><el-form-item label="Giá (VND)" required><el-input-number v-model="vr.form.price" style="width: 100%" :min="0"/></el-form-item></div>
           
           <div class="col-md-6">
-            <el-form-item label="Stock Quantity (Auto-calculated by Serials)" required>
+            <el-form-item label="Số lượng tồn (tự động bởi Seri)" required>
               <el-input-number v-model="vr.form.stockQuantity" style="width: 100%" :min="0" disabled />
             </el-form-item>
           </div>
@@ -320,7 +321,7 @@
           <div class="col-12 mt-2">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <label class="small fw-bold">Dynamic Attributes</label>
-              <el-button size="small" icon="Plus" @click="addVariantAttr">Add</el-button>
+              <el-button size="small" icon="Plus" @click="addVariantAttr">Thêm</el-button>
             </div>
             <div v-for="(attr, index) in vr.attrsList" :key="index" class="d-flex gap-2 mb-2">
               <el-input v-model="attr.key" placeholder="Key (e.g. Color)" size="small" />
@@ -330,9 +331,9 @@
           </div>
 
           <div class="col-12 mt-3 text-end">
-            <el-button v-if="vr.isEdit" @click="resetVariantForm">Cancel</el-button>
+            <el-button v-if="vr.isEdit" @click="resetVariantForm">Hủy</el-button>
             <el-button type="primary" :loading="vr.saving" @click="saveVariant">
-              {{ vr.isEdit ? 'Save Changes' : 'Add Variant' }}
+              {{ vr.isEdit ? 'Lưu thay đổi' : 'Thêm biến thể' }}
             </el-button>
           </div>
         </el-form>
@@ -376,7 +377,7 @@
       </el-table>
     </el-dialog>
 
-    <!-- DIALOG PRODUCT CÓ THÊM TAB LỊCH SỬ THAO TÁC (ĐÃ ĐƯỢC NÂNG CẤP UI) -->
+    <!-- DIALOG PRODUCT (có Tabs + Lịch sử thao tác) -->
     <el-dialog v-model="dlg.open" :title="dlg.isEdit ? 'Thông tin sản phẩm' : 'Thêm sản phẩm mới'" width="850px" top="5vh">
       <el-alert v-if="dlg.alert" :title="dlg.alert" type="error" show-icon class="mb-3" />
 
@@ -384,46 +385,46 @@
         <!-- TAB 1: THÔNG TIN CƠ BẢN -->
         <el-tab-pane label="Thông tin cơ bản" name="info">
           <el-form :model="dlg.form" label-position="top" class="row g-3 mt-2">
-            <div class="col-md-6"><el-form-item label="Product Name" required><el-input v-model="dlg.form.name" /></el-form-item></div>
-            <div class="col-md-6"><el-form-item label="Master SKU" required><el-input v-model="dlg.form.sku" /></el-form-item></div>
+            <div class="col-md-6"><el-form-item label="Tên sản phẩm" required><el-input v-model="dlg.form.name" /></el-form-item></div>
+            <div class="col-md-6"><el-form-item label="SKU chính" required><el-input v-model="dlg.form.sku" /></el-form-item></div>
 
             <div class="col-md-3">
-              <el-form-item label="Mark as New Arrival">
-                <el-switch v-model="dlg.form.isNew" active-text="New" inactive-text="Normal" />
+              <el-form-item label="Đánh dấu Mới">
+                <el-switch v-model="dlg.form.isNew" active-text="Mới" inactive-text="Bình thường" />
               </el-form-item>
             </div>
             <div class="col-md-3">
-              <el-form-item label="Mark as Faulty (Hide)">
-                <el-switch v-model="dlg.form.isFaulty" active-color="#ff4949" active-text="Faulty" inactive-text="Good" />
+              <el-form-item label="Đánh dấu Lỗi (Ẩn)">
+                <el-switch v-model="dlg.form.isFaulty" active-color="#ff4949" active-text="Lỗi" inactive-text="Tốt" />
               </el-form-item>
             </div>
 
             <div class="col-md-6">
-              <el-form-item label="Categories">
-                <el-select v-model="dlg.form.categoryIds" multiple placeholder="Select categories" style="width: 100%">
+              <el-form-item label="Danh mục">
+                <el-select v-model="dlg.form.categoryIds" multiple placeholder="Chọn danh mục" style="width: 100%">
                   <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
                 </el-select>
               </el-form-item>
             </div>
 
             <div class="col-md-6">
-              <el-form-item label="Campaign Tags">
-                <el-select v-model="dlg.form.tagIds" multiple placeholder="Select tags" style="width: 100%">
+              <el-form-item label="Thẻ chiến dịch">
+                <el-select v-model="dlg.form.tagIds" multiple placeholder="Chọn thẻ" style="width: 100%">
                   <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
                 </el-select>
               </el-form-item>
             </div>
 
             <div class="col-md-12">
-              <el-form-item label="Description">
+              <el-form-item label="Mô tả">
                 <el-input v-model="dlg.form.description" type="textarea" :rows="3" />
               </el-form-item>
             </div>
 
             <div class="col-12">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <label class="fw-bold">Specifications (Attributes)</label>
-                <el-button size="small" icon="Plus" @click="addAttribute">Add Spec</el-button>
+                <label class="fw-bold">Thông số kỹ thuật (Thuộc tính)</label>
+                <el-button size="small" icon="Plus" @click="addAttribute">Thêm</el-button>
               </div>
               <div v-for="(attr, index) in dlg.attributesList" :key="index" class="d-flex gap-2 mb-2">
                 <el-input v-model="attr.name" placeholder="Label (e.g. RAM)" />
@@ -433,7 +434,7 @@
             </div>
 
             <div class="col-12" v-if="dlg.isEdit && dlg.existingImages.length > 0">
-              <label class="fw-bold mb-2">Image Gallery</label>
+              <label class="fw-bold mb-2">Thư viện ảnh</label>
               <div class="d-flex gap-2 flex-wrap p-3 border rounded bg-light">
                 <div v-for="img in dlg.existingImages" :key="img.id" class="position-relative text-center" style="width: 110px;">
                   <el-image 
@@ -452,14 +453,14 @@
             </div>
 
             <div class="col-12">
-              <el-form-item label="Upload New Media">
+              <el-form-item label="Upload ảnh mới">
                 <input type="file" multiple accept="image/*" class="form-control" @change="onPickFiles" />
               </el-form-item>
             </div>
           </el-form>
         </el-tab-pane>
 
-        <!-- TAB 2: LỊCH SỬ THAO TÁC (Audit Log) - ĐÃ LÀM ĐẸP LẠI -->
+        <!-- TAB 2: LỊCH SỬ THAO TÁC -->
         <el-tab-pane label="Lịch sử thay đổi" name="history" v-if="dlg.isEdit">
           <div class="history-container mt-3">
             <div v-if="dlg.historyLoading" class="history-loading text-center py-5">
@@ -511,9 +512,9 @@
       </el-tabs>
 
       <template #footer>
-        <el-button @click="dlg.open = false">Cancel</el-button>
+        <el-button @click="dlg.open = false">Hủy</el-button>
         <el-button v-if="dlg.activeTab === 'info'" type="primary" :loading="dlg.loading" @click="submitForm">
-          {{ dlg.isEdit ? 'Update Product' : 'Create Product' }}
+          {{ dlg.isEdit ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm' }}
         </el-button>
       </template>
     </el-dialog>
@@ -610,7 +611,7 @@ async function load() {
     rows.value = normalizeProducts(pageData.content || []);
     totalElements.value = pageData.totalElements || 0;
   } catch (e) {
-    toast("Failed to load products.", "error");
+    toast("Không tải được sản phẩm.", "error");
   } finally {
     loading.value = false;
   }
@@ -703,7 +704,7 @@ async function loadVariants() {
   try { 
     const res = await axios.get(`${BASE_URL_API}/${vr.productId}/variants`); 
     vr.variants = res.data || []; 
-  } catch(e) { toast("Load variants failed", "error"); } 
+  } catch(e) { toast("Tải biến thể thất bại", "error"); } 
   vr.loading = false; 
 }
 
@@ -727,7 +728,7 @@ function editVariant(row) {
 }
 
 async function saveVariant() {
-  if(!vr.form.variantName || !vr.form.sku) return toast("Fill required fields", "warning");
+  if(!vr.form.variantName || !vr.form.sku) return toast("Vui lòng điền các trường bắt buộc", "warning");
   vr.saving = true;
   try {
     const attrObj = {}; 
@@ -737,15 +738,15 @@ async function saveVariant() {
     if(vr.isEdit) await axios.put(`${BASE_URL_API}/variants/${vr.editId}`, payload);
     else await axios.post(`${BASE_URL_API}/${vr.productId}/variants`, payload);
     
-    toast("Success", "success");
+    toast("Thành công", "success");
     resetVariantForm(); await loadVariants(); load(); 
-  } catch { toast("Failed", "error"); }
+  } catch { toast("Thất bại", "error"); }
   vr.saving = false;
 }
 
 async function deleteVariant(id) { 
-  try { await axios.delete(`${BASE_URL_API}/variants/${id}`); toast("Deleted", "success"); await loadVariants(); load(); } 
-  catch { toast("Failed", "error"); } 
+  try { await axios.delete(`${BASE_URL_API}/variants/${id}`); toast("Đã xóa", "success"); await loadVariants(); load(); } 
+  catch { toast("Thất bại", "error"); } 
 }
 
 // LOGIC QUẢN LÝ SỐ SERI
@@ -803,6 +804,7 @@ async function deleteSerial(serialId) {
     toast("Xóa thất bại", "error");
   }
 }
+
 async function generateSerials(quantity = 1) {
   try {
     const res = await axios.post(
@@ -821,8 +823,8 @@ async function generateSerials(quantity = 1) {
 
 // --- Product Actions ---
 async function onRestore(id) { 
-  try { await axios.put(`${BASE_URL_API}/${id}/restore`); toast("Restored!", "success"); load(); } 
-  catch { toast("Restore failed", "error"); } 
+  try { await axios.put(`${BASE_URL_API}/${id}/restore`); toast("Khôi phục thành công!", "success"); load(); } 
+  catch { toast("Khôi phục thất bại", "error"); } 
 }
 
 async function onDelete(row) { 
@@ -832,19 +834,19 @@ async function onDelete(row) {
       toast("Đã xóa vĩnh viễn sản phẩm lỗi.", "success"); 
     } else {
       await axios.delete(`${BASE_URL_API}/${row.id}`); 
-      toast("Đã chuyển vào Thùng rác.", "success"); 
+      toast("Đã chuyển vào thùng rác.", "success"); 
     }
     load(); 
-  } catch { toast("Delete failed.", "error"); } 
+  } catch { toast("Xóa thất bại.", "error"); } 
 }
 
 async function setPrimaryImage(imgId) { 
   try { 
     await axios.put(`${BASE_URL_API}/${dlg.editId}/images/${imgId}/primary`); 
-    toast("Updated Primary Image", "success"); 
+    toast("Cập nhật ảnh chính thành công", "success"); 
     const res = await productsApi.get(dlg.editId); 
     dlg.existingImages = (res.data?.data || res.data).images || []; 
-  } catch { toast("Failed", "error"); } 
+  } catch { toast("Thất bại", "error"); } 
 }
 
 // --- Dialog Management ---
@@ -898,11 +900,10 @@ async function onEdit(row) {
       dlg.attributesList = Array.isArray(attrs) ? attrs : []; 
     } catch { dlg.attributesList = []; }
 
-    // Đồng bộ tên trường lịch sử từ backend (createdAt, actionType)
     dlg.history = historyRes.data || [];
 
   } catch { 
-    toast("Load details failed", "error"); 
+    toast("Tải dữ liệu thất bại", "error"); 
   } finally { 
     dlg.loading = false; 
     dlg.historyLoading = false;
@@ -918,7 +919,7 @@ function removeAttribute(index) { dlg.attributesList.splice(index, 1); }
 function onPickFiles(e) { dlg.form.galleryImages = Array.from(e.target.files); }
 
 async function submitForm() {
-  if (!dlg.form.name || !dlg.form.sku) return toast("Name/SKU required", "warning");
+  if (!dlg.form.name || !dlg.form.sku) return toast("Vui lòng nhập Tên và SKU", "warning");
   dlg.loading = true;
   try {
     const formData = new FormData();
@@ -955,7 +956,6 @@ async function submitForm() {
     }
 
     if (dlg.isEdit) {
-      // Gọi API POST /api/products/{id}/update để fix lỗi Multipart PUT
       await productsApi.update(dlg.editId, formData); 
     } else {
       await productsApi.create(formData);
@@ -963,7 +963,7 @@ async function submitForm() {
 
     dlg.open = false; 
     await load(); 
-    toast("Success", "success");
+    toast("Thành công", "success");
   } catch (e) { 
     console.error("LỖI GỬI LÊN:", e);
     const backendError = e.response?.data?.message || e.message;
