@@ -9,7 +9,9 @@ import com.retailmanagement.dto.request.UpdateUserPasswordRequest;
 import com.retailmanagement.dto.request.UpdateUserRequest;
 import com.retailmanagement.dto.request.UpdateUserRoleRequest;
 import com.retailmanagement.dto.response.UserResponse;
+import com.retailmanagement.entity.Role;
 import com.retailmanagement.entity.User;
+import com.retailmanagement.repository.RoleRepository;
 import com.retailmanagement.repository.UserRepository;
 import com.retailmanagement.security.log.ActionType;
 import com.retailmanagement.security.log.SensitiveOperation;
@@ -26,6 +28,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
     @SensitiveOperation(
@@ -48,11 +51,13 @@ public class UserService {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
 
+        Role role = roleRepository.findByName("CUSTOMER");
+
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(role)
                 .build();
 
         return toResponse(userRepository.save(user));
@@ -132,10 +137,15 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
 
-        String oldRole = user.getRole();
-        String newRole = request.getRole();
+        Role newRole = roleRepository.findByName(request.getRole());
 
-        if (oldRole.equals(newRole)) {
+        if (newRole == null) {
+            throw new RuntimeException("Role không tồn tại");
+        }
+
+        Role oldRole = user.getRole();
+
+        if (oldRole.getName().equals(newRole.getName())) {
             throw new RuntimeException("Role không thay đổi");
         }
 
@@ -173,7 +183,7 @@ public class UserService {
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().getName())
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
