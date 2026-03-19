@@ -401,11 +401,25 @@ const tempSelectedId = ref(null);
 const promoResult = ref(null);
 const promoError = ref("");
 
-const paymentOptions = [
-  { value: "CASH", label: "Tiền mặt", icon: "💵" },
+const ALL_PAYMENT_OPTIONS = [
+  { value: "CASH",     label: "Tiền mặt",     icon: "💵" },
   { value: "TRANSFER", label: "Chuyển khoản", icon: "🏦" },
-  { value: "CARD", label: "Thẻ tín dụng", icon: "💳" },
+  { value: "CARD",     label: "Thẻ tín dụng", icon: "💳" },
 ];
+
+// Ẩn Tiền mặt khi chọn Giao tại nhà
+const paymentOptions = computed(() =>
+  deliveryMethod.value === "HOME"
+    ? ALL_PAYMENT_OPTIONS.filter(o => o.value !== "CASH")
+    : ALL_PAYMENT_OPTIONS
+);
+
+// Khi chuyển sang Giao tại nhà: đặt mặc định là Chuyển khoản
+watch(deliveryMethod, (val) => {
+  if (val === "HOME" && form.paymentMethod === "CASH") {
+    form.paymentMethod = "TRANSFER";
+  }
+});
 
 const subtotal = computed(() =>
   form.items.reduce((sum, i) => {
