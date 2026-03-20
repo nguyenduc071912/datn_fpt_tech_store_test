@@ -51,7 +51,8 @@ public class UserService {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
 
-        Role role = roleRepository.findByName("CUSTOMER");
+        Role role = roleRepository.findByName("CUSTOMER")
+                .orElseThrow(() -> new RuntimeException("Role không tồn tại"));
 
         User user = User.builder()
                 .username(request.getUsername())
@@ -137,7 +138,8 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
 
-        Role newRole = roleRepository.findByName(request.getRole());
+        Role newRole = roleRepository.findByName(request.getRole())
+                .orElseThrow(() -> new RuntimeException("Role không tồn tại"));
 
         if (newRole == null) {
             throw new RuntimeException("Role không tồn tại");
