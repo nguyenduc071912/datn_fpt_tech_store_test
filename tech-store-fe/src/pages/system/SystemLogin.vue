@@ -1,4 +1,14 @@
 <!-- FILE: src/pages/system/SystemLogin.vue -->
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║  FONT FIX:                                               ║
+  ║  Thêm 3 dòng này vào <head> của index.html:              ║
+  ║                                                          ║
+  ║  <link rel="preconnect" href="https://fonts.googleapis.com"> ║
+  ║  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> ║
+  ║  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet"> ║
+  ╚══════════════════════════════════════════════════════════╝
+-->
 <template>
   <div class="login-root">
     <!-- Background -->
@@ -110,7 +120,7 @@
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
             <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
-          <span>HỆ THỐNG → Bảng điều khiển &nbsp;·&nbsp; KHO → Đơn hàng</span>
+          <span>HỆ THỐNG → Dashboard &nbsp;·&nbsp; SALES → Bán hàng &nbsp;·&nbsp; KHO → Đơn hàng</span>
         </div>
         <div class="divider-line"><span>hoặc</span></div>
         <button class="link-btn customer" @click="router.push('/login')">
@@ -185,7 +195,9 @@ async function doLogin() {
     toast("Đăng nhập hệ thống thành công.", "success");
 
     if (role === "INVENTORY") {
-      router.replace("/inventory/orders");
+      router.replace("/inventory/orders/paid");
+    } else if (role === "SALES") {
+      router.replace("/sales/pos");
     } else {
       router.replace("/system/dashboard");
     }
@@ -199,7 +211,24 @@ async function doLogin() {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap');
+/*
+ * ⚠️  @import Google Fonts đã bị XÓA khỏi đây.
+ *
+ * Lý do: @import trong <style scoped> được Vite xử lý muộn hơn,
+ * gây ra FOUT (Flash of Unstyled Text) hoặc font không load được.
+ *
+ * ✅ Thay vào đó, thêm vào public/index.html (trong <head>):
+ *
+ *   <link rel="preconnect" href="https://fonts.googleapis.com">
+ *   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ *   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+ */
+
+/* ─── CSS Font Variables ───────────────────────────────── */
+:root {
+  --font-display: 'Syne', 'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'DM Mono', 'Fira Code', 'Cascadia Code', ui-monospace, 'Courier New', monospace;
+}
 
 /* ─── Root ─────────────────────────────────────────────── */
 .login-root {
@@ -208,7 +237,7 @@ async function doLogin() {
   align-items: center;
   justify-content: center;
   background: #eef4f0;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display);
   position: relative;
   overflow: hidden;
   padding: 24px;
@@ -349,7 +378,7 @@ async function doLogin() {
   padding: 5px 12px;
   border-radius: 100px;
   margin-bottom: 20px;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .card-title {
@@ -359,6 +388,7 @@ async function doLogin() {
   margin: 0 0 8px;
   line-height: 1.2;
   letter-spacing: -0.03em;
+  font-family: var(--font-display);
 }
 
 .card-title em {
@@ -373,7 +403,7 @@ async function doLogin() {
   margin: 0;
   font-weight: 400;
   letter-spacing: 0.01em;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* ─── Error Alert ───────────────────────────────────────── */
@@ -388,7 +418,7 @@ async function doLogin() {
   padding: 11px 14px;
   border-radius: 10px;
   margin-bottom: 20px;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .alert-slide-enter-active { transition: all 0.3s cubic-bezier(0.34, 1.2, 0.64, 1); }
@@ -415,7 +445,7 @@ async function doLogin() {
   color: rgba(0, 140, 80, 0.65);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .field-wrapper {
@@ -452,7 +482,7 @@ async function doLogin() {
   border: none;
   outline: none;
   color: #0f2318;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 13.5px;
   font-weight: 300;
   letter-spacing: 0.02em;
@@ -488,7 +518,7 @@ async function doLogin() {
   border-radius: 10px;
   background: linear-gradient(135deg, rgba(0, 180, 100, 0.12) 0%, rgba(0, 160, 80, 0.08) 100%);
   color: #007a50;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -561,7 +591,7 @@ async function doLogin() {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: rgba(0, 140, 80, 0.45);
   letter-spacing: 0.03em;
@@ -573,7 +603,7 @@ async function doLogin() {
   align-items: center;
   width: 100%;
   gap: 10px;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: rgba(15, 35, 24, 0.2);
   letter-spacing: 0.08em;
@@ -592,7 +622,7 @@ async function doLogin() {
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display);
   transition: color 0.15s;
   padding: 0;
 }

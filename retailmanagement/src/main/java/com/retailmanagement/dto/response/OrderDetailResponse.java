@@ -22,6 +22,9 @@ public class OrderDetailResponse {
 
     private Integer customerId;
     private String customerName;
+    private String customerAddress;
+    private String customerPhone;
+    private String customerEmail;
 
     private Integer staffId;
     private String staffUsername;
@@ -45,6 +48,9 @@ public class OrderDetailResponse {
     private BigDecimal totalAmount;
 
     private Instant createdAt;
+    private Instant deliveredAt;
+    private Instant cancelledAt;
+    private Instant paidAt;
     private List<CreateOrderResponse.Item> items;
 
     public OrderDetailResponse(
@@ -56,6 +62,9 @@ public class OrderDetailResponse {
             String paymentStatus,
             Integer customerId,
             String customerName,
+            String customerEmail,
+            String customerPhone,
+            String customerAddress,
             Integer staffId,
             String staffUsername,
             String notes,
@@ -65,6 +74,9 @@ public class OrderDetailResponse {
             BigDecimal shippingFee,
             BigDecimal totalAmount,
             Instant createdAt,
+            Instant deliveredAt,
+            Instant cancelledAt,
+            Instant paidAt,
             List<CreateOrderResponse.Item> items
     ) {
         this.orderId       = orderId;
@@ -75,6 +87,9 @@ public class OrderDetailResponse {
         this.paymentStatus = paymentStatus;
         this.customerId    = customerId;
         this.customerName  = customerName;
+        this.customerAddress = customerAddress;
+        this.customerPhone   = customerPhone;
+        this.customerEmail   = customerEmail;
         this.staffId       = staffId;
         this.staffUsername = staffUsername;
         this.notes         = notes;
@@ -84,6 +99,9 @@ public class OrderDetailResponse {
         this.shippingFee   = shippingFee;
         this.totalAmount   = totalAmount;
         this.createdAt     = createdAt;
+        this.deliveredAt    = deliveredAt;
+        this.cancelledAt  = cancelledAt;
+        this.paidAt      = paidAt;
         this.items         = items;
 
         parseDiscountFromNotes();
@@ -98,6 +116,9 @@ public class OrderDetailResponse {
             String paymentStatus,
             Integer customerId,
             String customerName,
+            String customerAddress,
+            String customerPhone,
+            String customerEmail,
             Integer staffId,
             String staffUsername,
             String notes,
@@ -107,13 +128,16 @@ public class OrderDetailResponse {
             BigDecimal shippingFee,
             BigDecimal totalAmount,
             Instant createdAt,
+            Instant deliveredAt,
+            Instant cancelledAt,
+            Instant paidAt,
             List<CreateOrderResponse.Item> items,
             String promoCode,
             String appliedPromotionJson
     ) {
         this(orderId, orderNumber, channel, paymentMethod, status, paymentStatus,
-                customerId, customerName, staffId, staffUsername, notes,
-                subtotal, discountTotal, taxTotal, shippingFee, totalAmount, createdAt, items);
+                customerId, customerName, customerAddress, customerPhone, customerEmail, staffId, staffUsername, notes,
+                subtotal, discountTotal, taxTotal, shippingFee, totalAmount, createdAt, deliveredAt, cancelledAt, paidAt, items);
         this.promoCode = promoCode;
         this.comboInfo = parseComboInfo(appliedPromotionJson);
     }

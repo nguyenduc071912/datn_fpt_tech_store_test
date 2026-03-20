@@ -22,11 +22,6 @@ import UserManager from "../pages/system/UserManager.vue";
 import CustomerManager from "../pages/system/CustomerManager.vue";
 import CategoryManager from "../pages/system/CategoryManager.vue";
 import ProductManager from "../pages/system/ProductManager.vue";
-import OrderListNew from "../pages/system/OrderListNew.vue";
-import OrderListProcessing from "../pages/system/OrderListProcessing.vue";
-import OrderListPaid from "../pages/system/OrderListPaid.vue";
-import OrderListDelivered from "../pages/system/OrderListDelivered.vue";
-import OrderListShipping from "../pages/system/OrderListShipping.vue";
 import ReturnListPending from "../pages/system/ReturnListPending.vue";
 import ReturnListAll from "../pages/system/ReturnListAll.vue";
 import OrderFilter from "../pages/system/OrderFilter.vue";
@@ -35,7 +30,9 @@ import PricingManager from "../pages/system/PricingManager.vue";
 import PromotionManager from "../pages/system/PromotionManager.vue";
 import SettingsCurrency from "../pages/system/SettingsCurrency.vue";
 import PaymentManagement from "../pages/system/PaymentManagement.vue";
-
+import SerialManager from "../pages/system/SerialManager.vue";
+import OrderDashboard from "../pages/system/OrderDashboard.vue";
+import ProductDashboard from "../pages/system/ProductDashboard.vue";
 
 import Toployalcustomers from "../pages/system/Toployalcustomers.vue";
 import Loyaltysummaryadmin from "../pages/system/Loyaltysummaryadmin.vue";
@@ -52,6 +49,12 @@ import InventoryOrderDetail from "../pages/inventory/InventoryOrderDetail.vue";
 import InventoryOrdersPaid from "../pages/inventory/InventoryOrdersPaid.vue";
 import InventoryOrdersProcessing from "../pages/inventory/InventoryOrdersProcessing.vue";
 import Changepassword from "../pages/customer/Changepassword.vue";
+
+// ===== Sales (POS) =====
+import SalesShell from "../pages/sales/SalesShell.vue";
+import SalesPOS from "../pages/sales/SalesPOS.vue";
+import SalesPickup from "../pages/sales/SalesPickup.vue";
+// import SalesOrderHistory from "../pages/sales/SalesOrderHistory.vue"; // TODO
 
 //===== 403 =====
 import Forbidden from "../pages/customer/Forbidden.vue";
@@ -70,12 +73,12 @@ const routes = [
     component: CustomerLogin,
     meta: { portal: "customer", hideHeader: true },
   },
-{
-  path: "/change-password",
-  name: "change-password",
-  component: Changepassword,
-  meta: { portal: "customer", requiresAuth: true, hideHeader: true },
-},
+  {
+    path: "/change-password",
+    name: "change-password",
+    component: Changepassword,
+    meta: { portal: "customer", requiresAuth: true, hideHeader: true },
+  },
   {
     path: "/register",
     name: "register",
@@ -130,7 +133,6 @@ const routes = [
     component: ProductDetail,
     meta: { portal: "customer" },
   },
-  
 
   // ===== 403 FORBIDDEN =====
   {
@@ -169,7 +171,7 @@ const routes = [
         component: UserManager,
         meta: { title: "User Management" },
       },
-      
+
       {
         path: "customers",
         name: "system-customers",
@@ -182,7 +184,6 @@ const routes = [
         component: Toployalcustomers,
         meta: { title: "Top loyal customers" },
       },
-     
 
       {
         path: "categories",
@@ -196,38 +197,27 @@ const routes = [
         component: ProductManager,
         meta: { title: "Products" },
       },
+      {
+        path: 'serials',
+        name: 'SerialManager',
+        component: SerialManager, 
+        meta: { title: 'Quản lý số Seri' }
+      },
+      {
+        path: 'dashboard-products',
+        name: 'ProductDashboard',
+        component: ProductDashboard,
+        meta: { title: 'Báo cáo Tổng quan' }
+      },
 
       // ===== Orders =====
       {
-        path: "orders/new",
-        name: "system-orders-new",
-        component: OrderListNew,
-        meta: { title: "Orders (New)" },
+        path: "order-dashboard",
+        name: "order-dashboard",
+        component: OrderDashboard,
+        meta: { title: "Order Dashboard" },
       },
-      {
-        path: "orders/processing",
-        name: "system-orders-processing",
-        component: OrderListProcessing,
-        meta: { title: "Orders (Processing)" },
-      },
-      {
-        path: "orders/paid",
-        name: "system-orders-paid",
-        component: OrderListPaid,
-        meta: { title: "Orders (Paid)" },
-      },
-      {
-        path: "orders/delivered",
-        name: "system-orders-delivered",
-        component: OrderListDelivered,
-        meta: { title: "Orders (Delivered)" },
-      },
-      {
-        path: "orders/shipping",
-        name: "system-orders-shipping",
-        component: OrderListShipping,
-        meta: { title: "Orders (Shipping)" },
-      },
+
       {
         path: "orders/:orderId",
         name: "system-order-detail",
@@ -282,8 +272,6 @@ const routes = [
         component: PaymentManagement,
         meta: { title: "Payment History" },
       },
-
-  
 
       {
         path: "Loyaltysummaryadmin",
@@ -348,6 +336,42 @@ const routes = [
   },
 
   { path: "/:pathMatch(.*)*", redirect: "/" },
+
+  // ===== SALES LOGIN =====
+  {
+    path: "/sales/login",
+    name: "sales-login",
+    component: SystemLogin,
+    meta: { portal: "sales", hideHeader: true },
+  },
+
+  // ===== SALES AREA =====
+  {
+    path: "/sales",
+    component: SalesShell,
+    meta: { portal: "sales", requiresAuth: true, roles: ["SALES"], hideHeader: true },
+    children: [
+      { path: "", redirect: "/sales/pos" },
+      {
+        path: "pos",
+        name: "sales-pos",
+        component: SalesPOS,
+        meta: { title: "Bán hàng tại quầy" },
+      },
+      {
+        path: "pickup",
+        name: "sales-pickup",
+        component: SalesPickup,
+        meta: { title: "Nhận hàng tại quầy" },
+      },
+      // {
+      //   path: "history",
+      //   name: "sales-history",
+      //   component: SalesOrderHistory,
+      //   meta: { title: "Lịch sử đơn hàng" },
+      // },
+    ],
+  },
 ];
 
 const router = createRouter({
@@ -360,40 +384,62 @@ router.beforeEach((to) => {
   const role = (getRole() || "").toUpperCase();
   const isAuthed = !!token;
 
-  const portal = to.meta?.portal || "customer";
+  // Vue Router 4: child routes không tự inherit meta từ parent
+  // → dùng to.matched để lấy portal từ route gần nhất có set portal
+  const portal =
+    [...to.matched].reverse().find((r) => r.meta?.portal)?.meta?.portal ||
+    "customer";
   const isInventoryRoute = portal === "inventory";
+  const isSalesRoute = portal === "sales";
   const isInventory = role === "INVENTORY";
+  const isSales = role === "SALES";
   const isSystemRoute = portal === "system";
   const isCustomer = role === "CUSTOMER";
 
   if (to.meta?.requiresAuth && !isAuthed) {
-    return isSystemRoute ? "/system/login" : "/login";
+    if (isSystemRoute) return "/system/login";
+    if (isSalesRoute) return "/sales/login";
+    return "/login";
   }
 
   if (isAuthed) {
+    // Redirect khỏi trang login nếu đã đăng nhập
     if (!isSystemRoute && (to.path === "/login" || to.path === "/register")) {
-      return isCustomer ? "/" : "/system/dashboard";
+      if (isCustomer) return "/";
+      if (isSales) return "/sales/pos";
+      return "/system/dashboard";
     }
 
     if (isSystemRoute && to.path === "/system/login") {
       return !isCustomer ? "/system/dashboard" : "/";
+    }
+
+    if (to.path === "/sales/login") {
+      if (isSales) return "/sales/pos";
+      return "/";
     }
   }
 
   if (isAuthed) {
     if (role === "CUSTOMER" && portal !== "customer") return "/";
     if (role === "INVENTORY" && portal !== "inventory") return "/inventory/orders/paid";
-    if ((role === "ADMIN" || role === "SALES") && portal !== "system")
-      return "/system/dashboard";
+    if (role === "SALES" && portal !== "sales") return "/sales/pos";
+    if (role === "ADMIN" && portal !== "system") return "/system/dashboard";
   }
 
   if (isAuthed) {
     if (isInventoryRoute && !isInventory) {
-      return isCustomer ? "/" : "/system/dashboard";
+      return isCustomer ? "/" : isSales ? "/sales/pos" : "/system/dashboard";
     }
-
     if (!isInventoryRoute && isInventory) {
       return "/inventory/orders/paid";
+    }
+
+    if (isSalesRoute && !isSales) {
+      return isCustomer ? "/" : "/system/dashboard";
+    }
+    if (!isSalesRoute && isSales) {
+      return "/sales/pos";
     }
   }
 
