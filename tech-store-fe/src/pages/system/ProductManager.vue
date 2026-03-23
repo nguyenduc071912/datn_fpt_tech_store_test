@@ -15,7 +15,6 @@
         <p class="pm-header__sub">Hỗ trợ: Biến thể · Tồn kho · Đa danh mục · Sắp xếp · Thùng rác · Thẻ</p>
       </div>
       <div class="pm-header__actions">
-        <!-- View mode toggle -->
         <div class="pm-view-toggle">
           <button class="pm-view-btn" :class="{ active: viewMode === 'active' }" @click="viewMode = 'active'; load()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -48,7 +47,7 @@
       </div>
     </div>
 
-    <!-- ── Filter Panel (chỉ khi active) ──────────────────────────── -->
+    <!-- ── Filter Panel ────────────────────────────────────────────── -->
     <div v-if="viewMode === 'active'" class="pm-filter-panel">
       <div class="pm-filter-header">
         <div class="pm-filter-title">
@@ -58,103 +57,104 @@
           Bộ lọc
           <span v-if="activeFilterCount > 0" class="pm-filter-badge">{{ activeFilterCount }} đang áp dụng</span>
         </div>
-        <button v-if="activeFilterCount > 0" class="pm-filter-clear" @click="clearFilters">Xoá tất cả</button>
+        <button v-if="activeFilterCount > 0" class="pm-filter-clear" @click="clearFilters">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          Xoá tất cả
+        </button>
       </div>
-      <div class="pm-filter-fields">
-        <!-- Search -->
-        <div class="pm-filter-field">
-          <span class="pm-field-label">Tìm kiếm</span>
-          <div class="pm-search-wrap">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="pm-search-icon">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input v-model="keyword" class="pm-search-input" placeholder="Tên / SKU…" @keyup.enter="onFilter" />
-            <button v-if="keyword" class="pm-search-clear" @click="keyword = ''; onFilter()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+
+      <div class="pm-filter-body">
+        <!-- Row 1: Tìm kiếm / Danh mục / Thẻ / Sắp xếp -->
+        <div class="pm-filter-row">
+          <div class="pm-ff pm-ff--lg">
+            <span class="pm-fl">Tìm kiếm</span>
+            <div class="pm-search-wrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="pm-search-icon">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input v-model="keyword" class="pm-search-input" placeholder="Tên sản phẩm / SKU…" @keyup.enter="onFilter" />
+              <button v-if="keyword" class="pm-search-clear" @click="keyword = ''; onFilter()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="pm-ff">
+            <span class="pm-fl">Danh mục</span>
+            <select v-model="categoryIds" multiple class="pm-select pm-select--multi" @change="onFilter">
+              <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+
+          <div class="pm-ff">
+            <span class="pm-fl">Thẻ chiến dịch</span>
+            <select v-model="filterTagId" class="pm-select" @change="onFilter">
+              <option :value="null">Tất cả thẻ</option>
+              <option v-for="t in tags" :key="t.id" :value="t.id">{{ t.name }}</option>
+            </select>
+          </div>
+
+          <div class="pm-ff">
+            <span class="pm-fl">Sắp xếp</span>
+            <select v-model="sortBy" class="pm-select" @change="onFilter">
+              <option value="recently_updated">Mới cập nhật</option>
+              <option value="newest_arrival">Ngày nhập mới nhất</option>
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="best_selling">Bán chạy nhất</option>
+              <option value="price_asc">Giá: Thấp → Cao</option>
+              <option value="price_desc">Giá: Cao → Thấp</option>
+              <option value="name_asc">Tên: A → Z</option>
+              <option value="name_desc">Tên: Z → A</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Ngày nhập / Sản phẩm mới / Chất lượng / Checkbox + Lọc -->
+        <div class="pm-filter-row pm-filter-row--sep">
+          <div class="pm-ff pm-ff--lg">
+            <span class="pm-fl">Ngày nhập kho</span>
+            <div class="pm-date-range">
+              <input type="date" v-model="dateRange[0]" class="pm-date-input" @change="onFilter" />
+              <span class="pm-date-sep">→</span>
+              <input type="date" v-model="dateRange[1]" class="pm-date-input" @change="onFilter" />
+            </div>
+          </div>
+
+          <div class="pm-ff">
+            <span class="pm-fl">Sản phẩm mới</span>
+            <select v-model="filterIsNew" class="pm-select" @change="onFilter">
+              <option :value="null">Tất cả</option>
+              <option :value="true">Chỉ hàng mới</option>
+              <option :value="false">Hàng thường</option>
+            </select>
+          </div>
+
+          <div class="pm-ff">
+            <span class="pm-fl">Chất lượng</span>
+            <select v-model="filterIsFaulty" class="pm-select" @change="onFilter">
+              <option :value="null">Tất cả</option>
+              <option :value="true">Bị lỗi (ẩn)</option>
+              <option :value="false">Chất lượng tốt</option>
+            </select>
+          </div>
+
+          <div class="pm-ff pm-ff--actions">
+            <label class="pm-checkbox-label">
+              <input type="checkbox" v-model="inStockOnly" class="pm-checkbox" @change="onFilter" />
+              Chỉ còn hàng
+            </label>
+            <button class="pm-btn pm-btn--primary pm-btn--sm pm-btn--apply" @click="onFilter">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              Lọc
             </button>
           </div>
-        </div>
-
-        <!-- Category -->
-        <div class="pm-filter-field">
-          <span class="pm-field-label">Danh mục</span>
-          <select v-model="categoryIds" multiple class="pm-select pm-select--multi" @change="onFilter">
-            <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-        </div>
-
-        <!-- Tag -->
-        <div class="pm-filter-field">
-          <span class="pm-field-label">Thẻ</span>
-          <select v-model="filterTagId" class="pm-select" @change="onFilter">
-            <option :value="null">Tất cả thẻ</option>
-            <option v-for="t in tags" :key="t.id" :value="t.id">{{ t.name }}</option>
-          </select>
-        </div>
-
-        <!-- Sort -->
-        <div class="pm-filter-field">
-          <span class="pm-field-label">Sắp xếp</span>
-          <select v-model="sortBy" class="pm-select" @change="onFilter">
-            <option value="recently_updated">Mới cập nhật</option>
-            <option value="newest_arrival">Ngày nhập mới nhất</option>
-            <option value="newest">Mới nhất</option>
-            <option value="oldest">Cũ nhất</option>
-            <option value="best_selling">Bán chạy nhất</option>
-            <option value="price_asc">Giá: Thấp → Cao</option>
-            <option value="price_desc">Giá: Cao → Thấp</option>
-            <option value="name_asc">Tên: A → Z</option>
-            <option value="name_desc">Tên: Z → A</option>
-          </select>
-        </div>
-
-        <!-- Date range -->
-        <div class="pm-filter-field">
-          <span class="pm-field-label">Ngày nhập</span>
-          <div class="pm-date-range">
-            <input type="date" v-model="dateRange[0]" class="pm-date-input" @change="onFilter" placeholder="Từ ngày" />
-            <span class="pm-date-sep">—</span>
-            <input type="date" v-model="dateRange[1]" class="pm-date-input" @change="onFilter" placeholder="Đến ngày" />
-          </div>
-        </div>
-
-        <!-- Is New -->
-        <div class="pm-filter-field">
-          <span class="pm-field-label">Sản phẩm mới</span>
-          <select v-model="filterIsNew" class="pm-select" @change="onFilter">
-            <option :value="null">Tất cả</option>
-            <option :value="true">Chỉ hàng mới</option>
-            <option :value="false">Hàng thường</option>
-          </select>
-        </div>
-
-        <!-- Is Faulty -->
-        <div class="pm-filter-field">
-          <span class="pm-field-label">Chất lượng</span>
-          <select v-model="filterIsFaulty" class="pm-select" @change="onFilter">
-            <option :value="null">Tất cả</option>
-            <option :value="true">Bị lỗi (ẩn)</option>
-            <option :value="false">Chất lượng tốt</option>
-          </select>
-        </div>
-
-        <!-- In stock -->
-        <div class="pm-filter-field pm-filter-field--check">
-          <label class="pm-checkbox-label">
-            <input type="checkbox" v-model="inStockOnly" class="pm-checkbox" @change="onFilter" />
-            <span class="pm-checkbox-custom"></span>
-            <span>Chỉ còn hàng</span>
-          </label>
-        </div>
-
-        <!-- Apply -->
-        <div class="pm-filter-field pm-filter-field--action">
-          <button class="pm-btn pm-btn--primary pm-btn--sm" @click="onFilter">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            Lọc
-          </button>
         </div>
       </div>
     </div>
@@ -187,7 +187,6 @@
 
     <!-- ── Table Card ──────────────────────────────────────────────── -->
     <div class="pm-card">
-      <!-- Toolbar -->
       <div class="pm-toolbar">
         <div class="pm-toolbar__info">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -202,7 +201,6 @@
         </span>
       </div>
 
-      <!-- Table -->
       <div class="pm-table-wrap" :class="{ 'pm-table-wrap--loading': loading }">
         <div class="pm-loader-overlay" v-if="loading">
           <div class="pm-loader-ring"/>
@@ -224,7 +222,6 @@
             </tr>
           </thead>
           <tbody>
-            <!-- Empty -->
             <tr v-if="!loading && rows.length === 0">
               <td :colspan="viewMode === 'active' ? 8 : 7" class="pm-empty">
                 <div class="pm-empty__inner">
@@ -240,18 +237,12 @@
             </tr>
 
             <tr v-for="row in rows" :key="row.id" class="pm-row" :class="{ 'pm-row--selected': selectedIds.includes(row.id), 'pm-row--faulty': row.isFaulty }">
-              <!-- Checkbox -->
               <td v-if="viewMode === 'active'" style="text-align:center">
-                <input type="checkbox" class="pm-checkbox" :checked="selectedIds.includes(row.id)"
-                  @change="toggleRowSelect(row.id)" />
+                <input type="checkbox" class="pm-checkbox" :checked="selectedIds.includes(row.id)" @change="toggleRowSelect(row.id)" />
               </td>
-
-              <!-- ID -->
               <td style="text-align:center">
                 <span class="pm-id">#{{ row.id }}</span>
               </td>
-
-              <!-- Image -->
               <td style="text-align:center">
                 <div class="pm-img-wrap">
                   <img v-if="row.imageUrl" :src="row.imageUrl" class="pm-img" :alt="row.name" />
@@ -263,8 +254,6 @@
                   </div>
                 </div>
               </td>
-
-              <!-- Product info -->
               <td>
                 <div class="pm-product-info">
                   <div class="pm-product-name-row">
@@ -288,18 +277,12 @@
                   </div>
                 </div>
               </td>
-
-              <!-- Description -->
               <td>
                 <span class="pm-desc">{{ row.description || '—' }}</span>
               </td>
-
-              <!-- Date -->
               <td style="text-align:center">
                 <span class="pm-date">{{ formatDate(row.createdAt) }}</span>
               </td>
-
-              <!-- Status -->
               <td style="text-align:center">
                 <div v-if="viewMode === 'active'" class="pm-switch-wrap">
                   <label class="pm-switch">
@@ -315,8 +298,6 @@
                   Thùng rác
                 </span>
               </td>
-
-              <!-- Actions -->
               <td style="text-align:center">
                 <div v-if="viewMode === 'active'" class="pm-dropdown-wrap">
                   <button class="pm-action-btn pm-action-btn--variant" @click="openVariantDrawer(row)">
@@ -357,18 +338,13 @@
         </table>
       </div>
 
-      <!-- Pagination -->
       <div class="pm-pagination" v-if="totalElements > 0">
         <span class="pm-page-info">{{ page * 20 + 1 }}–{{ Math.min((page + 1) * 20, totalElements) }} / {{ totalElements }}</span>
         <div class="pm-page-btns">
           <button class="pm-page-btn" :disabled="page === 0" @click="onPageChange(page)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <button
-            v-for="p in pageNumbers" :key="p"
-            class="pm-page-btn" :class="{ active: p - 1 === page }"
-            @click="onPageChange(p)"
-          >{{ p }}</button>
+          <button v-for="p in pageNumbers" :key="p" class="pm-page-btn" :class="{ active: p - 1 === page }" @click="onPageChange(p)">{{ p }}</button>
           <button class="pm-page-btn" :disabled="(page + 1) * 20 >= totalElements" @click="onPageChange(page + 2)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
@@ -376,9 +352,7 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════════
-         DIALOG: XÁC NHẬN XÓA
-    ═══════════════════════════════════════════════════════════════ -->
+    <!-- ══ DIALOG: XÁC NHẬN XÓA ══ -->
     <Teleport to="body">
       <Transition name="pm-dialog-fade">
         <div v-if="deleteDlg.open" class="pm-overlay" @click.self="deleteDlg.open = false">
@@ -416,9 +390,7 @@
       </Transition>
     </Teleport>
 
-    <!-- ══════════════════════════════════════════════════════════════
-         DIALOG: XÁC NHẬN XÓA HÀNG LOẠT
-    ═══════════════════════════════════════════════════════════════ -->
+    <!-- ══ DIALOG: XÁC NHẬN XÓA HÀNG LOẠT ══ -->
     <Teleport to="body">
       <Transition name="pm-dialog-fade">
         <div v-if="batchDeleteDlg" class="pm-overlay" @click.self="batchDeleteDlg = false">
@@ -453,9 +425,7 @@
       </Transition>
     </Teleport>
 
-    <!-- ══════════════════════════════════════════════════════════════
-         DIALOG: BATCH UPDATE
-    ═══════════════════════════════════════════════════════════════ -->
+    <!-- ══ DIALOG: BATCH UPDATE ══ -->
     <Teleport to="body">
       <Transition name="pm-dialog-fade">
         <div v-if="batchDlg.open" class="pm-overlay" @click.self="batchDlg.open = false">
@@ -522,9 +492,7 @@
       </Transition>
     </Teleport>
 
-    <!-- ══════════════════════════════════════════════════════════════
-         DRAWER: BIẾN THỂ
-    ═══════════════════════════════════════════════════════════════ -->
+    <!-- ══ DRAWER: BIẾN THỂ ══ -->
     <Teleport to="body">
       <Transition name="pm-drawer-slide">
         <div v-if="vr.open" class="pm-drawer-backdrop" @click.self="vr.open = false">
@@ -538,9 +506,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-
             <div class="pm-drawer__body">
-              <!-- Variant list -->
               <div class="pm-drawer-section">
                 <div class="pm-drawer-section__title">Các biến thể hiện có</div>
                 <div class="pm-table-wrap" :class="{ 'pm-table-wrap--loading': vr.loading }">
@@ -563,26 +529,19 @@
                         <td><span class="pm-sku-val" style="font-size:12px">{{ v.sku }}</span></td>
                         <td style="text-align:right">
                           <div class="pm-price" style="font-size:13px">{{ formatCurrency(v.price) }}</div>
-                          <div style="font-size:11px; color:var(--c-subtle); margin-top:2px">
-                            Tồn: <span :style="v.stockQuantity > 0 ? 'color:var(--c-green);font-weight:700' : 'color:var(--c-red);font-weight:700'">{{ v.stockQuantity }}</span>
+                          <div style="font-size:11px; color:#6b7280; margin-top:2px">
+                            Tồn: <span :style="v.stockQuantity > 0 ? 'color:#16a34a;font-weight:700' : 'color:#dc2626;font-weight:700'">{{ v.stockQuantity }}</span>
                           </div>
                         </td>
                         <td style="text-align:center">
                           <div class="pm-action-group">
-                            <button class="pm-action-btn pm-action-btn--variant" @click="openSerialDialog(v)" style="font-size:11px; padding:5px 9px">
-                              Số Seri
-                            </button>
+                            <button class="pm-action-btn pm-action-btn--variant" @click="openSerialDialog(v)" style="font-size:11px; padding:5px 9px">Số Seri</button>
                             <button class="pm-action-btn pm-action-btn--edit" @click="editVariant(v)">
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                              </svg>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                               Sửa
                             </button>
                             <button class="pm-action-btn pm-action-btn--delete" @click="deleteVariant(v.id)">
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                              </svg>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                               Xóa
                             </button>
                           </div>
@@ -593,7 +552,6 @@
                 </div>
               </div>
 
-              <!-- Variant form -->
               <div class="pm-drawer-section pm-drawer-section--form">
                 <div class="pm-drawer-section__title" :class="vr.isEdit ? 'pm-drawer-section__title--edit' : 'pm-drawer-section__title--add'">
                   {{ vr.isEdit ? 'Cập nhật biến thể' : 'Thêm biến thể mới' }}
@@ -616,8 +574,6 @@
                     <input type="number" v-model="vr.form.stockQuantity" class="pm-input" disabled />
                   </div>
                 </div>
-
-                <!-- Dynamic attributes -->
                 <div class="pm-attr-section">
                   <div class="pm-attr-header">
                     <span class="pm-field__label">Dynamic Attributes</span>
@@ -634,7 +590,6 @@
                     </button>
                   </div>
                 </div>
-
                 <div class="pm-form-footer">
                   <button v-if="vr.isEdit" class="pm-btn pm-btn--ghost pm-btn--sm" @click="resetVariantForm">Hủy</button>
                   <button class="pm-btn pm-btn--primary pm-btn--sm" :class="{ 'pm-btn--loading': vr.saving }" @click="saveVariant">
@@ -650,9 +605,7 @@
       </Transition>
     </Teleport>
 
-    <!-- ══════════════════════════════════════════════════════════════
-         DIALOG: SERIAL NUMBERS
-    ═══════════════════════════════════════════════════════════════ -->
+    <!-- ══ DIALOG: SERIAL NUMBERS ══ -->
     <Teleport to="body">
       <Transition name="pm-dialog-fade">
         <div v-if="serialDlg.open" class="pm-overlay" @click.self="serialDlg.open = false">
@@ -668,8 +621,6 @@
             <div class="pm-dialog__body">
               <span class="pm-dialog__badge pm-dialog__badge--blue">Quản lý Seri</span>
               <h2 class="pm-dialog__title">{{ serialDlg.variantName }}</h2>
-
-              <!-- Gen controls -->
               <div class="pm-serial-controls">
                 <div class="pm-field" style="flex:0 0 160px">
                   <label class="pm-field__label">Số lượng nhập kho</label>
@@ -683,8 +634,6 @@
                   </button>
                 </div>
               </div>
-
-              <!-- Serial list -->
               <div class="pm-serial-label">Danh sách máy trong kho</div>
               <div class="pm-table-wrap pm-table-wrap--serial" :class="{ 'pm-table-wrap--loading': serialDlg.loading }">
                 <div class="pm-loader-overlay" v-if="serialDlg.loading"><div class="pm-loader-ring"/></div>
@@ -717,7 +666,6 @@
                   </tbody>
                 </table>
               </div>
-
               <div class="pm-dialog__actions">
                 <button class="pm-btn pm-btn--ghost" @click="serialDlg.open = false">Đóng</button>
               </div>
@@ -727,9 +675,7 @@
       </Transition>
     </Teleport>
 
-    <!-- ══════════════════════════════════════════════════════════════
-         DIALOG: THÊM / SỬA SẢN PHẨM
-    ═══════════════════════════════════════════════════════════════ -->
+    <!-- ══ DIALOG: THÊM / SỬA SẢN PHẨM ══ -->
     <Teleport to="body">
       <Transition name="pm-dialog-fade">
         <div v-if="dlg.open" class="pm-overlay" @click.self="dlg.open = false">
@@ -742,18 +688,13 @@
                 </svg>
               </div>
             </div>
-
             <div class="pm-dialog__body">
               <span class="pm-dialog__badge pm-dialog__badge--blue">{{ dlg.isEdit ? 'Cập nhật' : 'Tạo mới' }}</span>
               <h2 class="pm-dialog__title">{{ dlg.isEdit ? 'Thông tin sản phẩm' : 'Thêm sản phẩm mới' }}</h2>
-
-              <!-- Alert -->
               <div class="pm-alert" v-if="dlg.alert">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 {{ dlg.alert }}
               </div>
-
-              <!-- Tab nav -->
               <div class="pm-tab-nav">
                 <button class="pm-tab-item" :class="{ active: dlg.activeTab === 'info' }" @click="dlg.activeTab = 'info'">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -765,7 +706,6 @@
                 </button>
               </div>
 
-              <!-- TAB: Info -->
               <div v-if="dlg.activeTab === 'info'" class="pm-tab-content">
                 <div class="pm-form pm-form--grid">
                   <div class="pm-field">
@@ -789,8 +729,6 @@
                     </select>
                   </div>
                 </div>
-
-                <!-- Toggles -->
                 <div class="pm-toggle-row">
                   <label class="pm-toggle-item">
                     <span class="pm-toggle-label">Đánh dấu Mới</span>
@@ -809,13 +747,10 @@
                     </label>
                   </label>
                 </div>
-
                 <div class="pm-field" style="margin-top:14px">
                   <label class="pm-field__label">Mô tả</label>
                   <textarea v-model="dlg.form.description" class="pm-textarea" rows="3" />
                 </div>
-
-                <!-- Attributes -->
                 <div class="pm-attr-section" style="margin-top:14px">
                   <div class="pm-attr-header">
                     <span class="pm-field__label">Thông số kỹ thuật</span>
@@ -832,8 +767,6 @@
                     </button>
                   </div>
                 </div>
-
-                <!-- Existing images -->
                 <div v-if="dlg.isEdit && dlg.existingImages.length > 0" style="margin-top:14px">
                   <label class="pm-field__label" style="display:block; margin-bottom:10px">Thư viện ảnh</label>
                   <div class="pm-image-gallery">
@@ -851,8 +784,6 @@
                     </div>
                   </div>
                 </div>
-
-                <!-- File upload -->
                 <div class="pm-field" style="margin-top:14px">
                   <label class="pm-field__label">Upload ảnh mới</label>
                   <label class="pm-file-label">
@@ -866,7 +797,6 @@
                 </div>
               </div>
 
-              <!-- TAB: History -->
               <div v-else-if="dlg.activeTab === 'history'" class="pm-tab-content">
                 <div v-if="dlg.historyLoading" class="pm-history-loading">
                   <div class="pm-loader-ring pm-loader-ring--center"/>
@@ -904,7 +834,6 @@
                 </div>
               </div>
 
-              <!-- Dialog footer -->
               <div class="pm-dialog__actions">
                 <button class="pm-btn pm-btn--ghost" @click="dlg.open = false">Hủy bỏ</button>
                 <button v-if="dlg.activeTab === 'info'" class="pm-btn pm-btn--primary" :class="{ 'pm-btn--loading': dlg.loading }" @click="submitForm">
@@ -927,7 +856,7 @@ import { onMounted, reactive, ref, computed } from "vue";
 import { categoriesApi } from "../../api/categories.api";
 import { productsApi } from "../../api/products.api";
 import { toast } from "../../ui/toast";
-import axios from 'axios'; 
+import axios from 'axios';
 
 const BASE_URL_API = 'http://localhost:8080/api/products';
 
@@ -936,22 +865,19 @@ const categories = ref([]);
 const rows = ref([]);
 const tags = ref([]);
 const filterTagId = ref(null);
-const viewMode = ref('active'); 
+const viewMode = ref('active');
 const page = ref(0);
 const totalElements = ref(0);
 const keyword = ref("");
-const categoryIds = ref([]); 
+const categoryIds = ref([]);
 const sortBy = ref("newest_arrival");
 const inStockOnly = ref(false);
-
 const selectedIds = ref([]);
 const isBatchDeleting = ref(false);
-
 const dateRange = ref([]);
 const filterIsNew = ref(null);
 const filterIsFaulty = ref(null);
 
-// --- Delete confirm state ---
 const deleteDlg = reactive({ open: false, row: null, name: '', isFaulty: false });
 const batchDeleteDlg = ref(false);
 
@@ -974,7 +900,6 @@ function clearFilters() {
   dateRange.value = []; filterIsNew.value = null; filterIsFaulty.value = null;
   onFilter();
 }
-
 function toggleSelectAll(e) {
   if (e.target.checked) selectedIds.value = rows.value.map(r => r.id);
   else selectedIds.value = [];
@@ -984,7 +909,6 @@ function toggleRowSelect(id) {
   if (i >= 0) selectedIds.value.splice(i, 1);
   else selectedIds.value.push(id);
 }
-
 function openDeleteConfirm(row) {
   deleteDlg.row = row; deleteDlg.name = row.name; deleteDlg.isFaulty = row.isFaulty; deleteDlg.open = true;
 }
@@ -998,17 +922,14 @@ function formatDate(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleString("vi-VN", { dateStyle: 'short', timeStyle: 'short' });
 }
-
 function fixImageUrl(url) {
   if (!url) return "https://via.placeholder.com/150?text=No+Image";
   if (url.startsWith("http")) return url;
   return `http://localhost:8080${url}`;
 }
-
 function normalizeProducts(list) {
   return (list || []).map((p) => ({ ...p, imageUrl: fixImageUrl(p.imageUrl) }));
 }
-
 function formatCurrency(val) {
   if (!val) return '0 ₫';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -1017,10 +938,9 @@ function formatCurrency(val) {
 async function loadCategories() {
   try {
     const res = await categoriesApi.list(false);
-    categories.value = res.data?.data || res.data || []; 
+    categories.value = res.data?.data || res.data || [];
   } catch (e) { console.error(e); }
 }
-
 async function loadTags() {
   try {
     const res = await axios.get('http://localhost:8080/api/tags');
@@ -1037,20 +957,19 @@ async function load() {
   try {
     let res;
     if (viewMode.value === 'trash') {
-        res = await axios.get(`${BASE_URL_API}/trash`, { params: { page: page.value } });
+      res = await axios.get(`${BASE_URL_API}/trash`, { params: { page: page.value } });
     } else {
-        const params = {
-          page: page.value, keyword: keyword.value || undefined, sortBy: sortBy.value || undefined,
-          inStockOnly: inStockOnly.value, tagId: filterTagId.value || undefined,
-          startDate: dateRange.value?.[0] ? `${dateRange.value[0]}T00:00:00` : undefined,
-          endDate: dateRange.value?.[1] ? `${dateRange.value[1]}T23:59:59` : undefined,
-          isNew: filterIsNew.value === null ? undefined : filterIsNew.value,
-          isFaulty: filterIsFaulty.value === null ? undefined : filterIsFaulty.value
-        };
-        if (categoryIds.value?.length > 0) params.categoryIds = categoryIds.value.join(',');
-        res = await productsApi.list(params); 
+      const params = {
+        page: page.value, keyword: keyword.value || undefined, sortBy: sortBy.value || undefined,
+        inStockOnly: inStockOnly.value, tagId: filterTagId.value || undefined,
+        startDate: dateRange.value?.[0] ? `${dateRange.value[0]}T00:00:00` : undefined,
+        endDate: dateRange.value?.[1] ? `${dateRange.value[1]}T23:59:59` : undefined,
+        isNew: filterIsNew.value === null ? undefined : filterIsNew.value,
+        isFaulty: filterIsFaulty.value === null ? undefined : filterIsFaulty.value
+      };
+      if (categoryIds.value?.length > 0) params.categoryIds = categoryIds.value.join(',');
+      res = await productsApi.list(params);
     }
-
     const pageData = res.data?.data || res.data;
     rows.value = normalizeProducts(pageData.content || []);
     totalElements.value = pageData.totalElements || 0;
@@ -1070,9 +989,9 @@ async function handleBatchDelete() {
   try {
     await productsApi.batchDelete(selectedIds.value);
     toast(`Đã chuyển ${selectedIds.value.length} sản phẩm vào thùng rác`, "success");
-    selectedIds.value = []; 
+    selectedIds.value = [];
     batchDeleteDlg.value = false;
-    await load(); 
+    await load();
   } catch (e) {
     toast("Lỗi khi xóa hàng loạt", "error");
   } finally {
@@ -1091,36 +1010,29 @@ async function toggleProductStatus(row) {
     }
   } catch (e) {
     toast("Lỗi cập nhật trạng thái", "error");
-    row.isVisible = !row.isVisible; 
+    row.isVisible = !row.isVisible;
   }
 }
 
 const batchDlg = reactive({
-  open: false,
-  loading: false,
+  open: false, loading: false,
   form: { isVisible: null, isNew: null, isFaulty: null, tagIds: [] }
 });
-
 function openBatchUpdateDialog() {
   batchDlg.form = { isVisible: null, isNew: null, isFaulty: null, tagIds: [] };
   batchDlg.open = true;
 }
-
 async function submitBatchUpdate() {
   batchDlg.loading = true;
   try {
     const payload = {
-      ids: selectedIds.value,
-      isVisible: batchDlg.form.isVisible,
-      isNew: batchDlg.form.isNew,
-      isFaulty: batchDlg.form.isFaulty,
+      ids: selectedIds.value, isVisible: batchDlg.form.isVisible,
+      isNew: batchDlg.form.isNew, isFaulty: batchDlg.form.isFaulty,
       tagIds: batchDlg.form.tagIds.length > 0 ? batchDlg.form.tagIds : null
     };
     await productsApi.batchUpdate(payload);
     toast("Cập nhật hàng loạt thành công!", "success");
-    batchDlg.open = false;
-    selectedIds.value = [];
-    await load();
+    batchDlg.open = false; selectedIds.value = []; await load();
   } catch (e) {
     toast("Lỗi cập nhật hàng loạt", "error");
   } finally {
@@ -1128,173 +1040,112 @@ async function submitBatchUpdate() {
   }
 }
 
-// --- Variant Logic ---
 const vr = reactive({
   open: false, productId: null, productName: "", variants: [], loading: false, saving: false, isEdit: false, editId: null,
-  form: { variantName: "", sku: "", price: 0, stockQuantity: 0, isActive: true }, attrsList: [{key: "", value: ""}] 
+  form: { variantName: "", sku: "", price: 0, stockQuantity: 0, isActive: true }, attrsList: [{ key: "", value: "" }]
 });
 
-async function openVariantDrawer(row) { 
-  vr.productId = row.id; vr.productName = row.name; vr.open = true; 
-  resetVariantForm(); 
-  await loadVariants(); 
+async function openVariantDrawer(row) {
+  vr.productId = row.id; vr.productName = row.name; vr.open = true;
+  resetVariantForm(); await loadVariants();
 }
-
-async function loadVariants() { 
-  vr.loading = true; 
-  try { 
-    const res = await axios.get(`${BASE_URL_API}/${vr.productId}/variants`); 
-    vr.variants = res.data || []; 
-  } catch(e) { toast("Tải biến thể thất bại", "error"); } 
-  vr.loading = false; 
+async function loadVariants() {
+  vr.loading = true;
+  try {
+    const res = await axios.get(`${BASE_URL_API}/${vr.productId}/variants`);
+    vr.variants = res.data || [];
+  } catch (e) { toast("Tải biến thể thất bại", "error"); }
+  vr.loading = false;
 }
-
-function resetVariantForm() { 
-  vr.isEdit = false; vr.editId = null; 
-  vr.form = { variantName: "", sku: "", price: 0, stockQuantity: 0, isActive: true }; 
-  vr.attrsList = [{key: "", value: ""}]; 
+function resetVariantForm() {
+  vr.isEdit = false; vr.editId = null;
+  vr.form = { variantName: "", sku: "", price: 0, stockQuantity: 0, isActive: true };
+  vr.attrsList = [{ key: "", value: "" }];
 }
-
-function addVariantAttr() { vr.attrsList.push({key: "", value: ""}); }
+function addVariantAttr() { vr.attrsList.push({ key: "", value: "" }); }
 function removeVariantAttr(index) { vr.attrsList.splice(index, 1); }
-
 function editVariant(row) {
-  vr.isEdit = true; vr.editId = row.id; 
+  vr.isEdit = true; vr.editId = row.id;
   vr.form = { variantName: row.variantName, sku: row.sku, price: row.price, stockQuantity: row.stockQuantity, isActive: row.isActive };
-  try { 
-    const obj = JSON.parse(row.attributesJson || '{}'); 
-    const keys = Object.keys(obj); 
-    vr.attrsList = keys.length > 0 ? keys.map(k => ({key: k, value: obj[k]})) : [{key: "", value: ""}];
-  } catch { vr.attrsList = [{key: "", value: ""}]; }
+  try {
+    const obj = JSON.parse(row.attributesJson || '{}');
+    const keys = Object.keys(obj);
+    vr.attrsList = keys.length > 0 ? keys.map(k => ({ key: k, value: obj[k] })) : [{ key: "", value: "" }];
+  } catch { vr.attrsList = [{ key: "", value: "" }]; }
 }
-
 async function saveVariant() {
-  if(!vr.form.variantName || !vr.form.sku) return toast("Vui lòng điền các trường bắt buộc", "warning");
+  if (!vr.form.variantName || !vr.form.sku) return toast("Vui lòng điền các trường bắt buộc", "warning");
   vr.saving = true;
   try {
-    const attrObj = {}; 
-    vr.attrsList.forEach(item => { if(item.key && item.value) attrObj[item.key.trim()] = item.value.trim(); });
+    const attrObj = {};
+    vr.attrsList.forEach(item => { if (item.key && item.value) attrObj[item.key.trim()] = item.value.trim(); });
     const payload = { ...vr.form, attributesJson: Object.keys(attrObj).length > 0 ? JSON.stringify(attrObj) : null };
-    
-    if(vr.isEdit) await axios.put(`${BASE_URL_API}/variants/${vr.editId}`, payload);
+    if (vr.isEdit) await axios.put(`${BASE_URL_API}/variants/${vr.editId}`, payload);
     else await axios.post(`${BASE_URL_API}/${vr.productId}/variants`, payload);
-    
     toast("Thành công", "success");
-    resetVariantForm(); await loadVariants(); load(); 
+    resetVariantForm(); await loadVariants(); load();
   } catch { toast("Thất bại", "error"); }
   vr.saving = false;
 }
-
-async function deleteVariant(id) { 
-  try { await axios.delete(`${BASE_URL_API}/variants/${id}`); toast("Đã xóa", "success"); await loadVariants(); load(); } 
-  catch { toast("Thất bại", "error"); } 
+async function deleteVariant(id) {
+  try { await axios.delete(`${BASE_URL_API}/variants/${id}`); toast("Đã xóa", "success"); await loadVariants(); load(); }
+  catch { toast("Thất bại", "error"); }
 }
-
 async function openSerialDialog(row) {
-  serialDlg.variantId = row.id;
-  serialDlg.variantName = row.variantName;
-  serialDlg.inputText = "";
-  serialDlg.open = true;
-  await loadSerials();
+  serialDlg.variantId = row.id; serialDlg.variantName = row.variantName;
+  serialDlg.inputText = ""; serialDlg.open = true; await loadSerials();
 }
-
 async function loadSerials() {
   serialDlg.loading = true;
   try {
     const res = await axios.get(`http://localhost:8080/api/products/variants/${serialDlg.variantId}/serials`);
     serialDlg.list = res.data || [];
-  } catch (e) {
-    toast("Lỗi tải danh sách seri", "error");
-  } finally {
-    serialDlg.loading = false;
-  }
+  } catch (e) { toast("Lỗi tải danh sách seri", "error"); }
+  finally { serialDlg.loading = false; }
 }
-
-async function submitSerials() {
-  if (!serialDlg.inputText.trim()) return;
-  const rawSerials = serialDlg.inputText.split(/[\n,]+/);
-  const serials = rawSerials.map(s => s.trim()).filter(s => s.length > 0);
-  if (serials.length === 0) return;
-
-  serialDlg.adding = true;
-  try {
-    const payload = { serialNumbers: serials };
-    await axios.post(`http://localhost:8080/api/products/variants/${serialDlg.variantId}/serials`, payload);
-    toast("Thêm Seri thành công", "success");
-    serialDlg.inputText = "";
-    await loadSerials();
-    await loadVariants(); 
-    await load(); 
-  } catch (e) {
-    const msg = e.response?.data || "Có lỗi xảy ra (có thể Seri bị trùng)";
-    toast(msg, "error");
-  } finally {
-    serialDlg.adding = false;
-  }
-}
-
 async function deleteSerial(serialId) {
   try {
     await axios.delete(`http://localhost:8080/api/products/variants/serials/${serialId}`);
     toast("Xóa Seri thành công", "success");
-    await loadSerials();
-    await loadVariants();
-    await load(); 
-  } catch (e) {
-    toast("Xóa thất bại", "error");
-  }
+    await loadSerials(); await loadVariants(); await load();
+  } catch (e) { toast("Xóa thất bại", "error"); }
 }
-
 async function generateSerials(quantity = 1) {
   try {
-    const res = await axios.post(
-      `http://localhost:8080/api/products/variants/${serialDlg.variantId}/serials/generate`,
-      null,
-      { params: { quantity } }
-    );
+    const res = await axios.post(`http://localhost:8080/api/products/variants/${serialDlg.variantId}/serials/generate`, null, { params: { quantity } });
     toast(`Đã gen ${res.data?.serials?.length || quantity} serial thành công`, "success");
-    await loadSerials();
-    await loadVariants();
-    await load();
-  } catch (e) {
-    toast("Gen serial thất bại", "error");
-  }
+    await loadSerials(); await loadVariants(); await load();
+  } catch (e) { toast("Gen serial thất bại", "error"); }
 }
-
-async function onRestore(id) { 
-  try { await axios.put(`${BASE_URL_API}/${id}/restore`); toast("Khôi phục thành công!", "success"); load(); } 
-  catch { toast("Khôi phục thất bại", "error"); } 
+async function onRestore(id) {
+  try { await axios.put(`${BASE_URL_API}/${id}/restore`); toast("Khôi phục thành công!", "success"); load(); }
+  catch { toast("Khôi phục thất bại", "error"); }
 }
-
-async function onDelete(row) { 
-  try { 
+async function onDelete(row) {
+  try {
     if (row.isFaulty) {
-      await axios.delete(`${BASE_URL_API}/${row.id}/hard`); 
-      toast("Đã xóa vĩnh viễn sản phẩm lỗi.", "success"); 
+      await axios.delete(`${BASE_URL_API}/${row.id}/hard`);
+      toast("Đã xóa vĩnh viễn sản phẩm lỗi.", "success");
     } else {
-      await axios.delete(`${BASE_URL_API}/${row.id}`); 
-      toast("Đã chuyển vào thùng rác.", "success"); 
+      await axios.delete(`${BASE_URL_API}/${row.id}`);
+      toast("Đã chuyển vào thùng rác.", "success");
     }
-    load(); 
-  } catch { toast("Xóa thất bại.", "error"); } 
+    load();
+  } catch { toast("Xóa thất bại.", "error"); }
 }
-
-async function setPrimaryImage(imgId) { 
-  try { 
-    await axios.put(`${BASE_URL_API}/${dlg.editId}/images/${imgId}/primary`); 
-    toast("Cập nhật ảnh chính thành công", "success"); 
-    const res = await productsApi.get(dlg.editId); 
-    dlg.existingImages = (res.data?.data || res.data).images || []; 
-  } catch { toast("Thất bại", "error"); } 
+async function setPrimaryImage(imgId) {
+  try {
+    await axios.put(`${BASE_URL_API}/${dlg.editId}/images/${imgId}/primary`);
+    toast("Cập nhật ảnh chính thành công", "success");
+    const res = await productsApi.get(dlg.editId);
+    dlg.existingImages = (res.data?.data || res.data).images || [];
+  } catch { toast("Thất bại", "error"); }
 }
 
 const dlg = reactive({
-  open: false, isEdit: false, loading: false, alert: "", editId: null, attributesList: [], existingImages: [], idsToDelete: [], 
-  activeTab: 'info', history: [], historyLoading: false, 
-  form: { 
-    name: "", sku: "", description: "", isVisible: true, categoryIds: [], galleryImages: [], tagIds: [],
-    isNew: true, isFaulty: false 
-  },
+  open: false, isEdit: false, loading: false, alert: "", editId: null, attributesList: [], existingImages: [], idsToDelete: [],
+  activeTab: 'info', history: [], historyLoading: false,
+  form: { name: "", sku: "", description: "", isVisible: true, categoryIds: [], galleryImages: [], tagIds: [], isNew: true, isFaulty: false },
 });
 
 function getLogType(severity) {
@@ -1302,27 +1153,20 @@ function getLogType(severity) {
   if (severity === 'MEDIUM') return 'warning';
   return 'primary';
 }
-
 function openCreateDialog() {
-  dlg.isEdit = false; dlg.editId = null; dlg.attributesList = [{ name: "", value: "" }]; dlg.existingImages = []; dlg.idsToDelete = []; 
-  dlg.activeTab = 'info';
-  dlg.form = { 
-    name: "", sku: "", description: "", isVisible: true, categoryIds: [], galleryImages: [], tagIds: [],
-    isNew: true, isFaulty: false 
-  };
+  dlg.isEdit = false; dlg.editId = null; dlg.attributesList = [{ name: "", value: "" }];
+  dlg.existingImages = []; dlg.idsToDelete = []; dlg.activeTab = 'info';
+  dlg.form = { name: "", sku: "", description: "", isVisible: true, categoryIds: [], galleryImages: [], tagIds: [], isNew: true, isFaulty: false };
   dlg.alert = ""; dlg.open = true;
 }
-
 async function onEdit(row) {
-  dlg.isEdit = true; dlg.editId = row.id; dlg.idsToDelete = []; dlg.existingImages = []; 
+  dlg.isEdit = true; dlg.editId = row.id; dlg.idsToDelete = []; dlg.existingImages = [];
   dlg.activeTab = 'info'; dlg.open = true; dlg.loading = true; dlg.historyLoading = true;
-  
   try {
     const [detailRes, historyRes] = await Promise.all([
       productsApi.get(row.id),
       productsApi.getHistory(row.id).catch(() => ({ data: [] }))
     ]);
-
     const data = detailRes.data?.data || detailRes.data;
     dlg.form = {
       name: data.name, sku: data.sku, description: data.description, isVisible: data.isVisible,
@@ -1330,27 +1174,20 @@ async function onEdit(row) {
       isNew: data.isNew, isFaulty: data.isFaulty
     };
     if (data.tags?.length > 0) {
-       dlg.form.tagIds = data.tags.map(name => tags.value.find(t => t.name === name)?.id).filter(id => id);
+      dlg.form.tagIds = data.tags.map(name => tags.value.find(t => t.name === name)?.id).filter(id => id);
     }
     dlg.existingImages = data.images || [];
-    try { 
-      const attrs = JSON.parse(data.attributes); 
-      dlg.attributesList = Array.isArray(attrs) ? attrs : []; 
+    try {
+      const attrs = JSON.parse(data.attributes);
+      dlg.attributesList = Array.isArray(attrs) ? attrs : [];
     } catch { dlg.attributesList = []; }
-
     dlg.history = historyRes.data || [];
-
-  } catch { 
-    toast("Tải dữ liệu thất bại", "error"); 
-  } finally { 
-    dlg.loading = false; 
-    dlg.historyLoading = false;
-  }
+  } catch { toast("Tải dữ liệu thất bại", "error"); }
+  finally { dlg.loading = false; dlg.historyLoading = false; }
 }
-
-function markImageForDelete(imageId) { 
-  dlg.idsToDelete.push(imageId); 
-  dlg.existingImages = dlg.existingImages.filter(img => img.id !== imageId); 
+function markImageForDelete(imageId) {
+  dlg.idsToDelete.push(imageId);
+  dlg.existingImages = dlg.existingImages.filter(img => img.id !== imageId);
 }
 function addAttribute() { dlg.attributesList.push({ name: "", value: "" }); }
 function removeAttribute(index) { dlg.attributesList.splice(index, 1); }
@@ -1361,51 +1198,32 @@ async function submitForm() {
   dlg.loading = true;
   try {
     const formData = new FormData();
-    formData.append("name", String(dlg.form.name || "")); 
-    formData.append("sku", String(dlg.form.sku || "")); 
-    formData.append("description", String(dlg.form.description || "")); 
+    formData.append("name", String(dlg.form.name || ""));
+    formData.append("sku", String(dlg.form.sku || ""));
+    formData.append("description", String(dlg.form.description || ""));
     formData.append("isVisible", String(dlg.form.isVisible));
     formData.append("isNew", String(dlg.form.isNew));
     formData.append("isFaulty", String(dlg.form.isFaulty));
-    
-    if (Array.isArray(dlg.form.categoryIds) && dlg.form.categoryIds.length > 0) {
+    if (Array.isArray(dlg.form.categoryIds) && dlg.form.categoryIds.length > 0)
       dlg.form.categoryIds.forEach(id => formData.append("categoryIds", id));
-    }
-    if (Array.isArray(dlg.form.tagIds) && dlg.form.tagIds.length > 0) {
+    if (Array.isArray(dlg.form.tagIds) && dlg.form.tagIds.length > 0)
       dlg.form.tagIds.forEach(id => formData.append("tagIds", id));
-    }
-    if (Array.isArray(dlg.idsToDelete) && dlg.idsToDelete.length > 0) {
+    if (Array.isArray(dlg.idsToDelete) && dlg.idsToDelete.length > 0)
       dlg.idsToDelete.forEach(id => formData.append("idsToDelete", id));
-    }
-    if (dlg.form.galleryImages && dlg.form.galleryImages.length > 0) {
+    if (dlg.form.galleryImages && dlg.form.galleryImages.length > 0)
       for (let i = 0; i < dlg.form.galleryImages.length; i++) {
-         let file = dlg.form.galleryImages[i];
-         if (file instanceof File || file instanceof Blob) {
-            formData.append("galleryImages", file);
-         }
+        let file = dlg.form.galleryImages[i];
+        if (file instanceof File || file instanceof Blob) formData.append("galleryImages", file);
       }
-    }
-    const validAttrs = dlg.attributesList.filter(a => a.name && a.name.trim() !== "" && a.value && a.value.trim() !== "");
-    if (validAttrs.length > 0) {
-      formData.append("attributes", JSON.stringify(validAttrs));
-    }
-
-    if (dlg.isEdit) {
-      await productsApi.update(dlg.editId, formData); 
-    } else {
-      await productsApi.create(formData);
-    }
-
-    dlg.open = false; 
-    await load(); 
-    toast("Thành công", "success");
-  } catch (e) { 
+    const validAttrs = dlg.attributesList.filter(a => a.name?.trim() && a.value?.trim());
+    if (validAttrs.length > 0) formData.append("attributes", JSON.stringify(validAttrs));
+    if (dlg.isEdit) await productsApi.update(dlg.editId, formData);
+    else await productsApi.create(formData);
+    dlg.open = false; await load(); toast("Thành công", "success");
+  } catch (e) {
     console.error("LỖI GỬI LÊN:", e);
-    const backendError = e.response?.data?.message || e.message;
-    toast("Lỗi: " + backendError, "error"); 
-  } finally { 
-    dlg.loading = false; 
-  }
+    toast("Lỗi: " + (e.response?.data?.message || e.message), "error");
+  } finally { dlg.loading = false; }
 }
 
 onMounted(async () => {
@@ -1418,21 +1236,6 @@ onMounted(async () => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ─────────────────────────────────────────────────────────────────
-   BIẾN MÀU ĐÃ ĐƯỢC HARDCODE TRỰC TIẾP (không dùng var())
-   bg:#f6f7f9  card:#ffffff  border:#e4e7ec  border-light:#f0f2f5
-   text:#0f1117  muted:#6b7280  subtle:#9ca3af
-   blue:#2563eb  blue-bg:#eff6ff  blue-border:#bfdbfe
-   green:#16a34a  green-bg:#f0fdf4  green-border:#bbf7d0
-   red:#dc2626  red-bg:#fff1f2  red-border:#fecdd3
-   orange:#d97706  orange-bg:#fffbeb  orange-border:#fde68a
-   purple:#7c3aed  purple-bg:#f5f3ff  purple-border:#ddd6fe
-   radius:12px  radius-sm:8px
-   shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04)
-   shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04)
-   shadow-lg: 0 24px 64px rgba(0,0,0,.13), 0 8px 24px rgba(0,0,0,.06)
-───────────────────────────────────────────────────────────────── */
-
 .pm-page {
   font-family: 'Plus Jakarta Sans', sans-serif;
   background: #f6f7f9;
@@ -1443,7 +1246,7 @@ onMounted(async () => {
 }
 *, *::before, *::after { box-sizing: border-box; }
 
-/* ── Header ────────────────────────────────────────────────────── */
+/* ── Header ── */
 .pm-header {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 20px; margin-bottom: 22px; flex-wrap: wrap;
@@ -1457,7 +1260,6 @@ onMounted(async () => {
 .pm-header__sub { font-size: 13px; color: #6b7280; margin: 0; font-weight: 500; }
 .pm-header__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding-top: 4px; flex-wrap: wrap; }
 
-/* View toggle */
 .pm-view-toggle {
   display: flex; background: #f6f7f9; border: 1px solid #e4e7ec;
   border-radius: 8px; padding: 3px; gap: 2px;
@@ -1469,12 +1271,9 @@ onMounted(async () => {
   color: #6b7280; cursor: pointer; border-radius: 6px; transition: all 0.15s;
 }
 .pm-view-btn:hover { color: #0f1117; background: #ffffff; }
-.pm-view-btn.active {
-  background: #0f1117; color: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-}
+.pm-view-btn.active { background: #0f1117; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 
-/* ── Buttons ───────────────────────────────────────────────────── */
+/* ── Buttons ── */
 .pm-btn {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 18px; font-size: 13.5px; font-weight: 700;
@@ -1499,83 +1298,118 @@ onMounted(async () => {
 @keyframes spin-r { to { transform: rotate(360deg); } }
 .pm-spin { animation: spin-r 0.7s linear infinite; }
 
-/* ── Filter Panel ──────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   FILTER PANEL – REDESIGN
+══════════════════════════════════════════════════════════ */
 .pm-filter-panel {
-  background: #ffffff; border: 1px solid #e4e7ec;
-  border-radius: 12px; overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   margin-bottom: 16px;
+  overflow: hidden;
 }
 .pm-filter-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; border-bottom: 1px solid #f0f2f5;
+  padding: 10px 18px;
+  border-bottom: 1px solid #f0f2f5;
+  background: #fafbfc;
 }
 .pm-filter-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 700; color: #0f1117;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 700; color: #0f1117;
 }
 .pm-filter-badge {
   background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;
-  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
 }
 .pm-filter-clear {
-  font-size: 12px; color: #9ca3af; background: none; border: none;
-  cursor: pointer; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 600; transition: color 0.15s;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: #9ca3af; background: none; border: none;
+  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; transition: all 0.15s;
 }
-.pm-filter-clear:hover { color: #dc2626; }
-.pm-filter-fields {
+.pm-filter-clear:hover { color: #dc2626; background: #fff1f2; }
+
+.pm-filter-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+
+.pm-filter-row {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 0.8fr 1.2fr 1.4fr 0.8fr 0.8fr auto auto;
+  grid-template-columns: 1.8fr 1fr 1fr 1fr;
+  gap: 10px;
   align-items: end;
 }
-.pm-filter-field { padding: 12px 14px; border-right: 1px solid #f0f2f5; }
-.pm-filter-field:last-child { border-right: none; }
-.pm-filter-field--check { display: flex; align-items: center; }
-.pm-filter-field--action { display: flex; align-items: center; padding: 12px 16px; }
-.pm-field-label {
-  display: block; font-size: 10.5px; font-weight: 700; color: #9ca3af;
-  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+.pm-filter-row--sep {
+  padding-top: 10px;
+  border-top: 1px dashed #e4e7ec;
 }
+
+/* Filter Field */
+.pm-ff { display: flex; flex-direction: column; gap: 5px; }
+.pm-ff--actions {
+  display: flex; flex-direction: row;
+  align-items: center; gap: 10px;
+  padding-bottom: 1px;
+}
+.pm-fl {
+  font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: #9ca3af;
+}
+
+/* Search */
 .pm-search-wrap { position: relative; display: flex; align-items: center; }
-.pm-search-icon { position: absolute; left: 10px; color: #9ca3af; pointer-events: none; }
+.pm-search-icon { position: absolute; left: 10px; color: #9ca3af; pointer-events: none; flex-shrink: 0; }
 .pm-search-input {
-  width: 100%; padding: 8px 30px 8px 32px; font-size: 13px;
-  font-family: 'Plus Jakarta Sans', sans-serif; border: 1.5px solid #e4e7ec;
-  border-radius: 8px; background: #ffffff; color: #0f1117; outline: none;
-  transition: border-color 0.15s;
+  width: 100%; padding: 7px 30px 7px 32px;
+  font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif;
+  border: 1.5px solid #e4e7ec; border-radius: 8px;
+  background: #f9fafb; color: #0f1117; outline: none; transition: border-color 0.15s;
 }
-.pm-search-input:focus { border-color: #2563eb; }
+.pm-search-input:focus { border-color: #2563eb; background: #fff; }
 .pm-search-clear {
-  position: absolute; right: 8px; background: none; border: none; cursor: pointer;
-  color: #9ca3af; padding: 2px; display: flex; align-items: center;
+  position: absolute; right: 8px; background: none; border: none;
+  cursor: pointer; color: #9ca3af; padding: 2px;
+  display: flex; align-items: center;
 }
 .pm-search-clear:hover { color: #0f1117; }
+
+/* Select */
 .pm-select {
-  width: 100%; padding: 8px 10px; font-size: 13px;
-  font-family: 'Plus Jakarta Sans', sans-serif; border: 1.5px solid #e4e7ec;
-  border-radius: 8px; background: #ffffff; color: #0f1117;
+  width: 100%; padding: 7px 10px; font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border: 1.5px solid #e4e7ec; border-radius: 8px;
+  background: #f9fafb; color: #0f1117;
   outline: none; cursor: pointer; transition: border-color 0.15s;
 }
 .pm-select:focus { border-color: #2563eb; }
-.pm-select--multi { min-height: 36px; }
+.pm-select--multi { min-height: 34px; }
+
+/* Date range */
 .pm-date-range { display: flex; align-items: center; gap: 6px; }
 .pm-date-input {
   flex: 1; padding: 7px 8px; font-size: 12px;
-  font-family: 'Plus Jakarta Sans', sans-serif; border: 1.5px solid #e4e7ec;
-  border-radius: 8px; background: #ffffff; color: #0f1117;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border: 1.5px solid #e4e7ec; border-radius: 8px;
+  background: #f9fafb; color: #0f1117;
   outline: none; transition: border-color 0.15s;
 }
 .pm-date-input:focus { border-color: #2563eb; }
-.pm-date-sep { font-size: 11px; color: #9ca3af; font-weight: 700; }
-.pm-checkbox { width: 15px; height: 15px; accent-color: #2563eb; cursor: pointer; }
+.pm-date-sep { font-size: 12px; color: #9ca3af; font-weight: 700; flex-shrink: 0; }
+
+/* Checkbox */
+.pm-checkbox { width: 15px; height: 15px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0; }
 .pm-checkbox-label {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 600; color: #0f1117; cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 600; color: #0f1117;
+  cursor: pointer; white-space: nowrap;
 }
 .pm-checkbox-custom { display: none; }
 
-/* ── Batch bar ─────────────────────────────────────────────────── */
+/* Apply button */
+.pm-btn--apply { flex-shrink: 0; margin-left: auto; }
+
+/* ── Batch bar ── */
 .pm-batch-bar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 20px; background: #eff6ff;
@@ -1593,7 +1427,7 @@ onMounted(async () => {
 .pm-batch-count strong { font-weight: 800; }
 .pm-batch-bar__actions { display: flex; gap: 8px; }
 
-/* ── Card ──────────────────────────────────────────────────────── */
+/* ── Card ── */
 .pm-card {
   background: #ffffff; border: 1px solid #e4e7ec;
   border-radius: 12px;
@@ -1612,7 +1446,7 @@ onMounted(async () => {
 .pm-count__num { font-size: 16px; font-weight: 800; color: #0f1117; }
 .pm-count__label { font-size: 12px; color: #9ca3af; font-weight: 600; }
 
-/* ── Table ─────────────────────────────────────────────────────── */
+/* ── Table ── */
 .pm-table-wrap { overflow-x: auto; position: relative; min-height: 120px; }
 .pm-table-wrap--loading { pointer-events: none; }
 .pm-table-wrap--serial { max-height: 360px; overflow-y: auto; }
@@ -1639,7 +1473,6 @@ onMounted(async () => {
 .pm-row--selected { background: #eff6ff !important; }
 .pm-row--faulty { opacity: 0.75; }
 
-/* Cells */
 .pm-id {
   font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 600;
   color: #2563eb; background: #eff6ff; padding: 2px 7px; border-radius: 5px;
@@ -1673,7 +1506,6 @@ onMounted(async () => {
 .pm-stock-tag--in  { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
 .pm-stock-tag--out { background: #fff1f2; color: #dc2626; border-color: #fecdd3; }
 
-/* Status tags */
 .pm-tag {
   display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
   border-radius: 999px; font-size: 11.5px; font-weight: 700;
@@ -1689,7 +1521,7 @@ onMounted(async () => {
 .pm-tag--gray  .pm-tag__dot { background: #9ca3af; }
 
 .pm-desc {
-  display: block; font-size: 12.5px; color: #6b7280; overflow: hidden;
+  font-size: 12.5px; color: #6b7280; overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   max-width: 220px; line-height: 1.5;
 }
@@ -1758,7 +1590,7 @@ onMounted(async () => {
 .pm-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .pm-page-btn.active { background: #0f1117; border-color: #0f1117; color: white; }
 
-/* ── Dialog ────────────────────────────────────────────────────── */
+/* ── Dialog ── */
 .pm-overlay {
   position: fixed; inset: 0; background: rgba(10,12,20,0.28);
   display: flex; align-items: center; justify-content: center;
@@ -1773,7 +1605,6 @@ onMounted(async () => {
 .pm-dialog--lg { max-width: 600px; }
 .pm-dialog--xl { max-width: 800px; }
 
-/* Band */
 .pm-dialog__band {
   position: relative; height: 110px; display: flex;
   align-items: center; justify-content: center; overflow: hidden;
@@ -1814,7 +1645,6 @@ onMounted(async () => {
 .pm-dialog__notice--blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .pm-dialog__actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
 
-/* Alert */
 .pm-alert {
   display: flex; align-items: center; gap: 8px; padding: 10px 14px;
   background: #fff1f2; border: 1px solid #fecdd3;
@@ -1822,7 +1652,7 @@ onMounted(async () => {
 }
 
 /* Tab nav */
-.pm-tab-nav { display: flex; gap: 3px; border-bottom: 1px solid #f0f2f5; padding: 0; margin-bottom: 16px; }
+.pm-tab-nav { display: flex; gap: 3px; border-bottom: 1px solid #f0f2f5; margin-bottom: 16px; }
 .pm-tab-item {
   display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px;
   border: none; border-bottom: 2.5px solid transparent; background: transparent;
@@ -1854,12 +1684,10 @@ onMounted(async () => {
 .pm-input:disabled { background: #f0f2f5; color: #9ca3af; cursor: not-allowed; }
 .pm-textarea { resize: vertical; line-height: 1.5; }
 
-/* Toggle row */
 .pm-toggle-row { display: flex; gap: 20px; margin-top: 4px; flex-wrap: wrap; }
 .pm-toggle-item { display: flex; flex-direction: column; gap: 8px; }
 .pm-toggle-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #0f1117; }
 
-/* Attributes */
 .pm-attr-section { display: flex; flex-direction: column; gap: 8px; }
 .pm-attr-header { display: flex; align-items: center; justify-content: space-between; }
 .pm-attr-row { display: flex; gap: 8px; align-items: center; }
@@ -1871,7 +1699,6 @@ onMounted(async () => {
 .pm-icon-btn--red { background: #fff1f2; color: #dc2626; }
 .pm-icon-btn--red:hover { background: #dc2626; color: white; }
 
-/* Image gallery */
 .pm-image-gallery {
   display: flex; gap: 10px; flex-wrap: wrap; padding: 14px;
   background: #f6f7f9; border-radius: 12px; border: 1px solid #e4e7ec;
@@ -1894,7 +1721,6 @@ onMounted(async () => {
 .pm-gallery-btn--del  { background: #fff1f2; color: #dc2626; border-color: #fecdd3; }
 .pm-gallery-btn--del:hover  { background: #dc2626; color: white; border-color: #dc2626; }
 
-/* File upload */
 .pm-file-label {
   display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px;
   border: 1.5px dashed #e4e7ec; border-radius: 8px;
@@ -1903,14 +1729,11 @@ onMounted(async () => {
 }
 .pm-file-label:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
 
-/* Serial controls */
 .pm-serial-controls { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 .pm-serial-label {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.07em; color: #9ca3af; margin-bottom: 8px;
 }
-
-/* Form footer */
 .pm-form-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
 /* History timeline */
@@ -1930,10 +1753,7 @@ onMounted(async () => {
   flex: 1; background: #ffffff; border: 1px solid #e4e7ec;
   border-radius: 12px; padding: 14px 16px; transition: all 0.15s;
 }
-.pm-timeline-content:hover {
-  border-color: #d1d5db;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-}
+.pm-timeline-content:hover { border-color: #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 .pm-timeline-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .pm-timeline-user { display: flex; align-items: center; gap: 8px; }
 .pm-avatar {
@@ -1955,7 +1775,7 @@ onMounted(async () => {
   border-radius: 6px; font-size: 11px; color: #9ca3af; font-weight: 600;
 }
 
-/* ── Drawer ────────────────────────────────────────────────────── */
+/* ── Drawer ── */
 .pm-drawer-backdrop {
   position: fixed; inset: 0; background: rgba(10,12,20,0.22);
   z-index: 999; display: flex; justify-content: flex-end;
@@ -1985,7 +1805,7 @@ onMounted(async () => {
 .pm-drawer-section__title--edit { color: #2563eb; }
 .pm-drawer-section__title--add  { color: #16a34a; }
 
-/* ── Spinner ───────────────────────────────────────────────────── */
+/* ── Spinner ── */
 .pm-spinner {
   display: inline-block; width: 14px; height: 14px;
   border: 2px solid rgba(0,0,0,0.1); border-top-color: currentColor;
@@ -1993,7 +1813,7 @@ onMounted(async () => {
 }
 .pm-spinner--white { border-color: rgba(255,255,255,0.25); border-top-color: #fff; }
 
-/* ── Transitions ───────────────────────────────────────────────── */
+/* ── Transitions ── */
 .pm-dialog-fade-enter-active, .pm-dialog-fade-leave-active { transition: opacity 0.22s ease; }
 .pm-dialog-fade-enter-active .pm-dialog,
 .pm-dialog-fade-leave-active .pm-dialog { transition: transform 0.28s cubic-bezier(0.34,1.4,0.64,1), opacity 0.22s ease; }
@@ -2011,18 +1831,21 @@ onMounted(async () => {
 .pm-slide-down-enter-active, .pm-slide-down-leave-active { transition: all 0.2s ease; }
 .pm-slide-down-enter-from, .pm-slide-down-leave-to { opacity: 0; transform: translateY(-8px); }
 
-/* ── Responsive ────────────────────────────────────────────────── */
+/* ── Responsive ── */
 @media (max-width: 1200px) {
-  .pm-filter-fields { grid-template-columns: 1fr 1fr 1fr; }
-  .pm-filter-field { border-right: none; border-bottom: 1px solid #f0f2f5; }
-  .pm-filter-field:last-child { border-bottom: none; }
+  .pm-filter-row { grid-template-columns: 1fr 1fr; }
+  .pm-filter-row--sep { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 900px) {
   .pm-page { padding: 16px 16px 40px; }
   .pm-header { flex-direction: column; }
-  .pm-filter-fields { grid-template-columns: 1fr 1fr; }
   .pm-form--grid { grid-template-columns: 1fr; }
   .pm-drawer { width: 92%; }
   .pm-dialog--xl { max-width: 96vw; }
+}
+@media (max-width: 640px) {
+  .pm-filter-row,
+  .pm-filter-row--sep { grid-template-columns: 1fr; }
+  .pm-ff--actions { flex-wrap: wrap; }
 }
 </style>
