@@ -9,6 +9,7 @@ import com.retailmanagement.audit.TargetType;
 import com.retailmanagement.dto.request.AttributeRequest;
 import com.retailmanagement.dto.request.ProductRequest;
 import com.retailmanagement.dto.response.ImageResponse;
+import com.retailmanagement.dto.response.ProductImportResult;
 import com.retailmanagement.dto.response.ProductResponse;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.*;
@@ -47,6 +48,7 @@ public class ProductService {
     private final TagRepository tagRepository;
     private final ProductTagRepository productTagRepository;
     private final ProductSerialRepository productSerialRepository;
+
 
     private final String UPLOAD_DIR = "uploads/";
 
@@ -450,4 +452,5 @@ public class ProductService {
         }
         productRepository.saveAll(products);
     }
+
 }

@@ -85,5 +85,18 @@ export const productsApi = {
     return http.get("/api/reports/export/excel", {
       responseType: 'blob' 
     });
-  }
+  },
+  importFromExcel(file) {
+  const fd = new FormData()
+  fd.append('file', file)
+  return http.post('/api/products/import', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+},
+
+downloadTemplate() {
+  return http.get('/api/products/import/template', {
+    responseType: 'blob'
+  })
+},
 };
