@@ -24,7 +24,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             nativeQuery = true
     )
     Page<Product> findByCategoryId(@Param("categoryId") Integer categoryId, Pageable pageable);
-
+    boolean existsBySku(String sku);
     // Tìm kiếm Nâng cao: Tên, SKU, Thuộc tính, Lọc nhiều danh mục
     @Query(value = """
         SELECT p.*, 

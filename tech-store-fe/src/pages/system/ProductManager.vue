@@ -29,6 +29,7 @@
             </svg>
             Thùng rác
           </button>
+          
         </div>
 
         <button class="pm-btn pm-btn--outline" @click="load" :disabled="loading">
@@ -38,6 +39,15 @@
           </svg>
           {{ loading ? 'Đang tải…' : 'Tải lại' }}
         </button>
+        <button v-if="viewMode === 'active'" class="pm-btn pm-btn--outline" @click="showImport = true">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="12" y1="18" x2="12" y2="12"/>
+    <line x1="9" y1="15" x2="15" y2="15"/>
+  </svg>
+  Import Excel
+</button>
         <button v-if="viewMode === 'active'" class="pm-btn pm-btn--primary" @click="openCreateDialog">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -847,7 +857,11 @@
         </div>
       </Transition>
     </Teleport>
-
+<ProductImportDialog
+  :open="showImport"
+  @close="showImport = false"
+  @imported="load()"
+/>
   </div>
 </template>
 
@@ -857,6 +871,7 @@ import { categoriesApi } from "../../api/categories.api";
 import { productsApi } from "../../api/products.api";
 import { toast } from "../../ui/toast";
 import axios from 'axios';
+import ProductImportDialog from '../../components/ProductImportDialog.vue'
 
 const BASE_URL_API = 'http://localhost:8080/api/products';
 
@@ -877,7 +892,7 @@ const isBatchDeleting = ref(false);
 const dateRange = ref([]);
 const filterIsNew = ref(null);
 const filterIsFaulty = ref(null);
-
+const showImport = ref(false)
 const deleteDlg = reactive({ open: false, row: null, name: '', isFaulty: false });
 const batchDeleteDlg = ref(false);
 
@@ -1523,6 +1538,7 @@ onMounted(async () => {
 .pm-desc {
   font-size: 12.5px; color: #6b7280; overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  line-clamp: 3;
   max-width: 220px; line-height: 1.5;
 }
 .pm-date { font-size: 12px; color: #6b7280; white-space: nowrap; font-weight: 500; }
