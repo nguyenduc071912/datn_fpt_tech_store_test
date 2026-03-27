@@ -55,7 +55,7 @@
           <span>Nhận hàng tại quầy</span>
         </router-link>
 
-        <router-link to="/sales/history" class="nav-item">
+        <!-- <router-link to="/sales/history" class="nav-item">
           <div class="nav-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
@@ -63,6 +63,22 @@
             </svg>
           </div>
           <span>Lịch sử đơn hàng</span>
+        </router-link> -->
+
+        <div class="sidebar-divider" style="margin: 10px 0 8px;"></div>
+        <div class="nav-section-label">KHÁCH HÀNG</div>
+
+        <router-link to="/sales/customers" class="nav-item">
+          <div class="nav-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span>Quản lý khách hàng</span>
+          <span class="nav-badge">Mới</span>
         </router-link>
       </nav>
 
@@ -207,6 +223,18 @@ function doLogout() {
   width: 20px; height: 20px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; color: #475569; transition: color 0.15s;
+}
+
+/* New badge on nav item */
+.nav-badge {
+  margin-left: auto;
+  font-size: 8.5px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  background: rgba(245,158,11,0.18);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.28);
+  padding: 2px 7px; border-radius: 20px;
+  flex-shrink: 0;
 }
 
 .sidebar-footer {
