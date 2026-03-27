@@ -54,6 +54,7 @@ import Changepassword from "../pages/customer/Changepassword.vue";
 import SalesShell from "../pages/sales/SalesShell.vue";
 import SalesPOS from "../pages/sales/SalesPOS.vue";
 import SalesPickup from "../pages/sales/SalesPickup.vue";
+import SalesCustomerManager from "../pages/sales/SalesCustomerManager.vue";
 // import SalesOrderHistory from "../pages/sales/SalesOrderHistory.vue"; // TODO
 
 //===== 403 =====
@@ -198,16 +199,16 @@ const routes = [
         meta: { title: "Products" },
       },
       {
-        path: 'serials',
-        name: 'SerialManager',
-        component: SerialManager, 
-        meta: { title: 'Quản lý số Seri' }
+        path: "serials",
+        name: "SerialManager",
+        component: SerialManager,
+        meta: { title: "Quản lý số Seri" },
       },
       {
-        path: 'dashboard-products',
-        name: 'ProductDashboard',
+        path: "dashboard-products",
+        name: "ProductDashboard",
         component: ProductDashboard,
-        meta: { title: 'Báo cáo Tổng quan' }
+        meta: { title: "Báo cáo Tổng quan" },
       },
 
       // ===== Orders =====
@@ -349,7 +350,12 @@ const routes = [
   {
     path: "/sales",
     component: SalesShell,
-    meta: { portal: "sales", requiresAuth: true, roles: ["SALES"], hideHeader: true },
+    meta: {
+      portal: "sales",
+      requiresAuth: true,
+      roles: ["SALES"],
+      hideHeader: true,
+    },
     children: [
       { path: "", redirect: "/sales/pos" },
       {
@@ -363,6 +369,12 @@ const routes = [
         name: "sales-pickup",
         component: SalesPickup,
         meta: { title: "Nhận hàng tại quầy" },
+      },
+      {
+        path: "customers",
+        name: "sales-customers",
+        component: SalesCustomerManager,
+        meta: { title: "Khách hàng tại quầy" },
       },
       // {
       //   path: "history",
@@ -422,7 +434,8 @@ router.beforeEach((to) => {
 
   if (isAuthed) {
     if (role === "CUSTOMER" && portal !== "customer") return "/";
-    if (role === "INVENTORY" && portal !== "inventory") return "/inventory/orders/paid";
+    if (role === "INVENTORY" && portal !== "inventory")
+      return "/inventory/orders/paid";
     if (role === "SALES" && portal !== "sales") return "/sales/pos";
     if (role === "ADMIN" && portal !== "system") return "/system/dashboard";
   }
