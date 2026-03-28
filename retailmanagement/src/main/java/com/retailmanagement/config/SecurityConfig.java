@@ -87,6 +87,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/orders/**")
                         .hasAnyRole("CUSTOMER", "ADMIN", "INVENTORY", "SALES")
                         .requestMatchers("/api/chat/customer").permitAll()
+                        .requestMatchers("/admin/migrate-images").permitAll()
                         .requestMatchers("/api/chat/staff/**").hasAnyRole("ADMIN", "STAFF")
                         .anyRequest().authenticated()
                 )

@@ -48,6 +48,7 @@ public class ProductService {
     private final TagRepository tagRepository;
     private final ProductTagRepository productTagRepository;
     private final ProductSerialRepository productSerialRepository;
+    private final CloudinaryService cloudinaryService;
 
 
     private final String UPLOAD_DIR = "uploads/";
@@ -102,10 +103,10 @@ public class ProductService {
             int sortOrder = 0;
             for (MultipartFile file : request.getGalleryImages()) {
                 if (!file.isEmpty()) {
-                    String fileName = saveFileToDisk(file);
+                    String url = cloudinaryService.uploadFile(file); // ← đổi
                     Image image = new Image();
                     image.setProduct(savedProduct);
-                    image.setUrl("/uploads/" + fileName);
+                    image.setUrl(url); // ← URL Cloudinary luôn
                     image.setIsPrimary(sortOrder == 0);
                     image.setSortOrder(sortOrder++);
                     image.setCreatedAt(Instant.now());
@@ -167,10 +168,10 @@ public class ProductService {
         if (request.getGalleryImages() != null) {
             for (MultipartFile file : request.getGalleryImages()) {
                 if (!file.isEmpty()) {
-                    String fileName = saveFileToDisk(file);
+                    String url = cloudinaryService.uploadFile(file); // ← đổi
                     Image image = new Image();
                     image.setProduct(product);
-                    image.setUrl("/uploads/" + fileName);
+                    image.setUrl(url); // ← URL Cloudinary luôn
                     image.setIsPrimary(false);
                     image.setSortOrder(1);
                     image.setCreatedAt(Instant.now());
