@@ -21,6 +21,7 @@ import java.util.UUID;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final CloudinaryService cloudinaryService;
     private final String UPLOAD_DIR = "uploads/categories/";
 
     // 1. Lấy danh sách (Có phân trang)
@@ -43,10 +44,9 @@ public class CategoryService {
             Category parent = categoryRepository.findById(request.getParentId()).orElse(null);
             category.setParent(parent);
         }
-
         if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
-            String fileName = saveFileToDisk(request.getImageFile());
-            category.setImageUrl("/uploads/categories/" + fileName);
+            String url = cloudinaryService.uploadFile(request.getImageFile()); // ← đổi
+            category.setImageUrl(url);
         }
 
         categoryRepository.save(category);
@@ -68,8 +68,8 @@ public class CategoryService {
         }
 
         if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
-            String fileName = saveFileToDisk(request.getImageFile());
-            category.setImageUrl("/uploads/categories/" + fileName);
+            String url = cloudinaryService.uploadFile(request.getImageFile());
+            category.setImageUrl(url);
         }
 
         categoryRepository.save(category);
