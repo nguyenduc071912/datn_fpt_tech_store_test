@@ -10,7 +10,7 @@
               <rect x="2" y="3" width="6" height="6" rx="1"/><rect x="9" y="3" width="6" height="6" rx="1"/><rect x="16" y="3" width="6" height="6" rx="1"/>
               <rect x="2" y="11" width="6" height="6" rx="1"/><rect x="9" y="11" width="6" height="6" rx="1"/>
             </svg>
-            System
+            Hệ thống
           </div>
           <h1 class="db-title">Admin <span class="db-title__accent">Dashboard</span></h1>
           <p class="db-subtitle">Truy cập nhanh các module quản trị</p>

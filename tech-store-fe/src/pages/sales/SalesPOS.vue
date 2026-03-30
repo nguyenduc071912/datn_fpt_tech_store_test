@@ -2,7 +2,7 @@
   <div class="pos-root">
 
     <!-- ══════════════════════════════════════
-         LEFT PANEL — Product Search
+         LEFT PANEL — Serial Search
     ══════════════════════════════════════ -->
     <div class="panel panel-left">
 
@@ -10,14 +10,14 @@
       <div class="search-bar">
         <div class="search-wrap" :class="{ focused: searchFocused }">
           <svg class="s-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M7 8h10M7 12h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
           <input
             ref="searchInput"
             v-model="searchQuery"
             class="s-input"
-            placeholder="Tìm tên sản phẩm..."
+            placeholder="Nhập mã serial để tìm kiếm..."
             autocomplete="off"
             spellcheck="false"
             @focus="searchFocused = true"
@@ -25,7 +25,7 @@
             @input="onSearchInput"
             @keyup.enter="doSearch"
           />
-          <span v-if="searchQuery && !searchLoading" class="s-hint">Enter ↵</span>
+          <span v-if="searchLoading" class="s-hint">Đang tìm...</span>
           <button v-if="searchQuery" class="s-clear" @click="clearSearch" tabindex="-1">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -47,17 +47,17 @@
         </div>
       </transition>
 
-      <!-- Loading skeleton -->
+      <!-- Loading -->
       <div v-if="searchLoading" class="loading-state">
         <span class="spinner amber"></span>
-        <span>Đang tìm kiếm...</span>
+        <span>Đang tra cứu serial...</span>
       </div>
 
       <!-- Results -->
       <div v-else-if="productGroups.length" class="results-scroll">
         <p class="results-meta">
-          <strong>{{ productGroups.length }}</strong> sản phẩm —
-          click serial để thêm vào đơn
+          Đã tìm thấy serial —
+          <strong>click để thêm vào đơn</strong>
         </p>
 
         <div
@@ -82,13 +82,19 @@
             <div class="variant-meta">
               <span class="variant-name">{{ variant.name }}</span>
               <span class="variant-price">{{ formatMoney(variant.price) }}</span>
-              <span class="serial-badge">
+              <!-- Remaining stock badge -->
+              <span class="serial-badge" :class="variant.remainingCount > 0 ? 'serial-badge--ok' : 'serial-badge--out'">
                 <span v-if="variant.serialsLoading" class="spinner amber tiny"></span>
-                <span v-else>{{ variant.serials.length }} serial</span>
+                <template v-else>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  {{ variant.remainingCount }} máy còn lại
+                </template>
               </span>
             </div>
 
-            <!-- Serials -->
+            <!-- Serial chip(s) -->
             <div v-if="variant.serials.length" class="serial-chips">
               <button
                 v-for="s in variant.serials"
@@ -117,13 +123,14 @@
       <div v-else-if="!searchLoading" class="empty-state">
         <div class="empty-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.2"/>
-            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-            <path v-if="hasSearched" d="M8 11h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M7 8h10M7 12h7M7 16h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <circle v-if="hasSearched" cx="19" cy="19" r="4" stroke="currentColor" stroke-width="1.2"/>
+            <path v-if="hasSearched" d="M17 19h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
           </svg>
         </div>
-        <p class="empty-title">{{ hasSearched ? 'Không tìm thấy sản phẩm' : 'Không có sản phẩm nào' }}</p>
-        <p class="empty-sub">{{ hasSearched ? 'Thử từ khoá khác' : 'Không có dữ liệu từ máy chủ' }}</p>
+        <p class="empty-title">{{ hasSearched ? 'Không tìm thấy serial' : 'Tra cứu theo mã serial' }}</p>
+        <p class="empty-sub">{{ hasSearched ? 'Kiểm tra lại mã serial hoặc thử mã khác' : 'Nhập mã serial để tự động tìm kiếm' }}</p>
       </div>
     </div>
 
@@ -142,7 +149,7 @@
           Đơn hàng
         </h2>
         <span class="cart-count">{{ cart.length }}</span>
-        <button v-if="cart.length" class="btn-clear-cart" @click="cart = []">
+        <button v-if="cart.length" class="btn-clear-cart" @click="handleClearCart">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" stroke="currentColor" stroke-width="1.8"/>
@@ -207,7 +214,7 @@
             <span v-if="!cusLoading">Tra</span>
             <span v-else class="spinner white tiny"></span>
           </button>
-          <button v-if="foundCustomer" class="btn-remove-cus" @click="foundCustomer = null; cusQuery = ''">
+          <button v-if="foundCustomer" class="btn-remove-cus" @click="removeCustomer">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
               <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
               <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -221,7 +228,9 @@
               <span class="cus-name">{{ foundCustomer.fullName || foundCustomer.name }}</span>
               <span class="cus-meta">{{ foundCustomer.phone || foundCustomer.email }}</span>
             </div>
-            <span v-if="foundCustomer.vipTier" class="cus-tier">{{ foundCustomer.vipTier }}</span>
+            <span v-if="foundCustomer.vipTier || foundCustomer.customerType === 'VIP'" class="cus-tier">
+              {{ foundCustomer.vipTier || 'VIP' }}
+            </span>
           </div>
         </transition>
         <p v-if="cusError" class="cus-error">{{ cusError }}</p>
@@ -252,7 +261,7 @@
           class="btn-pay"
           :class="{ disabled: !cart.length || !foundCustomer }"
           :disabled="!cart.length || !foundCustomer"
-          @click="showModal = true"
+          @click="cashIn = totalAmount; showModal = true"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <rect x="1" y="4" width="22" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/>
@@ -291,7 +300,7 @@
               :key="m.value"
               class="method-tab"
               :class="{ active: payMethod === m.value }"
-              @click="payMethod = m.value; cashIn = 0"
+              @click="payMethod = m.value; cashIn = totalAmount"
             >
               <span>{{ m.icon }}</span>{{ m.label }}
             </button>
@@ -307,11 +316,16 @@
             <div class="quick-cash">
               <button v-for="q in quickOptions" :key="q" class="quick-btn" @click="cashIn = q">{{ formatShort(q) }}</button>
             </div>
-            <div v-if="cashIn >= totalAmount" class="cash-change">
+            <!-- cashIn = 0 → khách đưa đúng số, không thừa không thiếu -->
+            <div v-if="cashIn === 0 || cashIn === totalAmount" class="cash-change">
+              <span>Tiền thừa trả lại</span>
+              <strong>{{ formatMoney(0) }}</strong>
+            </div>
+            <div v-else-if="cashIn > totalAmount" class="cash-change">
               <span>Tiền thừa trả lại</span>
               <strong>{{ formatMoney(cashIn - totalAmount) }}</strong>
             </div>
-            <div v-else-if="cashIn > 0" class="cash-lack">
+            <div v-else-if="cashIn > 0 && cashIn < totalAmount" class="cash-lack">
               <span>Còn thiếu</span>
               <strong>{{ formatMoney(totalAmount - cashIn) }}</strong>
             </div>
@@ -346,7 +360,7 @@
           <div class="modal-footer">
             <button
               class="btn-confirm"
-              :disabled="payLoading || (payMethod === 'CASH' && cashIn < totalAmount)"
+              :disabled="payLoading || (payMethod === 'CASH' && cashIn > 0 && cashIn < totalAmount)"
               @click="confirmPayment"
             >
               <span v-if="!payLoading">
@@ -377,7 +391,7 @@
           <h3 class="success-title">Thanh toán thành công!</h3>
           <p class="success-id">{{ orderDone?.orderNumber ?? orderDone?.order_number ?? ('#' + orderDone?.id) }}</p>
           <p class="success-amount">{{ formatMoney(snapshotTotal) }}</p>
-          <div v-if="payMethod === 'CASH' && cashIn > 0" class="success-change">
+          <div v-if="payMethod === 'CASH' && cashIn > snapshotTotal" class="success-change">
             Tiền thừa: <strong>{{ formatMoney(cashIn - snapshotTotal) }}</strong>
           </div>
           <button class="btn-new" @click="resetAll">
@@ -395,108 +409,184 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { productsApi } from "../../api/products.api";
 import { serialsApi } from "../../api/serials.api";
 import { ordersApi } from "../../api/orders.api";
 import { paymentsApi } from "../../api/payments";
 import { customersApi } from "../../api/customers.api";
+import { confirmModal } from "../../ui/confirm";
+import { toast } from "../../ui/toast";
 
-// ── Search ──────────────────────────────────────────────────────
-const searchInput = ref(null);
-const searchQuery = ref("");
+const router = useRouter();
+
+// ── Search (Serial-based) ────────────────────────────────────────
+const searchInput  = ref(null);
+const searchQuery  = ref("");
 const searchFocused = ref(false);
 const searchLoading = ref(false);
-const searchError = ref("");
+const searchError  = ref("");
 const productGroups = ref([]);
-const hasSearched = ref(false);
+const hasSearched  = ref(false);
 
-// Debounce timer ref
-let debounceTimer = null;
+const SOLD_STATUSES = ["sold", "used", "inactive", "disabled", "deleted", "reserved"];
 
+// serialNumber là field chính theo API (SerialManager xác nhận)
 const serialCode = (s) =>
   s.serialNumber ?? s.serialCode ?? s.serial_number ?? s.serial ?? s.code ?? "";
 
-// Called on every keystroke — debounced 400ms
+// Debounce timer cho auto-search
+let searchTimer = null;
+
+// Auto-search theo từng ký tự gõ (debounce 400ms)
 function onSearchInput() {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    doSearch();
-  }, 400);
+  clearTimeout(searchTimer);
+  if (!searchQuery.value.trim()) {
+    productGroups.value = [];
+    searchError.value = "";
+    hasSearched.value = false;
+    return;
+  }
+  searchTimer = setTimeout(() => doSearch(), 400);
 }
 
+/**
+ * Tìm serial theo từ khoá — tự động gọi khi gõ (hoặc nhấn Enter).
+ * Dùng serialsApi.list({ keyword }) → GET /api/products/variants/serials/all
+ * Hỗ trợ response dạng array, { data: [] }, { content: [] }, { data: { content: [] } }
+ */
 async function doSearch() {
   const q = searchQuery.value.trim();
+  if (!q) {
+    searchError.value = "Vui lòng nhập mã serial cần tìm.";
+    return;
+  }
+  hasSearched.value = true;
   searchLoading.value = true;
   searchError.value = "";
   productGroups.value = [];
-  if (q) hasSearched.value = true;
 
   try {
-    // 1. Tìm sản phẩm — nếu q rỗng thì load tất cả
-    const params = q
-      ? { keyword: q, name: q, q, search: q }
-      : {};
-    const res = await productsApi.list(params);
-    const raw = res?.data;
-    let products = [];
-    if (Array.isArray(raw)) products = raw;
-    else if (Array.isArray(raw?.data)) products = raw.data;
-    else if (Array.isArray(raw?.content)) products = raw.content;
-    else if (Array.isArray(raw?.items)) products = raw.items;
+    // Gọi API list với keyword search — parse theo đúng cấu trúc của SerialManager
+    const res = await serialsApi.list({ keyword: q, size: 50 });
+    const data = res.data?.data ?? res.data;
+    // Hỗ trợ paginated (content) và array thẳng
+    const items = Array.isArray(data?.content) ? data.content
+                : Array.isArray(data)           ? data
+                : [];
 
-    if (!products.length) {
-      if (q) searchError.value = `Không tìm thấy sản phẩm nào khớp với "${q}"`;
+    if (!items.length) {
+      searchError.value = `Không tìm thấy serial "${q}" trong kho hàng.`;
       return;
     }
 
-    // 2. Với mỗi product, load variants (có thể đã nằm trong response)
-    const groups = await Promise.all(
-      products.map(async (p) => {
-        let variants = p.variants ?? [];
-        if (!variants.length) {
-          try {
-            const vRes = await productsApi.getVariants(p.id);
-            const vRaw = vRes?.data;
-            variants = Array.isArray(vRaw) ? vRaw
-              : Array.isArray(vRaw?.data) ? vRaw.data
-              : Array.isArray(vRaw?.content) ? vRaw.content : [];
-          } catch { variants = []; }
-        }
+    // Lọc serial còn khả dụng
+    const available = items.filter((s) => {
+      const st = (s.status || "").toLowerCase();
+      return !SOLD_STATUSES.includes(st);
+    });
 
-        const variantRows = variants.map((v) => ({
-          id: v.id,
-          name: v.name || v.variantName || "Mặc định",
-          price: v.price ?? v.salePrice ?? 0,
+    if (!available.length) {
+      searchError.value = `Serial "${q}" đã được bán hoặc không còn khả dụng.`;
+      return;
+    }
+
+    // Nhóm serial theo product → variant
+    // Dùng productName làm key vì API không trả productId trong list endpoint
+    const groupMap = {};
+    for (const serial of available) {
+      const productId   = serial.productId   ?? serial.product?.id
+                       ?? serial.variant?.productId ?? serial.variant?.product?.id ?? null;
+      const productName = serial.productName ?? serial.product?.name ?? serial.variant?.productName ?? "Sản phẩm";
+      const variantId   = serial.variantId   ?? serial.variant?.id   ?? null;
+      const variantName = serial.variantName ?? serial.variant?.name ?? "Mặc định";
+      // Giá: ưu tiên các field phổ biến, fallback 0
+      const price = serial.price ?? serial.salePrice ?? serial.sellingPrice
+                  ?? serial.variant?.price ?? serial.variant?.salePrice ?? serial.variant?.sellingPrice
+                  ?? serial.variantPrice ?? serial.variantSalePrice
+                  ?? serial.productVariant?.price ?? serial.productVariant?.salePrice
+                  ?? 0;
+
+      // Group key theo tên sản phẩm (an toàn hơn dùng id vì id có thể undefined)
+      const groupKey   = productName;
+      const variantKey = variantName; // group variant theo tên
+
+      if (!groupMap[groupKey]) {
+        groupMap[groupKey] = { id: productId, name: productName, variantMap: {} };
+      }
+      const vm = groupMap[groupKey].variantMap;
+      if (!vm[variantKey]) {
+        vm[variantKey] = {
+          id: variantId,
+          name: variantName,
+          price,
+          remainingCount: 0,
           serials: [],
-          serialsLoading: true,
-        }));
+          serialsLoading: false,
+          _needsPrice: variantId != null, // serial API không trả giá → luôn fetch từ variant API
+        };
+      }
+      vm[variantKey].serials.push(serial);
+      vm[variantKey].remainingCount++;
+    }
 
-        // 3. Load serials cho mỗi variant song song
-        await Promise.all(
-          variantRows.map(async (vRow) => {
-            try {
-              const sRes = await productsApi.getSerials(vRow.id);
-              const sRaw = sRes?.data;
-              let serials = Array.isArray(sRaw) ? sRaw
-                : Array.isArray(sRaw?.data) ? sRaw.data
-                : Array.isArray(sRaw?.content) ? sRaw.content : [];
-              const SOLD_STATUSES = ["sold", "used", "inactive", "disabled", "deleted", "reserved"];
-              vRow.serials = serials.filter((s) => {
-                const st = (s.status || "").toLowerCase();
-                return st === "in_stock" || (!SOLD_STATUSES.includes(st) && st !== "");
-              });
-            } catch { vRow.serials = []; }
-            finally { vRow.serialsLoading = false; }
-          })
-        );
-
-        return { id: p.id, name: p.name, variants: variantRows };
-      })
-    );
+    const groups = Object.values(groupMap).map((g) => ({
+      id: g.id,
+      name: g.name,
+      variants: Object.values(g.variantMap),
+    }));
 
     productGroups.value = groups;
+
+    // ── Fetch giá: copy y chang logic code cũ ──────────────────────
+    // Code cũ: productsApi.list() → lấy productId → getVariants(productId) → lấy giá từ variant
+    // Serial API không bao giờ trả giá, nên phải đi qua productsApi như code cũ.
+    await Promise.all(
+      groups.map(async (group) => {
+        try {
+          // Bước 1: lấy productId — dùng group.id nếu có, không thì search theo tên (y chang code cũ)
+          let productId = group.id;
+
+          if (!productId) {
+            const pRes = await productsApi.list({ keyword: group.name, name: group.name, q: group.name, search: group.name });
+            const pRaw = pRes?.data;
+            const pList = Array.isArray(pRaw) ? pRaw
+                        : Array.isArray(pRaw?.data) ? pRaw.data
+                        : Array.isArray(pRaw?.content) ? pRaw.content
+                        : Array.isArray(pRaw?.items) ? pRaw.items : [];
+            const pMatch = pList.find((p) => p.name === group.name) ?? pList[0] ?? null;
+            if (pMatch) { productId = pMatch.id; group.id = pMatch.id; }
+          }
+
+          if (!productId) return;
+
+          // Bước 2: getVariants(productId)
+          const vRes = await productsApi.getVariants(productId);
+          const vRaw = vRes?.data;
+          const vList = Array.isArray(vRaw) ? vRaw
+                      : Array.isArray(vRaw?.data) ? vRaw.data
+                      : Array.isArray(vRaw?.content) ? vRaw.content : [];
+
+          // Bước 3: match variant theo id → variantName → name (case-insensitive) → fallback 1 phần tử
+          for (const variant of group.variants) {
+            const sName = variant.name;
+            const vFound = vList.find((v) => v.id === variant.id)
+                        ?? vList.find((v) => (v.variantName ?? v.name ?? v.variant_name ?? "") === sName)
+                        ?? vList.find((v) => {
+                             const vn = (v.variantName ?? v.name ?? v.variant_name ?? "").trim().toLowerCase();
+                             return vn && vn === sName.trim().toLowerCase();
+                           })
+                        ?? (vList.length === 1 ? vList[0] : null);
+            const p = vFound ? (vFound.price ?? vFound.salePrice ?? vFound.sellingPrice ?? 0) : 0;
+            if (vFound) {
+              variant.price = p;
+            }
+          }
+        } catch { /* giữ giá 0 nếu lỗi */ }
+      })
+    );
   } catch (e) {
-    searchError.value = e?.response?.data?.message || "Lỗi tìm kiếm. Thử lại sau.";
+    searchError.value = e?.response?.data?.message || `Không tìm thấy serial "${q}". Kiểm tra lại mã.`;
   } finally {
     searchLoading.value = false;
   }
@@ -506,9 +596,8 @@ function clearSearch() {
   searchQuery.value = "";
   searchError.value = "";
   hasSearched.value = false;
+  productGroups.value = [];
   searchInput.value?.focus();
-  // Reload all products when search is cleared
-  doSearch();
 }
 
 // ── Cart ────────────────────────────────────────────────────────
@@ -516,15 +605,19 @@ const cart = ref([]);
 
 function addToCart(serial, variant, productName) {
   const sid = serial.id ?? serial.serialId;
-  if (alreadyInCart(sid)) return;
+  if (alreadyInCart(sid)) {
+    toast("Serial này đã có trong đơn hàng", "warning");
+    return;
+  }
   cart.value.push({
-    serialId: sid,
-    serialCode: serialCode(serial),
-    variantId: variant.id,
+    serialId:    sid,
+    serialCode:  serialCode(serial),
+    variantId:   variant.id,
     productName,
     variantName: variant.name,
-    price: variant.price,
+    price:       variant.price,
   });
+  toast(`Đã thêm serial ${serialCode(serial)} vào đơn`, "success");
 }
 
 function alreadyInCart(sid) {
@@ -535,13 +628,27 @@ function removeFromCart(sid) {
   cart.value = cart.value.filter((i) => i.serialId !== sid);
 }
 
+async function handleClearCart() {
+  if (!cart.value.length) return;
+  const ok = await confirmModal(
+    `Xóa tất cả ${cart.value.length} sản phẩm khỏi đơn hàng?`,
+    "Xóa đơn hàng",
+    "Xóa đơn",
+    true
+  );
+  if (ok) {
+    cart.value = [];
+    toast("Đã xóa đơn hàng", "info");
+  }
+}
+
 const totalAmount = computed(() => cart.value.reduce((s, i) => s + i.price, 0));
 
 // ── Customer lookup ──────────────────────────────────────────────
-const cusQuery = ref("");
-const cusFocused = ref(false);
-const cusLoading = ref(false);
-const cusError = ref("");
+const cusQuery     = ref("");
+const cusFocused   = ref(false);
+const cusLoading   = ref(false);
+const cusError     = ref("");
 const foundCustomer = ref(null);
 
 async function lookupCustomer() {
@@ -559,25 +666,38 @@ async function lookupCustomer() {
         (c.email || "").toLowerCase().includes(q) ||
         (c.fullName || c.name || "").toLowerCase().includes(q)
     );
-    if (found) foundCustomer.value = found;
-    else cusError.value = "Không tìm thấy khách hàng.";
-  } catch { cusError.value = "Lỗi tra cứu."; }
-  finally { cusLoading.value = false; }
+    if (found) {
+      foundCustomer.value = found;
+      toast(`Đã tìm thấy: ${found.fullName || found.name}`, "success");
+    } else {
+      cusError.value = "Không tìm thấy khách hàng.";
+    }
+  } catch {
+    cusError.value = "Lỗi tra cứu. Vui lòng thử lại.";
+  } finally {
+    cusLoading.value = false;
+  }
+}
+
+function removeCustomer() {
+  foundCustomer.value = null;
+  cusQuery.value = "";
+  cusError.value = "";
 }
 
 // ── Payment ──────────────────────────────────────────────────────
-const showModal = ref(false);
-const payMethod = ref("CASH");
-const cashIn = ref(0);
-const payLoading = ref(false);
-const payError = ref("");
-const orderDone = ref(null);
+const showModal    = ref(false);
+const payMethod    = ref("CASH");
+const cashIn       = ref(0);
+const payLoading   = ref(false);
+const payError     = ref("");
+const orderDone    = ref(null);
 const snapshotTotal = ref(0);
 
 const methods = [
-  { value: "CASH", label: "Tiền mặt", icon: "💵" },
-  { value: "TRANSFER", label: "Chuyển khoản", icon: "📱" },
-  { value: "CREDIT_CARD", label: "Thẻ tín dụng", icon: "💳" },
+  { value: "CASH",        label: "Tiền mặt",          icon: "💵" },
+  { value: "TRANSFER",    label: "Chuyển khoản",       icon: "📱" },
+  { value: "CREDIT_CARD", label: "Thẻ tín dụng",       icon: "💳" },
 ];
 
 const quickOptions = computed(() => {
@@ -597,37 +717,39 @@ async function confirmPayment() {
   payLoading.value = true;
   payError.value = "";
   snapshotTotal.value = totalAmount.value;
+  // cashIn = 0 nghĩa là khách đưa đúng số tiền (option 1)
+  if (cashIn.value === 0) cashIn.value = snapshotTotal.value;
   try {
     // 1. Tạo đơn hàng (PENDING)
     const oRes = await ordersApi.create({
-      customerId: foundCustomer.value?.id || null,
+      customerId:    foundCustomer.value?.id || null,
       paymentMethod: payMethod.value,
-      channel: "OFFLINE",
-      notes: "POS - Bán tại quầy",
+      channel:       "OFFLINE",
+      notes:         "POS - Bán tại quầy",
       items: cart.value.map((i) => ({
         variantId: i.variantId,
-        quantity: 1,
+        quantity:  1,
       })),
     });
 
-    const raw = oRes?.data;
-    const order = raw?.data ?? raw?.order ?? raw;
+    const raw     = oRes?.data;
+    const order   = raw?.data ?? raw?.order ?? raw;
     const orderId = order?.id ?? order?.orderId ?? raw?.id ?? raw?.orderId;
     console.log("[POS] order response:", JSON.stringify(order));
 
     if (!orderId) throw new Error("Không lấy được mã đơn hàng từ server.");
 
-    // 2. Tạo payment khi order còn PENDING
+    // 2. Tạo payment
     const now = new Date().toISOString();
     await paymentsApi.create({
       orderId,
-      method: payMethod.value,
-      amount: snapshotTotal.value,
+      method:        payMethod.value,
+      amount:        snapshotTotal.value,
       paymentStatus: "PAID",
-      paidAt: now,
+      paidAt:        now,
     });
 
-    // 3. PAID → PROCESSING → SHIPPING → DELIVERED
+    // 3. Cập nhật trạng thái đơn hàng
     await ordersApi.markAsProcessing(orderId).catch(() => {});
     await ordersApi.markAsShipping(orderId).catch(() => {});
     await ordersApi.markAsDelivered(orderId).catch(() => {});
@@ -639,9 +761,13 @@ async function confirmPayment() {
 
     orderDone.value = order;
     showModal.value = false;
+    toast("Thanh toán thành công!", "success");
   } catch (e) {
     payError.value = e?.response?.data?.message || e?.message || "Tạo đơn thất bại. Thử lại.";
-  } finally { payLoading.value = false; }
+    toast(payError.value, "error");
+  } finally {
+    payLoading.value = false;
+  }
 }
 
 function resetAll() {
@@ -653,13 +779,10 @@ function resetAll() {
   cashIn.value = 0;
   payError.value = "";
   orderDone.value = null;
-  // Reset search and reload all products
-  searchQuery.value = "";
-  searchError.value = "";
-  hasSearched.value = false;
-  doSearch();
+  clearSearch();
   searchInput.value?.focus();
 }
+
 
 // ── Helpers ──────────────────────────────────────────────────────
 function formatMoney(v) {
@@ -667,7 +790,7 @@ function formatMoney(v) {
 }
 function formatShort(v) {
   if (v >= 1_000_000) return (v / 1_000_000).toFixed(v % 1_000_000 === 0 ? 0 : 1) + "tr";
-  if (v >= 1_000) return (v / 1_000).toFixed(0) + "k";
+  if (v >= 1_000)     return (v / 1_000).toFixed(0) + "k";
   return String(v);
 }
 function initials(name = "") {
@@ -676,18 +799,30 @@ function initials(name = "") {
 
 // ── Keyboard shortcuts ───────────────────────────────────────────
 function onKey(e) {
-  if (e.key === "F2") { e.preventDefault(); searchInput.value?.focus(); }
+  if (e.key === "F2")     { e.preventDefault(); searchInput.value?.focus(); }
   if (e.key === "Escape" && showModal.value) closeModal();
 }
+
 onMounted(() => {
   window.addEventListener("keydown", onKey);
   searchInput.value?.focus();
-  // Load tất cả sản phẩm ngay khi vào trang
-  doSearch();
+
+  // Đọc khách hàng được gán từ trang SalesCustomerManager
+  try {
+    const saved = sessionStorage.getItem("pos_customer");
+    if (saved) {
+      const cust = JSON.parse(saved);
+      foundCustomer.value = cust;
+      cusQuery.value = cust.phone || cust.email || cust.fullName || "";
+      sessionStorage.removeItem("pos_customer");
+      toast(`Đã gán khách hàng: ${cust.fullName || cust.name}`, "success");
+    }
+  } catch { /* ignore */ }
 });
+
 onUnmounted(() => {
   window.removeEventListener("keydown", onKey);
-  clearTimeout(debounceTimer);
+  clearTimeout(searchTimer);
 });
 </script>
 
@@ -787,11 +922,16 @@ onUnmounted(() => {
 }
 .variant-name { font-size: 13px; font-weight: 600; color: #334155; }
 .variant-price { font-size: 13px; font-weight: 700; color: #d97706; }
+
+/* Serial / stock badge */
 .serial-badge {
-  margin-left: auto; font-size: 11px; color: #64748b;
-  background: #f1f5f9; padding: 2px 8px; border-radius: 10px;
-  display: flex; align-items: center; gap: 5px;
+  margin-left: auto; font-size: 11px;
+  background: #f1f5f9; padding: 3px 9px; border-radius: 10px;
+  display: flex; align-items: center; gap: 5px; font-weight: 600;
+  color: #64748b;
 }
+.serial-badge--ok  { background: #dcfce7; color: #15803d; }
+.serial-badge--out { background: #fef2f2; color: #dc2626; }
 
 .serial-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
