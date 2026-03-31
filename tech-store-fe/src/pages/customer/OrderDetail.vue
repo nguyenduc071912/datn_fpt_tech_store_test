@@ -258,7 +258,7 @@
                     </div>
                     <div class="item-stat">
                       <span class="stat-label">Đơn giá</span>
-                      <span class="stat-value">{{ formatMoney(row.lineTotal) }}</span>
+                      <span class="stat-value">{{ formatMoney(row.price) }}</span>
                     </div>
                   </div>
                 </div>
