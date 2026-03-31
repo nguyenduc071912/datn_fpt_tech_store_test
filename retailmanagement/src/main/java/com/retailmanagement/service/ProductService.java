@@ -88,14 +88,16 @@ public class ProductService {
         Product savedProduct = productRepository.save(product);
 
         if (request.getCategoryIds() != null) {
+            boolean first = true;
             for (Integer catId : request.getCategoryIds()) {
                 ProductCategory pc = new ProductCategory();
                 ProductCategoryId pcId = new ProductCategoryId(savedProduct.getId(), catId);
                 pc.setId(pcId);
                 pc.setCategory(categoryRepository.getReferenceById(catId));
-                pc.setIsPrimary(false);
+                pc.setIsPrimary(first);  // ← category đầu tiên là primary
                 pc.setCreatedAt(Instant.now());
                 productCategoryRepository.save(pc);
+                first = false;
             }
         }
 
@@ -182,6 +184,19 @@ public class ProductService {
 
         productTagRepository.deleteByProduct_Id(product.getId());
         productTagRepository.flush();
+        if (request.getCategoryIds() != null) {
+            boolean first = true;
+            for (Integer catId : request.getCategoryIds()) {
+                ProductCategory pc = new ProductCategory();
+                ProductCategoryId pcId = new ProductCategoryId(product.getId(), catId);
+                pc.setId(pcId);
+                pc.setCategory(categoryRepository.getReferenceById(catId));
+                pc.setIsPrimary(first);  // ← category đầu tiên là primary
+                pc.setCreatedAt(Instant.now());
+                productCategoryRepository.save(pc);
+                first = false;
+            }
+        }
 
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
             for (Integer tagId : request.getTagIds()) {
@@ -201,7 +216,7 @@ public class ProductService {
 
         productRepository.save(product);
     }
-
+@Transactional
     public Page<ProductResponse> getProducts(int page, List<Integer> categoryIds, String keyword, String sortBy, boolean inStockOnly, Integer tagId, LocalDateTime startDate, LocalDateTime endDate, Boolean isNew, Boolean isFaulty) {
         Sort sortObj = Sort.by(Sort.Direction.DESC, "id");
         if (sortBy != null) {
@@ -247,7 +262,7 @@ public class ProductService {
 
         return new PageImpl<>(content, pageable, productPage.getTotalElements());
     }
-
+@Transactional
     public ProductResponse getProductById(Integer id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + id));
@@ -348,16 +363,14 @@ public class ProductService {
         productCategoryRepository
                 .findFirstById_ProductIdAndIsPrimaryTrue(product.getId())
                 .ifPresent(pc -> dto.setCategoryId(pc.getCategory().getId()));
-
         int totalStock = productVariantRepository.findByProduct_Id(product.getId()).stream()
                 .filter(v -> Boolean.TRUE.equals(v.getIsActive()))
                 .mapToInt(v -> {
                     int actualStock = productSerialRepository.countByVariantIdAndStatus(v.getId(), "IN_STOCK");
                     if (v.getStockQuantity() == null || v.getStockQuantity() != actualStock) {
                         v.setStockQuantity(actualStock);
-                        productVariantRepository.save(v);
+                        productVariantRepository.save(v);  // ← GHI DỮ LIỆU bên trong method không có @Transactional!
                     }
-
                     return actualStock;
                 })
                 .sum();

@@ -92,7 +92,6 @@
             <circle cx="17" cy="19" r="2" stroke="currentColor" stroke-width="1.5"/>
           </svg>
           <p>Không có đơn hàng nào đang chờ lấy</p>
-          <span>Chỉ hiển thị đơn đã thanh toán (PAID)</span>
         </div>
 
         <div v-else class="orders-grid">
