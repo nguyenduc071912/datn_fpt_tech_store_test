@@ -7,7 +7,9 @@ import com.retailmanagement.dto.response.ReturnResponse;
 import com.retailmanagement.service.ReturnService;
 import com.retailmanagement.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -20,35 +22,30 @@ public class ReturnController {
 
     /**
      * =========================
-     * CUSTOMER
+     * CUSTOMER / SALES
      * =========================
      */
 
-    // Tạo yêu cầu trả hàng
-    @PostMapping
+    // ✅ Tạo yêu cầu trả hàng — multipart để nhận kèm ảnh minh chứng
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<ReturnResponse> createReturn(
-            @RequestBody CreateReturnRequest request
+            @RequestPart("data") CreateReturnRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image
     ) {
         Integer userId = SecurityUtil.getCurrentUserId();
-        return ApiResponse.success(
-                returnService.createReturn(request, userId)
-        );
+        return ApiResponse.success(returnService.createReturn(request, userId, image));
     }
 
     // Xem lịch sử return của chính mình
     @GetMapping("/me")
     public ApiResponse<List<ReturnResponse>> getMyReturns() {
         Integer userId = SecurityUtil.getCurrentUserId();
-        return ApiResponse.success(
-                returnService.getReturnsByCustomer(userId)
-        );
+        return ApiResponse.success(returnService.getReturnsByCustomer(userId));
     }
 
-    // Customer hủy yêu cầu return (khi còn PENDING)
+    // Customer / Sales hủy yêu cầu (khi còn PENDING)
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> cancelReturn(
-            @PathVariable Long id
-    ) {
+    public ApiResponse<Void> cancelReturn(@PathVariable Long id) {
         Integer userId = SecurityUtil.getCurrentUserId();
         returnService.cancelReturn(id, userId);
         return ApiResponse.success(null);
@@ -56,21 +53,29 @@ public class ReturnController {
 
     /**
      * =========================
-     * ADMIN / SALES
+     * ADMIN — xét duyệt
      * =========================
      */
 
-    // Duyệt return (APPROVE)
-    @PutMapping("/{id}/approve")
-    public ApiResponse<Void> approveReturn(
-            @PathVariable Long id
+    // ✅ Endpoint chính: Admin ra quyết định với 3 mức
+    //    refundType = FULL (100%) / PARTIAL (80%) / REJECT (từ chối)
+    @PostMapping("/{id}/decide")
+    public ApiResponse<ReturnResponse> decide(
+            @PathVariable Long id,
+            @RequestBody ProcessReturnRequest request
     ) {
+        Integer staffId = SecurityUtil.getCurrentUserId();
+        return ApiResponse.success(returnService.decide(id, request, staffId));
+    }
+
+    // Giữ lại để tương thích ngược
+    @PutMapping("/{id}/approve")
+    public ApiResponse<Void> approveReturn(@PathVariable Long id) {
         Integer staffId = SecurityUtil.getCurrentUserId();
         returnService.approveReturn(id, staffId);
         return ApiResponse.success(null);
     }
 
-    // Từ chối return (REJECT)
     @PutMapping("/{id}/reject")
     public ApiResponse<Void> rejectReturn(
             @PathVariable Long id,
@@ -81,19 +86,13 @@ public class ReturnController {
         return ApiResponse.success(null);
     }
 
-    /**
-     * (OPTIONAL – nếu bạn vẫn muốn dùng process chung)
-     * Duyệt & hoàn tiền qua 1 endpoint
-     */
     @PostMapping("/{id}/process")
     public ApiResponse<ReturnResponse> processReturn(
             @PathVariable Long id,
             @RequestBody ProcessReturnRequest request
     ) {
         Integer staffId = SecurityUtil.getCurrentUserId();
-        return ApiResponse.success(
-                returnService.processReturn(id, request.getNote(), staffId)
-        );
+        return ApiResponse.success(returnService.processReturn(id, request.getNote(), staffId));
     }
 
     /**
@@ -102,39 +101,23 @@ public class ReturnController {
      * =========================
      */
 
-    // Danh sách tất cả return
     @GetMapping
     public ApiResponse<List<ReturnResponse>> getAllReturns() {
         return ApiResponse.success(returnService.getAllReturns());
     }
 
-    // Danh sách return theo trạng thái (PENDING / APPROVED / REJECTED)
     @GetMapping("/status/{status}")
-    public ApiResponse<List<ReturnResponse>> getReturnsByStatus(
-            @PathVariable String status
-    ) {
-        return ApiResponse.success(
-                returnService.getReturnsByStatus(status)
-        );
+    public ApiResponse<List<ReturnResponse>> getReturnsByStatus(@PathVariable String status) {
+        return ApiResponse.success(returnService.getReturnsByStatus(status));
     }
 
-    // Danh sách return theo đơn hàng
     @GetMapping("/order/{orderId}")
-    public ApiResponse<List<ReturnResponse>> getReturnsByOrder(
-            @PathVariable Long orderId
-    ) {
-        return ApiResponse.success(
-                returnService.getReturnsByOrder(orderId)
-        );
+    public ApiResponse<List<ReturnResponse>> getReturnsByOrder(@PathVariable Long orderId) {
+        return ApiResponse.success(returnService.getReturnsByOrder(orderId));
     }
 
-    // Chi tiết 1 return
     @GetMapping("/{id}")
-    public ApiResponse<ReturnResponse> getReturnDetail(
-            @PathVariable Long id
-    ) {
-        return ApiResponse.success(
-                returnService.getReturnDetail(id)
-        );
+    public ApiResponse<ReturnResponse> getReturnDetail(@PathVariable Long id) {
+        return ApiResponse.success(returnService.getReturnDetail(id));
     }
 }

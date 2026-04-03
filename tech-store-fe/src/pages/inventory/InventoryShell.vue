@@ -80,15 +80,19 @@
               <el-icon><DocumentChecked /></el-icon>
               <template #title>
                 <el-space :size="6" style="width: 100%; justify-content: space-between;">
-                  <span>Đơn đã thanh toán</span>
-                  <el-tag size="small" type="success" effect="plain" style="margin-left: auto; font-size: 8.5px; height: 18px; padding: 0 6px;">Mới</el-tag>
+                  <span>Đơn hàng mới</span>
                 </el-space>
               </template>
             </el-menu-item>
 
             <el-menu-item index="/inventory/orders/processing">
               <el-icon><Timer /></el-icon>
-              <span>Đang xử lý</span>
+              <span>Đơn đang đóng gói</span>
+            </el-menu-item>
+
+            <el-menu-item index="/inventory/orders/shipping">
+              <el-icon><Van /></el-icon>
+              <span>Lịch sử xuất kho</span>
             </el-menu-item>
           </el-menu-item-group>
         </el-menu>
@@ -119,7 +123,7 @@
 </template>
 
 <script setup>
-import { Box, DocumentChecked, SwitchButton, Timer } from "@element-plus/icons-vue";
+import { Box, DocumentChecked, SwitchButton, Timer, Van } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
 import { confirmModal } from "../../ui/confirm";
 import { toast } from "../../ui/toast";
