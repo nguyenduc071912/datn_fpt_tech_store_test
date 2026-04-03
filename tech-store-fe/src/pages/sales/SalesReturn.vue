@@ -161,7 +161,23 @@
               <el-table-column label="Đơn giá" width="120" align="right">
                 <template #default="{ row }">{{ formatMoney(row.price) }}</template>
               </el-table-column>
-
+<el-table-column label="Serial" min-width="160">
+  <template #default="{ row }">
+    <div v-if="row.serialNumbers && row.serialNumbers.length > 0">
+      <el-tag
+        v-for="sn in row.serialNumbers"
+        :key="sn"
+        size="small"
+        type="info"
+        effect="plain"
+        style="margin: 2px; font-family: monospace; font-size: 11px;"
+      >
+        {{ sn }}
+      </el-tag>
+    </div>
+    <el-text v-else type="info" size="small">—</el-text>
+  </template>
+</el-table-column>
               <!-- Quantity to return — only show when creating new return -->
               <el-table-column v-if="canCreateReturn" label="SL trả" width="120" align="center">
                 <template #default="{ row }">
@@ -462,7 +478,6 @@ function getItemKey(item) {
   return item.id ?? item.orderItemId ?? item.itemId ?? null;
 }
 
-// ── Search ────────────────────────────────────────────────────────────
 async function handleSearch() {
   if (!searchId.value.trim()) return;
   loading.value = true;
@@ -482,12 +497,10 @@ async function handleSearch() {
 
     let orderData = null;
 
-    // ── Nhánh 1: ID số nguyên ──────────────────────────────
     if (isNumeric) {
       const res = await ordersApi.getById(input);
       orderData = res?.data?.data ?? res?.data ?? null;
 
-    // ── Nhánh 2: Mã đơn ORD-xxx ───────────────────────────
     } else if (isOrderNumber) {
       try {
         const res = await ordersApi.getByOrderNumber(input);
@@ -496,8 +509,7 @@ async function handleSearch() {
           candidate.id = candidate.id ?? candidate.orderId;
           orderData = candidate;
         }
-      } catch (e) {
-        // Fallback: filter list nếu endpoint lỗi
+      } catch {
         const res = await ordersApi.filter(null, null, null, null, null);
         const raw = res?.data?.data ?? res?.data ?? [];
         const list = raw?.content ?? (Array.isArray(raw) ? raw : []);
@@ -510,7 +522,6 @@ async function handleSearch() {
         }
       }
 
-    // ── Nhánh 3: Serial Number ─────────────────────────────
     } else if (isSerial) {
       try {
         const res = await ordersApi.findBySerial(input);
@@ -518,7 +529,6 @@ async function handleSearch() {
         if (candidate) {
           candidate.id = candidate.id ?? candidate.orderId;
           orderData = candidate;
-          // Thông báo để sale biết đang xem đơn từ serial
           toast(`Tìm thấy đơn hàng từ serial: ${input}`, 'info');
         }
       } catch (e) {
@@ -528,6 +538,8 @@ async function handleSearch() {
         throw new Error(`Không tìm thấy serial: "${input}"`);
       }
     }
+
+    // ... phần còn lại giữ nguyên
 
     if (!orderData) throw new Error(`Không tìm thấy đơn hàng: "${input}"`);
 
