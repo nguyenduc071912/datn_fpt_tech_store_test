@@ -875,11 +875,11 @@ async function submitForm() {
     formData.append("isFaulty", String(dlg.form.isFaulty));
     
     if (Array.isArray(dlg.form.categoryIds) && dlg.form.categoryIds.length > 0)
-      dlg.form.categoryIds.forEach(id => formData.append("categoryIds", id));
+      dlg.form.categoryIds.forEach(id => formData.append("categoryIds", id?.id ?? id));
     if (Array.isArray(dlg.form.tagIds) && dlg.form.tagIds.length > 0)
-      dlg.form.tagIds.forEach(id => formData.append("tagIds", id));
+      dlg.form.tagIds.forEach(id => formData.append("tagIds", id?.id ?? id));
     if (Array.isArray(dlg.idsToDelete) && dlg.idsToDelete.length > 0)
-      dlg.idsToDelete.forEach(id => formData.append("idsToDelete", id));
+      dlg.idsToDelete.forEach(id => formData.append("idsToDelete", id?.id ?? id));
     if (dlg.form.galleryImages && dlg.form.galleryImages.length > 0)
       for (let i = 0; i < dlg.form.galleryImages.length; i++) {
         let file = dlg.form.galleryImages[i];
@@ -894,6 +894,7 @@ async function submitForm() {
     dlg.open = false; await load(); toast("Thành công", "success");
   } catch (e) {
     console.error("LỖI GỬI LÊN:", e);
+    console.error("RESPONSE DATA:", JSON.stringify(e.response?.data)); 
     toast("Lỗi: " + (e.response?.data?.message || e.message), "error");
   } finally { dlg.loading = false; }
 }

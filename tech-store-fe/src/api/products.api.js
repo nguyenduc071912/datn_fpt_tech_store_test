@@ -6,16 +6,13 @@ export const productsApi = {
   },
 
   create(formData) {
-    return http.post("/api/products", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    return http.post("/api/products", formData);
   },
 
   update(id, formData) {
-    return http.put(`/api/products/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    return http.put(`/api/products/${id}`, formData);
   },
+
 
   remove(id) {
     return http.delete(`/api/products/${id}`);
@@ -83,20 +80,18 @@ export const productsApi = {
 
   exportReport() {
     return http.get("/api/reports/export/excel", {
-      responseType: 'blob' 
+      responseType: 'blob'
     });
   },
   importFromExcel(file) {
-  const fd = new FormData()
-  fd.append('file', file)
-  return http.post('/api/products/import', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
-},
+    const fd = new FormData();
+    fd.append('file', file);
+    return http.post('/api/products/import', fd);
+  },
 
-downloadTemplate() {
-  return http.get('/api/products/import/template', {
-    responseType: 'blob'
-  })
-},
+  downloadTemplate() {
+    return http.get('/api/products/import/template', {
+      responseType: 'blob'
+    })
+  },
 };
