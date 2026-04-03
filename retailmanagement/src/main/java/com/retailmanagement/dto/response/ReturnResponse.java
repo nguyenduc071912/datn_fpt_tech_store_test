@@ -39,4 +39,6 @@ public class ReturnResponse {
 
     private Instant createdAt;
     private Instant refundedAt;
+
+    private String imageUrl;
 }

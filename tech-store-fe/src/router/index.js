@@ -35,6 +35,7 @@ import ProductDashboard from "../pages/system/ProductDashboard.vue";
 import Toployalcustomers from "../pages/system/Toployalcustomers.vue";
 import Loyaltysummaryadmin from "../pages/system/Loyaltysummaryadmin.vue";
 import ReportDashboard from "../pages/system/ReportDashboard.vue";
+import ReturnManager from "../pages/system/ReturnManager.vue";
 
 // ===== Audit =====
 import AuditLog from "../pages/audit/AuditLog.vue";
@@ -48,6 +49,7 @@ import InventoryShell from "../pages/inventory/InventoryShell.vue";
 import InventoryOrderDetail from "../pages/inventory/InventoryOrderDetail.vue";
 import InventoryOrdersPaid from "../pages/inventory/InventoryOrdersPaid.vue";
 import InventoryOrdersProcessing from "../pages/inventory/InventoryOrdersProcessing.vue";
+import InventoryOrdersShipping from "../pages/inventory/InventoryOrdersShipping.vue";
 import Changepassword from "../pages/customer/Changepassword.vue";
 
 // ===== Sales (POS) =====
@@ -269,6 +271,13 @@ const routes = [
         meta: { title: "ADMIN - LOYALTY SUMMARY" },
       },
 
+      {
+        path: "return-manager",
+        name: "return-manager",
+        component: ReturnManager,
+        meta: { title: "Return Manager" },
+      },
+
       // ===== Audit =====
       {
         path: "audit-logs",
@@ -328,6 +337,12 @@ const routes = [
         name: "Inventory Orders Processing",
         component: InventoryOrdersProcessing,
         meta: { title: "Inventory Orders Processing" },
+      },
+      {
+        path: "orders/shipping",
+        name: "Inventory Orders Shipping",
+        component: InventoryOrdersShipping,
+        meta: { title: "Inventory Orders Shipping" },
       },
       {
         path: "orders/:orderId",

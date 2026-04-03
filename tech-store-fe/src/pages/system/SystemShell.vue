@@ -79,7 +79,7 @@
           <!-- Dashboard -->
           <el-menu-item index="/system/dashboard">
             <el-icon><Grid /></el-icon>
-            <span>Dashboard</span>
+            <span>Tổng quan</span>
           </el-menu-item>
 
           <!-- Quản lý -->
@@ -87,14 +87,14 @@
             <el-sub-menu index="mgmt">
               <template #title>
                 <el-icon><UserFilled /></el-icon>
-                <span>Management</span>
+                <span>Quản lý</span>
               </template>
-              <el-menu-item index="/system/users">Users</el-menu-item>
-              <el-menu-item index="/system/customers">Customers</el-menu-item>
-              <el-menu-item index="/system/Toployalcustomers">Top Loyal Customers</el-menu-item>
-              <el-menu-item index="/system/Loyaltysummaryadmin">Loyalty Summary</el-menu-item>
-              <el-menu-item index="/system/categories">Categories</el-menu-item>
-              <el-menu-item index="/system/products">Products</el-menu-item>
+              <el-menu-item index="/system/users">Tài khoản</el-menu-item>
+              <el-menu-item index="/system/customers">Khách hàng</el-menu-item>
+              <el-menu-item index="/system/Toployalcustomers">Top Khách hàng</el-menu-item>
+              <el-menu-item index="/system/Loyaltysummaryadmin">Tổng kết Khách hàng</el-menu-item>
+              <el-menu-item index="/system/categories">Danh mục</el-menu-item>
+              <el-menu-item index="/system/products">Sản phẩm</el-menu-item>
               <el-menu-item index="/system/serials">Serials</el-menu-item>
               <el-menu-item index="/system/dashboard-products">Báo cáo Sản phẩm</el-menu-item>
             </el-sub-menu>
@@ -102,10 +102,10 @@
             <el-sub-menu index="orders">
               <template #title>
                 <el-icon><List /></el-icon>
-                <span>Orders</span>
+                <span>Đơn hàng</span>
               </template>
-              <el-menu-item index="/system/order-dashboard">Order Dashboard</el-menu-item>
-              <el-menu-item index="/system/orders/filter">Order Filter</el-menu-item>
+              <el-menu-item index="/system/order-dashboard">Tổng quan Đơn hàng</el-menu-item>
+              <el-menu-item index="/system/orders/filter">Bộ lọc Đơn hàng</el-menu-item>
             </el-sub-menu>
 
           </el-menu-item-group>
@@ -114,19 +114,23 @@
           <el-menu-item-group title="BÁO CÁO & TÀI CHÍNH">
             <el-menu-item index="/system/reports">
               <el-icon><DataLine /></el-icon>
-              <span>Reports</span>
+              <span>Báo cáo</span>
             </el-menu-item>
             <el-menu-item index="/system/pricing">
               <el-icon><Money /></el-icon>
-              <span>Pricing</span>
+              <span>Giá cả</span>
             </el-menu-item>
             <el-menu-item index="/system/payments">
               <el-icon><CreditCard /></el-icon>
-              <span>Payment</span>
+              <span>Thanh toán</span>
             </el-menu-item>
             <el-menu-item index="/system/promotions">
               <el-icon><Discount /></el-icon>
-              <span>Promotions</span>
+              <span>Khuyến mãi</span>
+            </el-menu-item>
+            <el-menu-item index="/system/return-manager">
+              <el-icon><RefreshLeft /></el-icon>
+              <span>Quản lý Trả hàng</span>
             </el-menu-item>
           </el-menu-item-group>
 
@@ -135,21 +139,21 @@
             <el-sub-menu index="audits">
               <template #title>
                 <el-icon><Lock /></el-icon>
-                <span>Security</span>
+                <span>Bảo mật</span>
               </template>
-              <el-menu-item index="/system/audit-dashboard">Audit Dashboard</el-menu-item>
-              <el-menu-item index="/system/audit-logs">Audit Logs</el-menu-item>
-              <el-menu-item index="/system/user-login-logs">User Login Logs</el-menu-item>
-              <el-menu-item index="/system/audit-report">Audit Report</el-menu-item>
-              <el-menu-item index="/system/security-logs">Security Logs</el-menu-item>
+              <el-menu-item index="/system/audit-dashboard">Tổng quan Bảo mật</el-menu-item>
+              <el-menu-item index="/system/audit-logs">Nhật ký Kiểm toán</el-menu-item>
+              <el-menu-item index="/system/user-login-logs">Nhật ký Đăng nhập</el-menu-item>
+              <el-menu-item index="/system/audit-report">Báo cáo Kiểm toán</el-menu-item>
+              <el-menu-item index="/system/security-logs">Nhật ký Bảo mật</el-menu-item>
             </el-sub-menu>
 
             <el-sub-menu index="settings">
               <template #title>
                 <el-icon><Setting /></el-icon>
-                <span>Settings</span>
+                <span>Cài đặt</span>
               </template>
-              <el-menu-item index="/system/settings/currency">Currency</el-menu-item>
+              <el-menu-item index="/system/settings/currency">Tiền tệ</el-menu-item>
             </el-sub-menu>
           </el-menu-item-group>
         </el-menu>

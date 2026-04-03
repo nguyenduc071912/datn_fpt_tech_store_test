@@ -26,7 +26,7 @@
     <el-steps v-if="order" :active="currentStep" finish-status="success" class="steps-bar">
       <el-step title="Tìm đơn" description="Nhập mã đơn" />
       <el-step title="Chọn hàng trả" description="Chọn sản phẩm + lý do" />
-      <el-step title="Thẩm định" description="SALE/Admin duyệt" />
+      <el-step title="Thẩm định" description="Admin xét duyệt" />
       <el-step title="Hoàn tất" description="Hoàn tiền khách" />
     </el-steps>
 
@@ -92,9 +92,9 @@
           />
           <el-alert
             v-else-if="existingReturn?.status === 'PENDING'"
-            title="CÓ YÊU CẦU ĐANG CHỜ DUYỆT"
+            title="CÓ YÊU CẦU ĐANG CHỜ ADMIN DUYỆT"
             type="warning"
-            description="Đang thẩm định. Kiểm tra panel bên phải để duyệt hoặc từ chối."
+            description="Yêu cầu đã được tạo. Admin sẽ xem xét ảnh minh chứng và quyết định."
             show-icon :closable="false" class="mb-20"
           />
           <el-alert
@@ -104,7 +104,6 @@
             :description="'Lý do: ' + (existingReturn.note || '—')"
             show-icon :closable="false" class="mb-20"
           />
-          <!-- Đơn chưa DELIVERED → không đủ điều kiện trả hàng -->
           <el-alert
             v-else-if="!existingReturn && order?.status !== 'DELIVERED'"
             title="CHƯA ĐỦ ĐIỀU KIỆN TRẢ HÀNG"
@@ -112,7 +111,6 @@
             :description="`Trạng thái đơn hiện tại: ${order?.status}. Chỉ có thể trả hàng sau khi đơn đã DELIVERED.`"
             show-icon :closable="false" class="mb-20"
           />
-          <!-- Đơn DELIVERED, chưa có return → sẵn sàng -->
           <el-alert
             v-else-if="!existingReturn && order?.status === 'DELIVERED'"
             title="SẴN SÀNG TẠO YÊU CẦU"
@@ -178,7 +176,7 @@
                 <template #default="{ row }">{{ formatMoney(row.price) }}</template>
               </el-table-column>
 
-              <!-- Quantity to return — only show when creating new return -->
+              <!-- Số lượng trả — chỉ hiện khi đang tạo mới -->
               <el-table-column v-if="canCreateReturn" label="SL trả" width="120" align="center">
                 <template #default="{ row }">
                   <el-input-number
@@ -199,11 +197,11 @@
               </el-table-column>
             </el-table>
 
-            <!-- Return Creation Form -->
+            <!-- ── Form tạo yêu cầu ── -->
             <div v-if="canCreateReturn" class="footer-actions">
               <el-divider />
 
-              <!-- Live refund estimate -->
+              <!-- Ước tính hoàn tiền (tính theo tỉ lệ thực tế đã discount) -->
               <el-row justify="space-between" align="middle" class="mb-10" v-if="selectedItems.length > 0">
                 <el-text size="small" type="info">
                   {{ selectedItems.length }} sản phẩm được chọn
@@ -215,19 +213,35 @@
               </el-row>
 
               <el-form label-position="top">
-                <el-form-item
-                  label="Lý do trả hàng"
-                  :error="reasonError"
-                  required
-                >
+                <!-- Lý do trả hàng -->
+                <el-form-item label="Lý do trả hàng" :error="reasonError" required>
                   <el-input
                     v-model="returnReason"
                     type="textarea"
                     :rows="2"
                     placeholder="Nhập lý do trả hàng... (bắt buộc)"
                     @input="reasonError = ''"
-                    :class="{ 'is-error': reasonError }"
                   />
+                </el-form-item>
+
+                <!-- ✅ Ảnh minh chứng -->
+                <el-form-item label="Ảnh minh chứng (tuỳ chọn)">
+                  <el-upload
+                    action="#"
+                    :auto-upload="false"
+                    :limit="1"
+                    accept="image/*"
+                    :on-change="(file) => { returnImage = file.raw }"
+                    :on-remove="() => { returnImage = null }"
+                    list-type="picture"
+                  >
+                    <el-button size="small" plain>Chọn ảnh</el-button>
+                    <template #tip>
+                      <el-text size="small" type="info">
+                        Ảnh sản phẩm bị lỗi — giúp Admin xét duyệt nhanh hơn
+                      </el-text>
+                    </template>
+                  </el-upload>
                 </el-form-item>
               </el-form>
 
@@ -247,10 +261,10 @@
           </el-card>
         </el-col>
 
-        <!-- ─── RIGHT COL: Customer + Action Panels ─── -->
+        <!-- ─── RIGHT COL: Customer + Status Panels ─── -->
         <el-col :span="8">
 
-          <!-- Customer -->
+          <!-- Khách hàng -->
           <el-card shadow="never" class="mb-20">
             <template #header><el-text tag="b">Khách hàng</el-text></template>
             <el-space>
@@ -285,12 +299,12 @@
             </el-button>
           </el-card>
 
-          <!-- PENDING Appraisal -->
+          <!-- ✅ PENDING — hiển thị thông tin, không có nút approve/reject (Admin xử lý ở trang riêng) -->
           <el-card v-if="existingReturn?.status === 'PENDING'" shadow="never" class="mb-20">
             <template #header>
               <el-row justify="space-between" align="middle">
-                <el-text tag="b">XỬ LÝ THẨM ĐỊNH</el-text>
-                <el-tag type="warning" plain>CHỜ DUYỆT</el-tag>
+                <el-text tag="b">THÔNG TIN YÊU CẦU</el-text>
+                <el-tag type="warning" plain>CHỜ ADMIN DUYỆT</el-tag>
               </el-row>
             </template>
 
@@ -300,43 +314,31 @@
                 <el-descriptions-item label="Sản phẩm">{{ returnDetail.productName }}</el-descriptions-item>
                 <el-descriptions-item label="Số lượng">{{ returnDetail.quantity }}</el-descriptions-item>
                 <el-descriptions-item label="Lý do">"{{ returnDetail.reason }}"</el-descriptions-item>
-                <el-descriptions-item label="Hoàn tiền dự kiến">
-                  <el-text type="danger" tag="b">{{ formatMoney(returnDetail.refundAmount) }}</el-text>
-                </el-descriptions-item>
-                <el-descriptions-item v-if="returnDetail.refundMethod" label="Phương thức hoàn">
-                  {{ returnDetail.refundMethod }}
-                </el-descriptions-item>
-                <el-descriptions-item v-if="returnDetail.refundStatus" label="Trạng thái hoàn">
-                  {{ returnDetail.refundStatus }}
-                </el-descriptions-item>
-                <el-descriptions-item v-if="returnDetail.note" label="Ghi chú">
-                  {{ returnDetail.note }}
-                </el-descriptions-item>
                 <el-descriptions-item label="Ngày yêu cầu">
                   {{ formatDate(returnDetail.createdAt) }}
                 </el-descriptions-item>
               </el-descriptions>
 
-              <el-divider />
-              <el-text size="small" type="info" class="mb-10" block>Hành động thẩm định:</el-text>
-              <el-button
-                type="success"
-                size="large"
-                style="width: 100%"
-                @click="confirmApprove"
-                :loading="submitting"
-                plain
-              >
-                ✓ DUYỆT YÊU CẦU
-              </el-button>
-              <el-button
-                type="danger"
-                link
-                style="width: 100%; margin-top: 8px"
-                @click="showRejectPrompt"
-              >
-                Từ chối yêu cầu
-              </el-button>
+              <!-- Ảnh minh chứng đã đính kèm -->
+              <div v-if="returnDetail.imageUrl" style="margin-top: 12px">
+                <el-text size="small" type="info">Ảnh minh chứng đã gửi:</el-text>
+                <el-image
+                  :src="returnDetail.imageUrl"
+                  :preview-src-list="[returnDetail.imageUrl]"
+                  fit="cover"
+                  style="width: 100%; max-height: 180px; border-radius: 4px; margin-top: 6px"
+                  preview-teleported
+                />
+              </div>
+
+              <el-alert
+                style="margin-top: 16px"
+                title="Đang chờ Admin xét duyệt"
+                description="Admin sẽ xem xét ảnh minh chứng và quyết định mức hoàn tiền tại trang Quản lý hoàn hàng."
+                type="info"
+                show-icon
+                :closable="false"
+              />
             </div>
           </el-card>
 
@@ -348,7 +350,7 @@
                   <el-descriptions-item v-if="returnDetail?.refundAmount" label="Đã hoàn tiền">
                     <el-text type="success" tag="b">{{ formatMoney(returnDetail.refundAmount) }}</el-text>
                   </el-descriptions-item>
-                  <el-descriptions-item v-if="returnDetail?.refundMethod" label="Phương thức">
+                  <el-descriptions-item v-if="returnDetail?.refundMethod" label="Loại hoàn">
                     {{ returnDetail.refundMethod }}
                   </el-descriptions-item>
                   <el-descriptions-item v-if="returnDetail?.processedByName" label="Người duyệt">
@@ -368,38 +370,6 @@
         </el-col>
       </el-row>
     </div>
-
-    <!-- ══════════ REJECT DIALOG ══════════ -->
-    <el-dialog v-model="rejectDialog.show" title="Từ chối yêu cầu trả hàng" width="420px">
-      <el-alert
-        title="Hành động này sẽ từ chối toàn bộ yêu cầu"
-        type="warning"
-        show-icon :closable="false"
-        class="mb-20"
-      />
-      <el-form label-position="top">
-        <el-form-item label="Lý do từ chối (bắt buộc)">
-          <el-input
-            v-model="rejectDialog.reason"
-            type="textarea"
-            :rows="3"
-            placeholder="Nhập lý do rõ ràng để thông báo cho khách hàng..."
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="rejectDialog.show = false" plain>Hủy</el-button>
-        <el-button
-          type="danger"
-          @click="confirmReject"
-          :loading="submitting"
-          :disabled="!rejectDialog.reason.trim()"
-          plain
-        >
-          Xác nhận từ chối
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -411,55 +381,48 @@ import { returnsApi } from '../../api/returns.api';
 import { toast } from '../../ui/toast';
 import { confirmModal } from '../../ui/confirm';
 
-// ── State ────────────────────────────────────────────────────────────
-const searchId = ref('');
-const loading = ref(false);
-const submitting = ref(false);
-const order = ref(null);
-const existingReturn = ref(null);
-const returnDetail = ref(null);
-const selectedItems = ref([]);
-const returnReason = ref('');
-const reasonError = ref('');
-const returnQuantities = reactive({}); // { itemId: quantity }
-const rejectDialog = reactive({ show: false, reason: '' });
+// ── State ─────────────────────────────────────────────────────────────
+const searchId        = ref('');
+const loading         = ref(false);
+const submitting      = ref(false);
+const order           = ref(null);
+const existingReturn  = ref(null);
+const returnDetail    = ref(null);
+const selectedItems   = ref([]);
+const returnReason    = ref('');
+const reasonError     = ref('');
+const returnImage     = ref(null); // ✅ ảnh minh chứng
+const returnQuantities = reactive({});
 
-// ── Computed ─────────────────────────────────────────────────────────
+// ── Computed ──────────────────────────────────────────────────────────
 
-/** Bước hiện tại trong luồng — kết hợp cả existingReturn.status và order.status */
 const currentStep = computed(() => {
   if (!order.value) return 0;
   const retStatus = existingReturn.value?.status;
   const ordStatus = order.value?.status;
-
-  // Ưu tiên theo return status (chính xác hơn)
   if (retStatus === 'COMPLETED') return 3;
   if (retStatus === 'PENDING')   return 2;
-
-  // Fallback: nhìn vào order status khi existingReturn chưa load hoặc null
   if (ordStatus === 'RETURNED' || ordStatus === 'PARTIALLY_RETURNED') return 3;
   if (ordStatus === 'RETURN_REQUESTED') return 2;
-
-  return 1; // NONE hoặc REJECTED → bước chọn hàng
+  return 1;
 });
 
-/** Có thể tạo yêu cầu mới không:
- * - Không có yêu cầu hiện tại (hoặc REJECTED)
- * - Đơn đã DELIVERED (backend bắt buộc)
- */
 const canCreateReturn = computed(() => {
   const noActiveReturn = !existingReturn.value || existingReturn.value.status === 'REJECTED';
-  const isDelivered = order.value?.status === 'DELIVERED';
+  const isDelivered    = order.value?.status === 'DELIVERED';
   return order.value && noActiveReturn && isDelivered;
 });
 
-/** Tổng tiền hoàn dự kiến */
+// ✅ Tính ước tính hoàn tiền theo tỉ lệ thực tế (đã áp discount)
 const estimatedRefund = computed(() => {
   if (!selectedItems.value.length) return 0;
+  const subtotal    = order.value?.subtotal    || 0;
+  const totalAmount = order.value?.totalAmount || 0;
+  const ratio = subtotal > 0 ? totalAmount / subtotal : 1;
   return selectedItems.value.reduce((sum, item) => {
-    const k = getRowKey(item);
+    const k   = getRowKey(item);
     const qty = (k != null ? returnQuantities[k] : null) ?? item.quantity;
-    return sum + (item.price ?? 0) * qty;
+    return sum + (item.price ?? 0) * qty * ratio;
   }, 0);
 });
 
@@ -467,22 +430,15 @@ const estimatedRefund = computed(() => {
 function isSelected(row) {
   return selectedItems.value.some(i => i.id === row.id);
 }
-const formatMoney = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
-const formatDate = (d) => d ? new Date(d).toLocaleString('vi-VN') : '—';
+const formatMoney  = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
+const formatDate   = (d) => d ? new Date(d).toLocaleString('vi-VN') : '—';
 const orderStatusType = (s) => ({ PENDING: 'warning', PAID: 'primary', PROCESSING: '', SHIPPING: 'primary', DELIVERED: 'success', CANCELLED: 'danger' }[s] || 'info');
+const initials     = (name = '') => (name || '').split(' ').map(n => n[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?';
+function handleImageError(row) { row.imageUrl = null; }
 
-function handleImageError(row) {
-  row.imageUrl = null;
-}
-
-const initials = (name = '') => (name || '').split(' ').map(n => n[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?';
-
-// ── Helpers for item ID ───────────────────────────────────────────────
-/** Lấy ID thực sự của order item — hỗ trợ nhiều field name từ backend */
 function getItemKey(item) {
   return item.id ?? item.orderItemId ?? item.itemId ?? null;
 }
-
 function getRowKey(item) {
   return item._uiKey || getItemKey(item) || item.serialCode || item.sku || null;
 }
@@ -491,23 +447,21 @@ function expandOrderItems(items) {
   return (items || []).flatMap((item) => {
     const baseKey = getItemKey(item);
     const serials = (item.serialNumbers || []).filter(Boolean);
-
     if (serials.length > 1) {
       return serials.map((sn) => ({
         ...item,
-        quantity: 1,
-        _uiKey: `${baseKey}:${sn}`,
-        _serialNumber: sn,
-        _baseItemId: baseKey,
+        quantity:       1,
+        _uiKey:         `${baseKey}:${sn}`,
+        _serialNumber:  sn,
+        _baseItemId:    baseKey,
       }));
     }
-
     const singleSerial = serials[0] || null;
     return [{
       ...item,
-      _uiKey: singleSerial ? `${baseKey}:${singleSerial}` : `${baseKey}`,
+      _uiKey:        singleSerial ? `${baseKey}:${singleSerial}` : `${baseKey}`,
       _serialNumber: singleSerial,
-      _baseItemId: baseKey,
+      _baseItemId:   baseKey,
     }];
   });
 }
@@ -517,31 +471,26 @@ const displayItems = computed(() => expandOrderItems(order.value?.items || []));
 // ── Search ────────────────────────────────────────────────────────────
 async function handleSearch() {
   if (!searchId.value.trim()) return;
-  loading.value = true;
-  order.value = null;
+  loading.value        = true;
+  order.value          = null;
   existingReturn.value = null;
-  returnDetail.value = null;
-  selectedItems.value = [];
-  returnReason.value = '';
-  reasonError.value = '';
+  returnDetail.value   = null;
+  selectedItems.value  = [];
+  returnReason.value   = '';
+  reasonError.value    = '';
   Object.keys(returnQuantities).forEach(k => delete returnQuantities[k]);
-// Ưu tiên thử serial trước nếu không tìm được bằng ID
 
   try {
     const input = searchId.value.trim();
-    
-    const isNumeric = /^\d+$/.test(input);
+    const isNumeric     = /^\d+$/.test(input);
     const isOrderNumber = input.toUpperCase().startsWith('ORD-');
-    const isSerial = !isNumeric && !isOrderNumber;
+    const isSerial      = !isNumeric && !isOrderNumber;
+    let orderData       = null;
 
-    let orderData = null;
-
-    // ── Nhánh 1: ID số nguyên ──────────────────────────────
     if (isNumeric) {
       const res = await ordersApi.getById(input);
       orderData = res?.data?.data ?? res?.data ?? null;
 
-    // ── Nhánh 2: Mã đơn ORD-xxx ───────────────────────────
     } else if (isOrderNumber) {
       try {
         const res = await ordersApi.getByOrderNumber(input);
@@ -550,21 +499,17 @@ async function handleSearch() {
           candidate.id = candidate.id ?? candidate.orderId;
           orderData = candidate;
         }
-      } catch (e) {
-        // Fallback: filter list nếu endpoint lỗi
+      } catch {
         const res = await ordersApi.filter(null, null, null, null, null);
-        const raw = res?.data?.data ?? res?.data ?? [];
+        const raw  = res?.data?.data ?? res?.data ?? [];
         const list = raw?.content ?? (Array.isArray(raw) ? raw : []);
-        const found = list.find(o =>
-          (o.orderNumber || '').toLowerCase() === input.toLowerCase()
-        ) ?? null;
+        const found = list.find(o => (o.orderNumber || '').toLowerCase() === input.toLowerCase()) ?? null;
         if (found?.id) {
           const detailRes = await ordersApi.getById(found.id);
           orderData = detailRes?.data?.data ?? detailRes?.data ?? found;
         }
       }
 
-    // ── Nhánh 3: Serial Number ─────────────────────────────
     } else if (isSerial) {
       try {
         const res = await ordersApi.findBySerial(input);
@@ -572,7 +517,6 @@ async function handleSearch() {
         if (candidate) {
           candidate.id = candidate.id ?? candidate.orderId;
           orderData = candidate;
-          // Thông báo để sale biết đang xem đơn từ serial
           toast(`Tìm thấy đơn hàng từ serial: ${input}`, 'info');
         }
       } catch (e) {
@@ -588,17 +532,16 @@ async function handleSearch() {
     const orderId = orderData.id ?? orderData.orderId;
     if (!orderId) throw new Error('Đơn hàng không có ID hợp lệ');
     orderData.id = orderId;
-    order.value = orderData;
+    order.value  = orderData;
 
-    // Init quantities map (kể cả case split serial)
     expandOrderItems(orderData.items || []).forEach(item => {
       const k = getRowKey(item);
       if (k != null) returnQuantities[k] = item.quantity;
     });
 
-    // Check existing return
+    // Kiểm tra return hiện có
     try {
-      const retRes = await returnsApi.getByOrder(orderId);
+      const retRes  = await returnsApi.getByOrder(orderId);
       const retData = retRes?.data?.data ?? retRes?.data ?? null;
       const singleReturn = Array.isArray(retData)
         ? retData.sort((a, b) => b.id - a.id)[0]
@@ -621,36 +564,38 @@ async function handleSearch() {
   }
 }
 
-// ── Create Return ─────────────────────────────────────────────────────
+// ── Create Return ──────────────────────────────────────────────────────
 async function initReturn() {
   if (selectedItems.value.length === 0) return;
   if (!returnReason.value.trim()) {
     reasonError.value = 'Vui lòng nhập lý do trả hàng';
     return;
   }
-
-  // Kiểm tra đơn hàng đã được giao (DELIVERED) — backend bắt buộc
   if (order.value?.status !== 'DELIVERED') {
     toast('Chỉ có thể tạo yêu cầu trả hàng khi đơn đã giao (DELIVERED)', 'warning');
     return;
   }
 
-  // Kiểm tra items có ID hợp lệ
   const invalidItems = selectedItems.value.filter(i => !getItemKey(i));
   if (invalidItems.length > 0) {
     toast(`Không xác định được mã sản phẩm: ${invalidItems.map(i => i.productName).join(', ')}`, 'error');
     return;
   }
 
-  // Confirm dialog
+  // ✅ Tỉ lệ discount thực tế của đơn
+  const subtotal    = order.value?.subtotal    || 0;
+  const totalAmount = order.value?.totalAmount || 0;
+  const ratio       = subtotal > 0 ? totalAmount / subtotal : 1;
+
   const summary = selectedItems.value
     .map(i => {
       const rowKey = getRowKey(i);
-      const qty = (rowKey != null ? returnQuantities[rowKey] : null) ?? i.quantity;
+      const qty    = (rowKey != null ? returnQuantities[rowKey] : null) ?? i.quantity;
       const serialTag = i._serialNumber ? ` (${i._serialNumber})` : '';
-      return `• ${i.productName}${serialTag} × ${qty} — ${formatMoney((i.price ?? 0) * qty)}`;
+      return `• ${i.productName}${serialTag} × ${qty} — ${formatMoney((i.price ?? 0) * qty * ratio)}`;
     })
     .join('\n');
+
   const ok = await confirmModal(
     `Xác nhận tạo yêu cầu trả hàng?\n\n${summary}\n\nTổng hoàn dự kiến: ${formatMoney(estimatedRefund.value)}`,
     'Khởi tạo trả hàng'
@@ -659,27 +604,34 @@ async function initReturn() {
 
   submitting.value = true;
   let successCount = 0;
-  let lastError = null;
+  let lastError    = null;
 
   try {
-    // Backend nhận 1 item/request (đối chiếu CreateReturnRequest DTO)
-    // Nếu nhiều items được chọn → gọi API nhiều lần tuần tự
     for (const item of selectedItems.value) {
-      const rowKey = getRowKey(item);
-      const qty = (rowKey != null ? returnQuantities[rowKey] : null) ?? item.quantity;
-      const refundAmount = (item.price ?? 0) * qty;
-      const orderItemId = item._baseItemId ?? getItemKey(item);
+      const rowKey       = getRowKey(item);
+      const qty          = (rowKey != null ? returnQuantities[rowKey] : null) ?? item.quantity;
+      const orderItemId  = item._baseItemId ?? getItemKey(item);
+
+      // ✅ Tính refundAmount theo tỉ lệ thực tế (đã discount)
+      const refundAmount = Math.round((item.price ?? 0) * qty * ratio);
 
       const payload = {
-        orderId: order.value.id,
-        orderItemId: orderItemId,  // Long — ID của OrderItem
-        quantity: qty,             // Integer
-        reason: returnReason.value.trim(),
-        refundAmount: refundAmount // BigDecimal
+        orderId:      order.value.id,
+        orderItemId:  orderItemId,
+        quantity:     qty,
+        reason:       returnReason.value.trim(),
+        refundAmount: refundAmount,
       };
 
+      // ✅ Gửi FormData để kèm ảnh
+      const formData = new FormData();
+      formData.append('data', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+      if (returnImage.value) {
+        formData.append('image', returnImage.value);
+      }
+
       try {
-        await returnsApi.create(payload);
+        await returnsApi.create(formData);
         successCount++;
       } catch (itemErr) {
         lastError = itemErr;
@@ -703,7 +655,7 @@ async function initReturn() {
   }
 }
 
-// ── Fetch Detail ──────────────────────────────────────────────────────
+// ── Fetch Detail ───────────────────────────────────────────────────────
 async function fetchReturnDetail(id) {
   try {
     const res = await returnsApi.getDetail(id);
@@ -713,47 +665,9 @@ async function fetchReturnDetail(id) {
   }
 }
 
-// ── Approve ───────────────────────────────────────────────────────────
-async function confirmApprove() {
-  const ok = await confirmModal('Xác nhận DUYỆT yêu cầu trả hàng này?', 'Duyệt trả hàng');
-  if (!ok) return;
-  submitting.value = true;
-  try {
-    await returnsApi.approve(existingReturn.value.id);
-    toast('Đã phê duyệt thành công', 'success');
-    if (searchId.value) handleSearch();
-  } catch (err) {
-    toast(err.response?.data?.message || 'Lỗi khi duyệt', 'error');
-  } finally {
-    submitting.value = false;
-  }
-}
-
-// ── Reject ────────────────────────────────────────────────────────────
-function showRejectPrompt() {
-  rejectDialog.reason = '';
-  rejectDialog.show = true;
-}
-
-async function confirmReject() {
-  if (!rejectDialog.reason.trim()) return;
-  submitting.value = true;
-  try {
-    await returnsApi.reject(existingReturn.value.id, rejectDialog.reason);
-    toast('Đã từ chối yêu cầu', 'info');
-    rejectDialog.show = false;
-    if (searchId.value) handleSearch();
-  } catch (err) {
-    toast(err.response?.data?.message || 'Lỗi khi từ chối', 'error');
-  } finally {
-    submitting.value = false;
-  }
-}
-
-// ── Misc ──────────────────────────────────────────────────────────────
+// ── Misc ───────────────────────────────────────────────────────────────
 function handleSelectionChange(val) {
   selectedItems.value = val;
-  // Init quantity cho items mới được chọn
   val.forEach(item => {
     const key = getRowKey(item);
     if (key !== null && returnQuantities[key] === undefined) {
@@ -762,32 +676,32 @@ function handleSelectionChange(val) {
   });
 }
 
-function canSelectItem(row) {
+function canSelectItem() {
   return !existingReturn.value || existingReturn.value.status === 'REJECTED';
 }
 
 function reset() {
-  order.value = null;
+  order.value          = null;
   existingReturn.value = null;
-  returnDetail.value = null;
-  selectedItems.value = [];
-  returnReason.value = '';
-  reasonError.value = '';
-  searchId.value = '';
+  returnDetail.value   = null;
+  selectedItems.value  = [];
+  returnReason.value   = '';
+  reasonError.value    = '';
+  returnImage.value    = null;
+  searchId.value       = '';
   Object.keys(returnQuantities).forEach(k => delete returnQuantities[k]);
 }
 </script>
 
 <style scoped>
-.sales-return { padding: 20px; min-height: 100vh; background: #f5f7fa; }
-.header { padding: 10px 0; margin-bottom: 16px; }
-.steps-bar { margin-bottom: 24px; background: #fff; padding: 20px 24px; border-radius: 4px; border: 1px solid #dcdfe6; }
-.search-wrap { text-align: center; padding: 60px 40px; }
-.mb-20 { margin-bottom: 20px; }
-.mb-10 { margin-bottom: 10px; }
-.mt-10 { margin-top: 10px; }
-.ml-8 { margin-left: 8px; }
+.sales-return  { padding: 20px; min-height: 100vh; background: #f5f7fa; }
+.header        { padding: 10px 0; margin-bottom: 16px; }
+.steps-bar     { margin-bottom: 24px; background: #fff; padding: 20px 24px; border-radius: 4px; border: 1px solid #dcdfe6; }
+.search-wrap   { text-align: center; padding: 60px 40px; }
+.mb-20         { margin-bottom: 20px; }
+.mb-10         { margin-bottom: 10px; }
+.mt-10         { margin-top: 10px; }
+.ml-8          { margin-left: 8px; }
 .product-thumb { width: 40px; height: 40px; flex-shrink: 0; }
-.product-thumb-error { width: 40px; height: 40px; background: #f5f5f5; border: 1px solid #dcdfe6; }
 .footer-actions { margin-top: 24px; }
 </style>

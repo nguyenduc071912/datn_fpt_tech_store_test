@@ -56,4 +56,7 @@ public class Return {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+
+    @Column(name = "image_url", length = 800)
+    private String imageUrl;
 }

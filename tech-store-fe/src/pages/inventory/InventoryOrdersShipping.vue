@@ -4,9 +4,9 @@
     <el-row type="flex" justify="space-between" align="bottom">
       <el-col :span="16">
         <el-space direction="vertical" alignment="start" :size="4">
-          <el-text type="warning" size="small" tag="b">INVENTORY</el-text>
-          <h2>Đơn đang xử lý</h2>
-          <el-text type="info">Các đơn hàng đang được kho chuẩn bị đóng gói</el-text>
+          <el-text type="primary" size="small" tag="b">INVENTORY</el-text>
+          <h2>Lịch sử xuất kho</h2>
+          <el-text type="info">Danh sách các đơn hàng đã được giao cho đơn vị vận chuyển</el-text>
         </el-space>
       </el-col>
       <el-col :span="8" style="text-align: right;">
@@ -21,15 +21,14 @@
       <el-col :span="6">
         <el-card shadow="never">
           <el-space>
-            <el-avatar :size="40" class="stat-icon-amber" shape="square">
+            <el-avatar :size="40" class="stat-icon-blue" shape="square" style="background-color: var(--el-color-primary-light-9); color: var(--el-color-primary)">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M9 5v4l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </el-avatar>
             <el-space direction="vertical" alignment="start" :size="0">
               <el-text tag="b" size="large">{{ orders.length }}</el-text>
-              <el-text type="info" size="small">Đang xử lý</el-text>
+              <el-text type="info" size="small">Đã xuất kho</el-text>
             </el-space>
           </el-space>
         </el-card>
@@ -37,7 +36,7 @@
       <el-col :span="6">
         <el-card shadow="never">
           <el-space>
-            <el-avatar :size="40" class="stat-icon-blue" shape="square">
+            <el-avatar :size="40" class="stat-icon-blue" shape="square" style="background-color: var(--el-color-primary-light-9); color: var(--el-color-primary)">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M2 9h14M9 2v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
@@ -55,22 +54,13 @@
     <el-card shadow="never" class="table-card">
       <template #header>
         <el-row type="flex" justify="space-between" align="middle">
-          <el-space>
-            <el-input
-              v-model="search"
-              placeholder="Tìm mã, tên, SĐT..."
-              clearable
-              class="search-input"
-            />
-            <el-button 
-              v-if="selectedOrders.length > 0"
-              type="primary" 
-              @click="bulkMarkShipping"
-            >
-              Giao vận {{ selectedOrders.length }} đơn đã chọn
-            </el-button>
-          </el-space>
-          <el-tag type="warning" effect="light">
+          <el-input
+            v-model="search"
+            placeholder="Tìm mã, tên, SĐT..."
+            clearable
+            class="search-input"
+          />
+          <el-tag type="primary" effect="light">
             {{ filteredOrders.length }} đơn hàng
           </el-tag>
         </el-row>
@@ -80,10 +70,7 @@
         :data="filteredOrders" 
         style="width: 100%" 
         empty-text="Không có đơn hàng nào"
-        @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="45" />
-
         <!-- Order number -->
         <el-table-column label="Mã đơn hàng" min-width="140">
           <template #default="{ row }">
@@ -111,8 +98,8 @@
         <!-- Status -->
         <el-table-column label="Trạng thái" width="140" align="center">
           <template #default>
-            <el-tag type="warning" effect="light" round>
-              Đang xử lý
+            <el-tag type="primary" effect="light" round>
+              Đang giao
             </el-tag>
           </template>
         </el-table-column>
@@ -125,18 +112,9 @@
         </el-table-column>
 
         <!-- Actions -->
-        <el-table-column label="Thao tác" width="200" align="center">
+        <el-table-column label="Thao tác" width="120" align="center">
           <template #default="{ row }">
             <el-space>
-              <el-button
-                size="small"
-                type="primary"
-                plain
-                @click="markShipping(row.orderId)"
-                :loading="loadingId === row.orderId"
-              >
-                Chuyển giao vận
-              </el-button>
               <el-button
                 size="small"
                 plain
@@ -156,14 +134,12 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { ordersApi } from "../../api/orders.api";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { formatVND, formatDate, initials } from "../../utils/format";
 
 const router = useRouter();
 const orders = ref([]);
 const search = ref("");
-const loadingId = ref(null);
-const selectedOrders = ref([]);
 
 const filteredOrders = computed(() => {
   const q = search.value.toLowerCase();
@@ -178,48 +154,12 @@ const totalAmount = computed(() =>
   orders.value.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
 );
 
-const handleSelectionChange = (val) => {
-  selectedOrders.value = val;
-};
-
 const loadOrders = async (silent = false) => {
   try {
-    const res = await ordersApi.listProcessing();
+    const res = await ordersApi.listShipping();
     orders.value = res.data;
   } catch (error) {
     if (!silent) ElMessage.error("Không thể tải danh sách đơn hàng");
-  }
-};
-
-const markShipping = async (orderId) => {
-  try {
-    await ElMessageBox.confirm('Xác nhận chuyển đơn hàng này cho đơn vị vận chuyển?', 'Kiểm tra', { type: 'primary' });
-    loadingId.value = orderId;
-    await ordersApi.markAsShipping(orderId);
-    ElMessage.success("Đã hoàn tất chuẩn bị và chuyển giao vận");
-    await loadOrders(true);
-  } catch (error) {
-    if (error !== 'cancel') {
-         ElMessage.error(error.response?.data?.message || "Có lỗi xảy ra");
-    }
-  } finally {
-    loadingId.value = null;
-  }
-};
-
-const bulkMarkShipping = async () => {
-  if (selectedOrders.value.length === 0) return;
-  try {
-    await ElMessageBox.confirm(
-      `Xác nhận bàn giao ${selectedOrders.value.length} đơn hàng cho đơn vị vận chuyển?`,
-      'Giao vận hàng loạt',
-      { type: 'primary' }
-    );
-    await Promise.all(selectedOrders.value.map(o => ordersApi.markAsShipping(o.orderId)));
-    ElMessage.success(`Đã giao vận ${selectedOrders.value.length} đơn hàng`);
-    await loadOrders();
-  } catch (error) {
-    if (error !== 'cancel') ElMessage.error("Có lỗi xảy ra khi xử lý hàng loạt");
   }
 };
 

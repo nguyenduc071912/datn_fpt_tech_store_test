@@ -6,4 +6,5 @@ import lombok.Data;
 public class ProcessReturnRequest {
     private String reason;
     private String note;
+    private String refundType;
 }

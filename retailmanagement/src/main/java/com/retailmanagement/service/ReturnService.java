@@ -2,14 +2,18 @@ package com.retailmanagement.service;
 
 import com.retailmanagement.constants.OrderStatuses;
 import com.retailmanagement.dto.request.CreateReturnRequest;
+import com.retailmanagement.dto.request.ProcessReturnRequest;
 import com.retailmanagement.dto.response.ReturnResponse;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,9 +28,10 @@ public class ReturnService {
     private final CustomerService customerService;
     private final StockTransactionRepository stockTransactionRepository;
     private final ProductVariantRepository variantRepository;
+    private final CloudinaryService cloudinaryService;
 
     @Transactional
-    public ReturnResponse createReturn(CreateReturnRequest req, Integer userId) {
+    public ReturnResponse createReturn(CreateReturnRequest req, Integer userId, MultipartFile image) {
 
         Order order = orderRepository.findById(req.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -38,7 +43,6 @@ public class ReturnService {
         OrderItem item = orderItemRepository.findById(req.getOrderItemId())
                 .orElseThrow(() -> new RuntimeException("Order item not found"));
 
-        // Tổng đã trả trước đó
         int returnedQty = returnRepository
                 .findByOrderIdOrderByCreatedAtDesc(order.getId())
                 .stream()
@@ -50,6 +54,16 @@ public class ReturnService {
             throw new RuntimeException("Return quantity exceeds purchased quantity");
         }
 
+        // ✅ Upload ảnh nếu có
+        String imageUrl = null;
+        if (image != null && !image.isEmpty()) {
+            try {
+                imageUrl = cloudinaryService.uploadFile(image);
+            } catch (IOException e) {
+                throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
+            }
+        }
+
         Return ret = Return.builder()
                 .order(order)
                 .orderItem(item)
@@ -58,17 +72,119 @@ public class ReturnService {
                 .refundAmount(req.getRefundAmount())
                 .refundStatus("PENDING")
                 .status("PENDING")
+                .imageUrl(imageUrl)   // ✅
                 .processedBy(userId)
                 .createdAt(Instant.now())
                 .build();
 
         returnRepository.save(ret);
 
-        // ✅ update order status
         order.setStatus(OrderStatuses.RETURN_REQUESTED);
         orderRepository.save(order);
 
         return mapToResponse(ret);
+    }
+
+    /**
+     * refundType = FULL    → hoàn 100% theo tỉ lệ thực tế của đơn (lỗi cửa hàng)
+     * refundType = PARTIAL → hoàn 80%  theo tỉ lệ thực tế của đơn (lỗi khách hàng)
+     * refundType = REJECT  → từ chối, không hoàn tiền
+     */
+    @Transactional
+    public ReturnResponse decide(Long returnId, ProcessReturnRequest request, Integer staffId) {
+
+        Return returnEntity = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("Return not found"));
+
+        if (!"PENDING".equals(returnEntity.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể xử lý yêu cầu đang PENDING");
+        }
+
+        String refundType = request.getRefundType();
+        Order order = returnEntity.getOrder();
+
+        // ── Từ chối ──────────────────────────────────────────────────
+        if ("REJECT".equals(refundType)) {
+            returnEntity.setStatus("REJECTED");
+            returnEntity.setRefundMethod("REJECT");
+            returnEntity.setNote(request.getNote());
+            returnEntity.setProcessedBy(staffId);
+            returnRepository.save(returnEntity);
+
+            // Khôi phục trạng thái đơn hàng về DELIVERED
+            order.setStatus(OrderStatuses.DELIVERED);
+            orderRepository.save(order);
+
+            return mapToResponse(returnEntity);
+        }
+
+        // ── Tính hoàn tiền theo tỉ lệ thực tế của đơn hàng ──────────
+        //
+        // Ví dụ: đơn có subtotal = 2.000.000đ, totalAmount = 1.600.000đ (sau 20% discount)
+        //        khách trả 1 sp giá gốc 500.000đ
+        //        → tỉ lệ sp = 500.000 / 2.000.000 = 25%
+        //        → hoàn thực tế = 25% × 1.600.000 = 400.000đ (thay vì 500.000đ)
+        //
+        // Lưu ý: nếu OrderItem dùng tên field khác (unitPrice, salePrice...)
+        //        hãy điều chỉnh item.getPrice() → item.getUnitPrice() v.v.
+
+        OrderItem item = returnEntity.getOrderItem();
+
+// Dùng lineTotal (đã có discount cấp item) × tỉ lệ số lượng trả
+        BigDecimal returnQty = BigDecimal.valueOf(returnEntity.getQuantity());
+        BigDecimal itemQty   = BigDecimal.valueOf(item.getQuantity());
+
+        BigDecimal itemRefundBase = item.getLineTotal()
+                .multiply(returnQty)
+                .divide(itemQty, 2, RoundingMode.HALF_UP);
+
+// Áp thêm discount cấp đơn (promotion, VIP, spin wheel...)
+        BigDecimal orderSubtotal = order.getSubtotal();
+        BigDecimal proportionalRefund;
+
+        if (orderSubtotal != null && orderSubtotal.compareTo(BigDecimal.ZERO) > 0) {
+            proportionalRefund = itemRefundBase
+                    .multiply(order.getTotalAmount())
+                    .divide(orderSubtotal, 2, RoundingMode.HALF_UP);
+        } else {
+            proportionalRefund = itemRefundBase;
+        }
+
+        // Áp tỉ lệ hoàn theo loại
+        BigDecimal finalRefund;
+        if ("FULL".equals(refundType)) {
+            finalRefund = proportionalRefund;
+        } else { // PARTIAL → 80%
+            finalRefund = proportionalRefund
+                    .multiply(new BigDecimal("0.8"))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
+        returnEntity.setStatus("APPROVED");
+        returnEntity.setRefundAmount(finalRefund);
+        returnEntity.setRefundMethod(refundType); // "FULL" hoặc "PARTIAL"
+        returnEntity.setRefundStatus("REFUNDED");
+        returnEntity.setRefundedAt(Instant.now());
+        returnEntity.setNote(request.getNote());
+        returnEntity.setProcessedBy(staffId);
+        returnRepository.save(returnEntity);
+
+        // Khôi phục tồn kho
+        restoreStockForReturn(returnEntity);
+
+        // Trừ điểm loyalty tương ứng số tiền thực hoàn
+        if ("PAID".equals(order.getPaymentStatus()) && order.getCustomer() != null) {
+            customerService.deductLoyaltyPoints(
+                    order.getCustomer().getId(),
+                    finalRefund,
+                    "RETURN",
+                    "returns",
+                    returnId
+            );
+        }
+
+        updateOrderStatusAfterReturn(order);
+        return mapToResponse(returnEntity);
     }
 
     @Transactional
@@ -256,6 +372,7 @@ public class ReturnService {
                 .refundStatus(r.getRefundStatus())
                 .status(r.getStatus())
                 .note(r.getNote())
+                .imageUrl(r.getImageUrl())
                 .customerId(r.getOrder().getCustomer() != null ? r.getOrder().getCustomer().getId() : null)
                 .customerName(r.getOrder().getCustomer() != null ? r.getOrder().getCustomer().getName() : null)
                 .processedBy(r.getProcessedBy()) // ✅ Trả về Integer
