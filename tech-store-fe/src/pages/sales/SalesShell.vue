@@ -126,7 +126,7 @@
     <!-- ═══════════════════════════════════
          MAIN CONTENT
     ═══════════════════════════════════ -->
-    <el-main style="margin-left: 256px; height: 100vh; overflow: hidden; padding: 0;">
+    <el-main style="margin-left: 256px; min-height: 100vh; overflow: auto; padding: 0;">
       <router-view />
     </el-main>
 

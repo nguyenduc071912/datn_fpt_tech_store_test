@@ -139,15 +139,31 @@
 
             <el-table
               v-else
-              :data="order.items || []"
+              :data="displayItems"
               @selection-change="handleSelectionChange"
+              row-key="_uiKey"
             >
               <el-table-column type="selection" width="50" :selectable="canSelectItem" />
+
+              <el-table-column label="Serial" min-width="140" width="140">
+                <template #default="{ row }">
+                  <el-text v-if="row._serialNumber" size="small" type="success" style="font-family: monospace;">
+                    {{ row._serialNumber }}
+                  </el-text>
+                  <el-text v-else size="small" type="info">—</el-text>
+                </template>
+              </el-table-column>
 
               <el-table-column label="Sản phẩm" min-width="200">
                 <template #default="{ row }">
                   <el-space>
-                    <el-image :src="row.imageUrl" class="product-thumb" fit="cover" />
+                    <el-image
+                      v-if="row.imageUrl"
+                      :src="row.imageUrl"
+                      class="product-thumb"
+                      fit="cover"
+                      @error="handleImageError(row)"
+                    />
                     <el-space direction="vertical" :size="0" align="start">
                       <el-text tag="b">{{ row.productName }}</el-text>
                       <el-text size="small" type="info">{{ row.variantName }}</el-text>
@@ -161,29 +177,13 @@
               <el-table-column label="Đơn giá" width="120" align="right">
                 <template #default="{ row }">{{ formatMoney(row.price) }}</template>
               </el-table-column>
-<el-table-column label="Serial" min-width="160">
-  <template #default="{ row }">
-    <div v-if="row.serialNumbers && row.serialNumbers.length > 0">
-      <el-tag
-        v-for="sn in row.serialNumbers"
-        :key="sn"
-        size="small"
-        type="info"
-        effect="plain"
-        style="margin: 2px; font-family: monospace; font-size: 11px;"
-      >
-        {{ sn }}
-      </el-tag>
-    </div>
-    <el-text v-else type="info" size="small">—</el-text>
-  </template>
-</el-table-column>
+
               <!-- Quantity to return — only show when creating new return -->
               <el-table-column v-if="canCreateReturn" label="SL trả" width="120" align="center">
                 <template #default="{ row }">
                   <el-input-number
                     v-if="isSelected(row)"
-                    v-model="returnQuantities[row.id]"
+                    v-model="returnQuantities[row._uiKey]"
                     :min="1"
                     :max="row.quantity"
                     size="small"
@@ -455,9 +455,9 @@ const canCreateReturn = computed(() => {
 
 /** Tổng tiền hoàn dự kiến */
 const estimatedRefund = computed(() => {
-  if (!order.value?.items) return 0;
+  if (!selectedItems.value.length) return 0;
   return selectedItems.value.reduce((sum, item) => {
-    const k = getItemKey(item);
+    const k = getRowKey(item);
     const qty = (k != null ? returnQuantities[k] : null) ?? item.quantity;
     return sum + (item.price ?? 0) * qty;
   }, 0);
@@ -470,6 +470,11 @@ function isSelected(row) {
 const formatMoney = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
 const formatDate = (d) => d ? new Date(d).toLocaleString('vi-VN') : '—';
 const orderStatusType = (s) => ({ PENDING: 'warning', PAID: 'primary', PROCESSING: '', SHIPPING: 'primary', DELIVERED: 'success', CANCELLED: 'danger' }[s] || 'info');
+
+function handleImageError(row) {
+  row.imageUrl = null;
+}
+
 const initials = (name = '') => (name || '').split(' ').map(n => n[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?';
 
 // ── Helpers for item ID ───────────────────────────────────────────────
@@ -478,6 +483,38 @@ function getItemKey(item) {
   return item.id ?? item.orderItemId ?? item.itemId ?? null;
 }
 
+function getRowKey(item) {
+  return item._uiKey || getItemKey(item) || item.serialCode || item.sku || null;
+}
+
+function expandOrderItems(items) {
+  return (items || []).flatMap((item) => {
+    const baseKey = getItemKey(item);
+    const serials = (item.serialNumbers || []).filter(Boolean);
+
+    if (serials.length > 1) {
+      return serials.map((sn) => ({
+        ...item,
+        quantity: 1,
+        _uiKey: `${baseKey}:${sn}`,
+        _serialNumber: sn,
+        _baseItemId: baseKey,
+      }));
+    }
+
+    const singleSerial = serials[0] || null;
+    return [{
+      ...item,
+      _uiKey: singleSerial ? `${baseKey}:${singleSerial}` : `${baseKey}`,
+      _serialNumber: singleSerial,
+      _baseItemId: baseKey,
+    }];
+  });
+}
+
+const displayItems = computed(() => expandOrderItems(order.value?.items || []));
+
+// ── Search ────────────────────────────────────────────────────────────
 async function handleSearch() {
   if (!searchId.value.trim()) return;
   loading.value = true;
@@ -488,19 +525,23 @@ async function handleSearch() {
   returnReason.value = '';
   reasonError.value = '';
   Object.keys(returnQuantities).forEach(k => delete returnQuantities[k]);
+// Ưu tiên thử serial trước nếu không tìm được bằng ID
 
   try {
     const input = searchId.value.trim();
+    
     const isNumeric = /^\d+$/.test(input);
     const isOrderNumber = input.toUpperCase().startsWith('ORD-');
     const isSerial = !isNumeric && !isOrderNumber;
 
     let orderData = null;
 
+    // ── Nhánh 1: ID số nguyên ──────────────────────────────
     if (isNumeric) {
       const res = await ordersApi.getById(input);
       orderData = res?.data?.data ?? res?.data ?? null;
 
+    // ── Nhánh 2: Mã đơn ORD-xxx ───────────────────────────
     } else if (isOrderNumber) {
       try {
         const res = await ordersApi.getByOrderNumber(input);
@@ -509,7 +550,8 @@ async function handleSearch() {
           candidate.id = candidate.id ?? candidate.orderId;
           orderData = candidate;
         }
-      } catch {
+      } catch (e) {
+        // Fallback: filter list nếu endpoint lỗi
         const res = await ordersApi.filter(null, null, null, null, null);
         const raw = res?.data?.data ?? res?.data ?? [];
         const list = raw?.content ?? (Array.isArray(raw) ? raw : []);
@@ -522,6 +564,7 @@ async function handleSearch() {
         }
       }
 
+    // ── Nhánh 3: Serial Number ─────────────────────────────
     } else if (isSerial) {
       try {
         const res = await ordersApi.findBySerial(input);
@@ -529,6 +572,7 @@ async function handleSearch() {
         if (candidate) {
           candidate.id = candidate.id ?? candidate.orderId;
           orderData = candidate;
+          // Thông báo để sale biết đang xem đơn từ serial
           toast(`Tìm thấy đơn hàng từ serial: ${input}`, 'info');
         }
       } catch (e) {
@@ -539,8 +583,6 @@ async function handleSearch() {
       }
     }
 
-    // ... phần còn lại giữ nguyên
-
     if (!orderData) throw new Error(`Không tìm thấy đơn hàng: "${input}"`);
 
     const orderId = orderData.id ?? orderData.orderId;
@@ -548,9 +590,9 @@ async function handleSearch() {
     orderData.id = orderId;
     order.value = orderData;
 
-    // Init quantities map
-    (orderData.items || []).forEach(item => {
-      const k = getItemKey(item);
+    // Init quantities map (kể cả case split serial)
+    expandOrderItems(orderData.items || []).forEach(item => {
+      const k = getRowKey(item);
       if (k != null) returnQuantities[k] = item.quantity;
     });
 
@@ -603,9 +645,10 @@ async function initReturn() {
   // Confirm dialog
   const summary = selectedItems.value
     .map(i => {
-      const k = getItemKey(i);
-      const qty = (k != null ? returnQuantities[k] : null) ?? i.quantity;
-      return `• ${i.productName} × ${qty} — ${formatMoney((i.price ?? 0) * qty)}`;
+      const rowKey = getRowKey(i);
+      const qty = (rowKey != null ? returnQuantities[rowKey] : null) ?? i.quantity;
+      const serialTag = i._serialNumber ? ` (${i._serialNumber})` : '';
+      return `• ${i.productName}${serialTag} × ${qty} — ${formatMoney((i.price ?? 0) * qty)}`;
     })
     .join('\n');
   const ok = await confirmModal(
@@ -622,13 +665,14 @@ async function initReturn() {
     // Backend nhận 1 item/request (đối chiếu CreateReturnRequest DTO)
     // Nếu nhiều items được chọn → gọi API nhiều lần tuần tự
     for (const item of selectedItems.value) {
-      const k = getItemKey(item);
-      const qty = (k != null ? returnQuantities[k] : null) ?? item.quantity;
+      const rowKey = getRowKey(item);
+      const qty = (rowKey != null ? returnQuantities[rowKey] : null) ?? item.quantity;
       const refundAmount = (item.price ?? 0) * qty;
+      const orderItemId = item._baseItemId ?? getItemKey(item);
 
       const payload = {
         orderId: order.value.id,
-        orderItemId: k,            // Long — ID của OrderItem
+        orderItemId: orderItemId,  // Long — ID của OrderItem
         quantity: qty,             // Integer
         reason: returnReason.value.trim(),
         refundAmount: refundAmount // BigDecimal
@@ -711,7 +755,7 @@ function handleSelectionChange(val) {
   selectedItems.value = val;
   // Init quantity cho items mới được chọn
   val.forEach(item => {
-    const key = getItemKey(item);
+    const key = getRowKey(item);
     if (key !== null && returnQuantities[key] === undefined) {
       returnQuantities[key] = item.quantity;
     }
@@ -744,5 +788,6 @@ function reset() {
 .mt-10 { margin-top: 10px; }
 .ml-8 { margin-left: 8px; }
 .product-thumb { width: 40px; height: 40px; flex-shrink: 0; }
+.product-thumb-error { width: 40px; height: 40px; background: #f5f5f5; border: 1px solid #dcdfe6; }
 .footer-actions { margin-top: 24px; }
 </style>
