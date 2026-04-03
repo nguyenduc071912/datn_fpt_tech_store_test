@@ -402,7 +402,9 @@
             
             <el-col :span="12">
               <el-form-item label="Thương hiệu">
-                <el-input v-model="dlg.form.brand" placeholder="Nhập hãng sản xuất (Apple, Asus...)" clearable />
+                <el-select v-model="dlg.form.brand" placeholder="Chọn hoặc nhập mới (Apple, Asus...)" filterable allow-create default-first-option clearable style="width:100%;">
+                  <el-option v-for="brand in commonBrands" :key="brand" :value="brand" :label="brand" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -521,6 +523,7 @@ import ProductImportDialog from '../../components/Productimportdialog.vue'
 
 const BASE_URL_API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+const commonBrands = ref(["Apple", "Samsung", "Asus", "Acer", "Dell", "HP", "Lenovo", "MSI", "Xiaomi", "Khác"]);
 const loading = ref(false);
 const categories = ref([]);
 const rows = ref([]);

@@ -172,9 +172,6 @@
             <template #header>
               <el-row justify="space-between" align="middle">
                 <el-text size="small" style="text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">Danh mục</el-text>
-                <el-tooltip content="Chỉ hiện active" placement="top">
-                  <el-switch v-model="activeOnly" size="small" @change="reloadAll" />
-                </el-tooltip>
               </el-row>
             </template>
             <el-select v-model="activeKey" style="width: 100%;" @change="onSelectCategory" placeholder="Chọn danh mục">
