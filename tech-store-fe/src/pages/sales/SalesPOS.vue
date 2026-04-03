@@ -215,7 +215,7 @@
             size="large"
             class="pay-btn"
             :disabled="!cart.length || !foundCustomer"
-            @click="showModal = true"
+            @click="openPaymentModal"
           >
             <el-icon class="mr-5"><Wallet /></el-icon> THANH TOÁN
           </el-button>
@@ -345,6 +345,11 @@ const quickOptions = computed(() => {
   const base = Math.ceil(t / 10000) * 10000;
   return [...new Set([base, base + 50000, base + 100000, base + 200000])].filter(v => v >= t);
 });
+
+function openPaymentModal() {
+  cashIn.value = totalAmount.value;
+  showModal.value = true;
+}
 
 // ── Helpers ──
 const SOLD_STATUSES = ["sold", "used", "inactive", "disabled", "deleted", "reserved"];
