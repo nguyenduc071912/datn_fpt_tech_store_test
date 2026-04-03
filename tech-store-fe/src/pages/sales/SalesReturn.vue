@@ -472,49 +472,60 @@ async function handleSearch() {
   selectedItems.value = [];
   returnReason.value = '';
   reasonError.value = '';
-  // Xoá quantities cũ
   Object.keys(returnQuantities).forEach(k => delete returnQuantities[k]);
 
   try {
-    let orderData = null;
     const input = searchId.value.trim();
     const isNumeric = /^\d+$/.test(input);
+    const isOrderNumber = input.toUpperCase().startsWith('ORD-');
+    const isSerial = !isNumeric && !isOrderNumber;
 
+    let orderData = null;
+
+    // ── Nhánh 1: ID số nguyên ──────────────────────────────
     if (isNumeric) {
-      // Tìm theo ID số nguyên
       const res = await ordersApi.getById(input);
       orderData = res?.data?.data ?? res?.data ?? null;
-    } else {
-      // Tìm theo mã đơn ORD-xxx qua endpoint chuyên biệt
+
+    // ── Nhánh 2: Mã đơn ORD-xxx ───────────────────────────
+    } else if (isOrderNumber) {
       try {
         const res = await ordersApi.getByOrderNumber(input);
-        // Backend trả order trực tiếp (không wrap thêm {data:...})
         const candidate = res?.data?.data ?? res?.data ?? null;
         if (candidate) {
-          // Normalize ID: hỗ trợ cả field 'id' và 'orderId'
-          const resolvedId = candidate.id ?? candidate.orderId;
-          if (resolvedId) {
-            candidate.id = resolvedId;
-            orderData = candidate;
-          } else if (candidate.orderNumber) {
-            // Có orderNumber nhưng không có id → vẫn dùng, id sẽ được set sau
-            orderData = candidate;
-          }
+          candidate.id = candidate.id ?? candidate.orderId;
+          orderData = candidate;
         }
       } catch (e) {
-        // Endpoint lỗi → fallback filter list
+        // Fallback: filter list nếu endpoint lỗi
         const res = await ordersApi.filter(null, null, null, null, null);
         const raw = res?.data?.data ?? res?.data ?? [];
         const list = raw?.content ?? (Array.isArray(raw) ? raw : []);
         const found = list.find(o =>
-          o.orderNumber === input ||
           (o.orderNumber || '').toLowerCase() === input.toLowerCase()
         ) ?? null;
-
         if (found?.id) {
           const detailRes = await ordersApi.getById(found.id);
           orderData = detailRes?.data?.data ?? detailRes?.data ?? found;
         }
+      }
+
+    // ── Nhánh 3: Serial Number ─────────────────────────────
+    } else if (isSerial) {
+      try {
+        const res = await ordersApi.findBySerial(input);
+        const candidate = res?.data?.data ?? res?.data ?? null;
+        if (candidate) {
+          candidate.id = candidate.id ?? candidate.orderId;
+          orderData = candidate;
+          // Thông báo để sale biết đang xem đơn từ serial
+          toast(`Tìm thấy đơn hàng từ serial: ${input}`, 'info');
+        }
+      } catch (e) {
+        if (e?.response?.status === 404) {
+          throw new Error(`Serial "${input}" chưa được gán với đơn hàng nào`);
+        }
+        throw new Error(`Không tìm thấy serial: "${input}"`);
       }
     }
 
@@ -525,13 +536,13 @@ async function handleSearch() {
     orderData.id = orderId;
     order.value = orderData;
 
-    // Init quantities map (dùng getItemKey để hỗ trợ nhiều field name)
+    // Init quantities map
     (orderData.items || []).forEach(item => {
       const k = getItemKey(item);
       if (k != null) returnQuantities[k] = item.quantity;
     });
 
-    // Check existing return (404 = bình thường, chưa có return)
+    // Check existing return
     try {
       const retRes = await returnsApi.getByOrder(orderId);
       const retData = retRes?.data?.data ?? retRes?.data ?? null;
@@ -539,7 +550,7 @@ async function handleSearch() {
         ? retData.sort((a, b) => b.id - a.id)[0]
         : retData;
       existingReturn.value = singleReturn || null;
-      if (singleReturn?.status === 'PENDING') fetchReturnDetail(singleReturn.id);
+      if (singleReturn?.status === 'PENDING')   fetchReturnDetail(singleReturn.id);
       if (singleReturn?.status === 'COMPLETED') fetchReturnDetail(singleReturn.id);
     } catch (retErr) {
       if (retErr?.response?.status !== 404) {
@@ -547,6 +558,7 @@ async function handleSearch() {
       }
       existingReturn.value = null;
     }
+
   } catch (err) {
     toast(err.response?.data?.message || err.message || 'Lỗi hệ thống', 'error');
     order.value = null;

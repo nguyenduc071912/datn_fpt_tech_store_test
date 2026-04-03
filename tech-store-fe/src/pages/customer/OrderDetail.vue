@@ -122,26 +122,46 @@
                 <el-tag type="info" effect="plain" size="small">{{ detail.items?.length }} sản phẩm</el-tag>
               </el-row>
             </el-space>
-            <el-table :data="detail.items" border stripe size="small">
-              <el-table-column type="index" width="48" align="center" />
-              <el-table-column label="Sản phẩm" min-width="200">
-                <template #default="{ row }">
-                  <el-text tag="div" style="font-weight: 600;">{{ row.productName }}</el-text>
-                  <el-text size="small" type="info">{{ row.variantName }}</el-text>
-                  <el-text size="small" type="info" style="display: block;">{{ row.sku }}</el-text>
-                </template>
-              </el-table-column>
-              <el-table-column label="SL" width="80" align="center">
-                <template #default="{ row }">
-                  <el-tag size="small">× {{ row.quantity }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="Đơn giá" width="140" align="right">
-                <template #default="{ row }">
-                  <el-text type="primary" style="font-weight: 600;">{{ formatMoney(row.price) }}</el-text>
-                </template>
-              </el-table-column>
-            </el-table>
+         <el-table :data="detail.items" border stripe size="small">
+  <el-table-column type="index" width="48" align="center" />
+  <el-table-column label="Sản phẩm" min-width="200">
+    <template #default="{ row }">
+      <el-text tag="div" style="font-weight: 600;">{{ row.productName }}</el-text>
+      <el-text size="small" type="info">{{ row.variantName }}</el-text>
+      <el-text size="small" type="info" style="display: block;">{{ row.sku }}</el-text>
+    </template>
+  </el-table-column>
+  <el-table-column label="SL" width="80" align="center">
+    <template #default="{ row }">
+      <el-tag size="small">× {{ row.quantity }}</el-tag>
+    </template>
+  </el-table-column>
+  <el-table-column label="Đơn giá" width="140" align="right">
+    <template #default="{ row }">
+      <el-text type="primary" style="font-weight: 600;">{{ formatMoney(row.price) }}</el-text>
+    </template>
+  </el-table-column>
+
+  <!-- ✅ THÊM MỚI: cột serial -->
+  <el-table-column label="Serial" min-width="160">
+    <template #default="{ row }">
+      <template v-if="row.serialNumbers && row.serialNumbers.length">
+        <el-tag
+          v-for="sn in row.serialNumbers"
+          :key="sn"
+          size="small"
+          type="info"
+          effect="plain"
+          style="margin: 2px 2px; font-family: monospace; letter-spacing: 0.04em;"
+        >
+          {{ sn }}
+        </el-tag>
+      </template>
+      <el-text v-else size="small" type="info">—</el-text>
+    </template>
+  </el-table-column>
+</el-table>
+           
           </template>
         </el-card>
       </div>

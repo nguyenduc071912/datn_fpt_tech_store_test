@@ -49,7 +49,7 @@ public class OrderService {
         private boolean    hasSpinBonus         = false;
         private String     discountType         = "NONE";
     }
-
+private final OrderItemSerialRepository orderItemSerialRepository;
     private final OrderRepository            orderRepository;
     private final OrderItemRepository        orderItemRepository;
     private final ProductVariantRepository   variantRepository;
@@ -344,11 +344,23 @@ public class OrderService {
             orderItemRepository.save(item);
 
             // OFFLINE: đánh dấu serial cụ thể nhân viên chọn → SOLD ngay
-            if ("OFFLINE".equals(request.getChannel()) && itemReq.getSerialId() != null) {
-                productSerialRepository.findById(itemReq.getSerialId()).ifPresent(serial -> {
+            // OFFLINE: đánh dấu serial cụ thể nhân viên chọn → SOLD ngay
+            if ("OFFLINE".equals(request.getChannel())) {
+                List<ProductSerial> inStockSerials = productSerialRepository
+                        .findByVariantIdAndStatus(variant.getId(), "IN_STOCK");
+                if (inStockSerials.size() < itemReq.getQuantity()) {
+                    throw new RuntimeException("Không đủ serial IN_STOCK cho: " + variant.getVariantName());
+                }
+                for (int i = 0; i < itemReq.getQuantity(); i++) {
+                    ProductSerial serial = inStockSerials.get(i);
                     serial.setStatus("SOLD");
                     productSerialRepository.save(serial);
-                });
+
+                    OrderItemSerial ois = new OrderItemSerial();
+                    ois.setOrderItem(item);
+                    ois.setProductSerial(serial);
+                    orderItemSerialRepository.save(ois);
+                }
             }
 
             variant.setReservedQty(variant.getReservedQty() + itemReq.getQuantity());
@@ -363,6 +375,11 @@ public class OrderService {
             st.setCreatedBy(user);
             st.setCreatedAt(Instant.now());
             stockTransactionRepository.save(st);
+            List<String> savedSerials = orderItemSerialRepository
+                    .findByOrderItem(item)
+                    .stream()
+                    .map(ois -> ois.getProductSerial().getSerialNumber())
+                    .toList();
 
             responseItems.add(new CreateOrderResponse.Item(
                     item.getId(),
@@ -374,8 +391,9 @@ public class OrderService {
                     item.getQuantity(),
                     item.getUnitPrice(),
                     item.getDiscount(),
-                    item.getShippingFee(),  // thêm vào response
-                    item.getLineTotal()
+                    item.getShippingFee(),
+                    item.getLineTotal(),
+                    savedSerials  // ← thêm vào
             ));
         }
 
@@ -577,20 +595,28 @@ public class OrderService {
         }
 
         List<CreateOrderResponse.Item> items = order.getOrderItems().stream()
-                .map(i -> new CreateOrderResponse.Item(
-                        i.getId(),
-                        i.getProduct().getId(),
-                        i.getVariant().getId(),
-                        i.getProductName(),
-                        i.getVariantName(),
-                        i.getSku(),
-                        i.getQuantity(),
-                        i.getUnitPrice(),
-                        i.getDiscount(),
-                        i.getLineTotal(),
-                        i.getShippingFee()
-                )).toList();
+                .map(i -> {
+                    List<String> serials = orderItemSerialRepository
+                            .findByOrderItem(i)
+                            .stream()
+                            .map(ois -> ois.getProductSerial().getSerialNumber())
+                            .toList();
 
+                    return new CreateOrderResponse.Item(
+                            i.getId(),
+                            i.getProduct().getId(),
+                            i.getVariant().getId(),
+                            i.getProductName(),
+                            i.getVariantName(),
+                            i.getSku(),
+                            i.getQuantity(),
+                            i.getUnitPrice(),
+                            i.getDiscount(),
+                            i.getShippingFee(),
+                            i.getLineTotal(),
+                            serials   // ← serial numbers
+                    );
+                }).toList();
         return new OrderDetailResponse(
                 order.getId(),
                 order.getOrderNumber(),
@@ -676,6 +702,13 @@ public class OrderService {
                     if (soldCount >= item.getQuantity()) break;
                     serial.setStatus("SOLD");
                     productSerialRepository.save(serial);
+
+                    // ✅ THÊM: lưu vào order_item_serials để có thể hiển thị sau
+                    OrderItemSerial ois = new OrderItemSerial();
+                    ois.setOrderItem(item);
+                    ois.setProductSerial(serial);
+                    orderItemSerialRepository.save(ois);
+
                     soldCount++;
                 }
             }
@@ -732,5 +765,24 @@ public class OrderService {
             tx.setCreatedAt(Instant.now());
             stockTransactionRepository.save(tx);
         }
+    }
+    public OrderDetailResponse getOrderBySerial(String serialNumber, CustomUserDetails user) {
+
+        // Tìm serial
+        ProductSerial serial = productSerialRepository
+                .findBySerialNumber(serialNumber)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy serial: " + serialNumber
+                ));
+
+        // Tìm OrderItemSerial → OrderItem → Order
+        OrderItemSerial ois = orderItemSerialRepository
+                .findByProductSerial(serial)
+                .orElseThrow(() -> new RuntimeException(
+                        "Serial này chưa được gán với đơn hàng nào"
+                ));
+
+        Long orderId = ois.getOrderItem().getOrder().getId();
+        return getOrderDetail(orderId, user);
     }
 }

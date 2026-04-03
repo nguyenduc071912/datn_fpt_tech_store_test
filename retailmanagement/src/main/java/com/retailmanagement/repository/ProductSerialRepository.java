@@ -9,11 +9,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductSerialRepository extends JpaRepository<ProductSerial, Long> {
     // Lấy toàn bộ số Seri của 1 Biến thể cụ thể
     List<ProductSerial> findByVariantId(Integer variantId);
+    Optional<ProductSerial> findBySerialNumber(String serialNumber);
+
     // Đếm số lượng máy thực tế đang ở trong kho của 1 Biến thể
     int countByVariantIdAndStatus(Integer variantId, String status);
     // Xóa toàn bộ Seri thuộc về 1 biến thể (khi xóa biến thể)
