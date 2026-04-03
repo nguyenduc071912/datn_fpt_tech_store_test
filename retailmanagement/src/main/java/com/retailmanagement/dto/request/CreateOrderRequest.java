@@ -16,4 +16,8 @@ public class CreateOrderRequest {
     private BigDecimal shippingFee;     // ✅ THÊM MỚI: phí vận chuyển (nullable, VD: 15000)
     private Long spinHistoryId;
     private List<CreateOrderItemRequest> items;
+    private Integer variantId;
+    private Integer quantity;
+    private List<String> serialNumbers;
+
 }

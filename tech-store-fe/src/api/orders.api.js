@@ -89,6 +89,10 @@ export const ordersApi = {
   getByOrderNumber(orderNumber) {
     return http.get(`/api/orders/number/${orderNumber}`);
   },
+  // Tìm đơn theo serial number của sản phẩm
+findBySerial(serialNumber) {
+  return http.get(`/api/orders/by-serial/${serialNumber}`);
+},
 
   // ✅ THÊM MỚI: validate mã giảm giá trước khi tạo đơn
   // Trả về: { valid, discount, minOrder, message }
