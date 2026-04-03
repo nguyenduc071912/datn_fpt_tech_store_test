@@ -65,4 +65,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Unauthorized", null));
     }
+
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMultipart(
+            org.springframework.web.multipart.MultipartException ex) {
+        // Log ra full cause chain
+        ex.printStackTrace();
+        Throwable cause = ex;
+        while (cause.getCause() != null) cause = cause.getCause();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Multipart error: " + cause.getMessage()));
+    }
 }
