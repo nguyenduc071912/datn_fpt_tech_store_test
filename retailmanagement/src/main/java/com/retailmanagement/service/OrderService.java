@@ -433,9 +433,12 @@ public class OrderService {
         orderRepository.save(order);
 
         if (discountCalc.isHasSpinBonus()) {
-            spinWheelService.useBonus(customer.getId(), order.getId());
+            spinWheelService.useBonus(
+                    customer.getId(),
+                    order.getId(),
+                    request.getSpinHistoryId()
+            );
         }
-
         if (discountCalc.getPromotionId() != null) {
             promotionService.recordRedemption(discountCalc.getPromotionId(), 1L);
             promotionService.recordCustomerUsage(
