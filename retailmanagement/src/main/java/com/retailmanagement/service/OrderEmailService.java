@@ -46,7 +46,7 @@ public class OrderEmailService {
             CreateEmailOptions params = CreateEmailOptions.builder()
                     .from("TechStore <noreply@nguyenduc.me>")
                     .to(order.getCustomer().getEmail())
-                    .subject("📦 Đơn hàng đã giao thành công #" + order.getOrderNumber())
+                    .subject("Don hang da giao thanh cong #" + order.getOrderNumber())
                     .html(htmlContent)
                     .attachments(new Attachment[]{attachment})
                     .build();
@@ -78,20 +78,18 @@ public class OrderEmailService {
         for (OrderItem item : order.getOrderItems()) {
             sb.append("""
               <tr>
-                <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;font-size:14px;color:#334155;line-height:1.5;">
-                  <span style="font-weight:600;color:#0f172a;">%s</span>
+                <td style="padding:9px 8px;border-bottom:1px solid #e5e5e5;font-size:13px;color:#222;">
                   %s
                 </td>
-                <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;text-align:center;
-                            font-size:13px;color:#64748b;white-space:nowrap;">x%d</td>
-                <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;text-align:right;
-                            font-size:13px;color:#64748b;white-space:nowrap;">%s ₫</td>
-                <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;text-align:right;
-                            font-size:13px;font-weight:700;color:#16a34a;white-space:nowrap;">%s ₫</td>
+                <td style="padding:9px 8px;border-bottom:1px solid #e5e5e5;text-align:center;
+                            font-size:13px;color:#555;white-space:nowrap;">%d</td>
+                <td style="padding:9px 8px;border-bottom:1px solid #e5e5e5;text-align:right;
+                            font-size:13px;color:#555;white-space:nowrap;">%s d</td>
+                <td style="padding:9px 8px;border-bottom:1px solid #e5e5e5;text-align:right;
+                            font-size:13px;font-weight:bold;color:#222;white-space:nowrap;">%s d</td>
               </tr>
             """.formatted(
                     item.getProductName(),
-                    "",
                     item.getQuantity(),
                     fmt(item.getUnitPrice()),
                     fmt(item.getLineTotal())
@@ -103,33 +101,33 @@ public class OrderEmailService {
     private String buildSummaryRows(Order order) {
         StringBuilder sb = new StringBuilder();
         if (order.getSubtotal() != null)
-            sb.append(sRow("Tạm tính",        fmt(order.getSubtotal()) + " ₫",           "#475569", false));
+            sb.append(sRow("Tam tinh",        fmt(order.getSubtotal()) + " d",            "#555",    false));
         if (isPositive(order.getShippingFee()))
-            sb.append(sRow("Phí vận chuyển",  fmt(order.getShippingFee()) + " ₫",        "#475569", false));
+            sb.append(sRow("Phi van chuyen",  fmt(order.getShippingFee()) + " d",         "#555",    false));
         if (isPositive(order.getVipDiscount()))
-            sb.append(sRow("Giảm VIP",        "- " + fmt(order.getVipDiscount()) + " ₫", "#16a34a", false));
+            sb.append(sRow("Giam VIP",        "- " + fmt(order.getVipDiscount()) + " d",  "#2a6e2a", false));
         if (isPositive(order.getSpinDiscount()))
-            sb.append(sRow("Giảm Vòng quay",  "- " + fmt(order.getSpinDiscount()) + " ₫","#16a34a", false));
+            sb.append(sRow("Giam Vong quay",  "- " + fmt(order.getSpinDiscount()) + " d", "#2a6e2a", false));
         if (order.getAppliedPromotionCode() != null)
-            sb.append(sRow("Mã KM",           order.getAppliedPromotionCode(),             "#16a34a", false));
+            sb.append(sRow("Ma KM",           order.getAppliedPromotionCode(),             "#2a6e2a", false));
         if (isPositive(order.getDiscountTotal()))
-            sb.append(sRow("Tổng giảm",       "- " + fmt(order.getDiscountTotal()) + " ₫","#16a34a", true));
+            sb.append(sRow("Tong giam",       "- " + fmt(order.getDiscountTotal()) + " d", "#2a6e2a", true));
         return sb.toString();
     }
 
     private String sRow(String label, String value, String color, boolean topBorder) {
-        String border = topBorder ? "border-top:1px solid #e2e8f0;padding-top:10px;margin-top:4px;" : "";
+        String border = topBorder ? "border-top:1px solid #ddd;padding-top:8px;" : "";
         return """
           <tr>
-            <td style="padding:5px 0;font-size:13px;color:#64748b;%s">%s</td>
-            <td style="padding:5px 0;font-size:13px;color:%s;text-align:right;font-weight:600;%s">%s</td>
+            <td style="padding:4px 0;font-size:13px;color:#777;%s">%s</td>
+            <td style="padding:4px 0;font-size:13px;color:%s;text-align:right;%s">%s</td>
           </tr>
         """.formatted(border, label, color, border, value);
     }
 
-    // ── Main HTML builder ─────────────────────────────────────────────────
+    // ── Main HTML builder — Delivered Email ───────────────────────────────
     private String buildDeliveredEmail(Order order) {
-        String customerName  = safe(order.getCustomer().getName(),  "Khách hàng");
+        String customerName  = safe(order.getCustomer().getName(),  "Khach hang");
         String customerEmail = safe(order.getCustomer().getEmail(), "—");
         String customerPhone = safe(order.getCustomer().getPhone() != null ? order.getCustomer().getPhone() : null, "—");
         String customerAddr  = safe(order.getCustomer().getAddress() != null ? order.getCustomer().getAddress() : null, "—");
@@ -145,7 +143,7 @@ public class OrderEmailService {
         String total       = fmt(order.getTotalAmount());
         String invoiceName = "invoice-" + order.getOrderNumber() + ".pdf";
         String orderNote   = order.getNotes() != null && !order.getNotes().isBlank()
-                ? "<tr><td colspan=\"2\" style=\"padding:6px 0 2px;\"><div style=\"border-left:3px solid #16a34a;padding:10px 12px;background:#f0fdf4;border-radius:6px;font-size:13px;color:#475569;\"><strong>Ghi chú:</strong> " + order.getNotes() + "</div></td></tr>"
+                ? "<tr><td colspan=\"2\" style=\"padding:6px 0 2px;\"><div style=\"border-left:3px solid #aaa;padding:8px 12px;background:#f9f9f9;font-size:13px;color:#555;\"><strong>Ghi chu:</strong> " + order.getNotes() + "</div></td></tr>"
                 : "";
 
         return """
@@ -154,88 +152,74 @@ public class OrderEmailService {
         <head>
           <meta charset="UTF-8"/>
           <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-          <title>Đơn hàng đã giao</title>
+          <title>Don hang da giao</title>
         </head>
-        <body style="margin:0;padding:0;background:#f0f2f5;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
-          <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f0f2f5;padding:40px 0;">
+        <body style="margin:0;padding:0;background:#f2f2f2;font-family:Arial,Helvetica,sans-serif;">
+          <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f2f2f2;padding:30px 0;">
             <tr><td align="center">
               <table width="600" cellpadding="0" cellspacing="0"
-                     style="max-width:600px;width:100%%;background:#fff;border-radius:16px;
-                            overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                     style="max-width:600px;width:100%%;background:#ffffff;border:1px solid #cccccc;">
 
                 <!-- HEADER -->
                 <tr>
-                  <td style="background:linear-gradient(135deg,#052e16 0%%,#14532d 60%%,#16a34a 100%%);
-                              padding:40px 48px;text-align:center;">
-                    <p style="margin:0 0 12px;font-size:13px;letter-spacing:4px;text-transform:uppercase;
-                               color:#86efac;font-weight:600;">TECHSTORE</p>
-                    <h1 style="margin:0;font-size:26px;font-weight:700;color:#fff;line-height:1.2;">
-                      Đơn hàng đã giao thành công 📦
-                    </h1>
-                    <p style="margin:10px 0 0;font-size:14px;color:#a7f3d0;">
-                      Cảm ơn bạn đã tin tưởng mua sắm tại TechStore
+                  <td style="background:#1a2744;padding:24px 32px;">
+                    <p style="margin:0;font-size:11px;letter-spacing:3px;color:#aabbd4;
+                               text-transform:uppercase;font-weight:bold;">TECHSTORE</p>
+                    <p style="margin:8px 0 0;font-size:18px;font-weight:bold;color:#ffffff;">
+                      Don hang da giao thanh cong
                     </p>
                   </td>
                 </tr>
 
-                <!-- BADGE + TIME -->
+                <!-- STATUS BAR -->
                 <tr>
-                  <td style="padding:28px 48px 0;text-align:center;">
-                    <div style="display:inline-block;background:#f0fdf4;border:1.5px solid #bbf7d0;
-                                border-radius:100px;padding:10px 24px;">
-                      <span style="font-size:14px;font-weight:600;color:#16a34a;">
-                        ✓ &nbsp;Giao hàng thành công — %s
-                      </span>
-                    </div>
+                  <td style="background:#e8f4e8;border-bottom:1px solid #c3dcc3;padding:10px 32px;">
+                    <p style="margin:0;font-size:13px;color:#2a6e2a;font-weight:bold;">
+                      Da giao luc %s — Hoa don dinh kem trong email nay
+                    </p>
                   </td>
                 </tr>
 
                 <!-- GREETING -->
                 <tr>
-                  <td style="padding:28px 48px 0;">
-                    <p style="margin:0;font-size:16px;color:#334155;line-height:1.6;">
-                      Xin chào <strong style="color:#0f172a;">%s</strong>,
+                  <td style="padding:24px 32px 0;">
+                    <p style="margin:0;font-size:14px;color:#333;">
+                      Xin chao <strong>%s</strong>,
                     </p>
-                    <p style="margin:10px 0 0;font-size:15px;color:#475569;line-height:1.7;">
-                      Đơn hàng <strong>#%s</strong> của bạn đã được giao thành công.
-                      Hóa đơn chi tiết (<strong>%s</strong>) đã được đính kèm trong email này.
+                    <p style="margin:10px 0 0;font-size:13px;color:#555;line-height:1.6;">
+                      Don hang <strong>#%s</strong> cua ban da duoc giao thanh cong.
+                      Hoa don chi tiet (<strong>%s</strong>) da duoc dinh kem trong email nay.
                     </p>
                   </td>
                 </tr>
 
                 <!-- CUSTOMER INFO -->
                 <tr>
-                  <td style="padding:24px 48px 0;">
+                  <td style="padding:20px 32px 0;">
+                    <p style="margin:0 0 8px;font-size:11px;font-weight:bold;letter-spacing:2px;
+                               text-transform:uppercase;color:#888;">THONG TIN KHACH HANG</p>
                     <table width="100%%" cellpadding="0" cellspacing="0"
-                           style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+                           style="border:1px solid #ddd;border-collapse:collapse;">
+                      %s
                       <tr>
-                        <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
-                          <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:2px;
-                                     text-transform:uppercase;color:#94a3b8;">THÔNG TIN KHÁCH HÀNG</p>
-                        </td>
+                        <td style="padding:7px 12px;font-size:13px;color:#666;border-bottom:1px solid #eee;
+                                    background:#fafafa;width:40%%;border-right:1px solid #eee;">Email</td>
+                        <td style="padding:7px 12px;font-size:13px;color:#222;border-bottom:1px solid #eee;">%s</td>
                       </tr>
                       <tr>
-                        <td style="padding:4px 20px 14px;">
-                          <table width="100%%" cellpadding="0" cellspacing="0">
-                            %s
-                            <tr>
-                              <td style="padding:6px 0;font-size:13px;color:#64748b;">Email</td>
-                              <td style="padding:6px 0;font-size:13px;color:#0f172a;text-align:right;font-weight:500;">%s</td>
-                            </tr>
-                            <tr>
-                              <td style="padding:6px 0;font-size:13px;color:#64748b;">Điện thoại</td>
-                              <td style="padding:6px 0;font-size:13px;color:#0f172a;text-align:right;font-weight:500;">%s</td>
-                            </tr>
-                            <tr>
-                              <td style="padding:6px 0;font-size:13px;color:#64748b;">Địa chỉ giao hàng</td>
-                              <td style="padding:6px 0;font-size:13px;color:#0f172a;text-align:right;font-weight:500;">%s</td>
-                            </tr>
-                            <tr>
-                              <td style="padding:6px 0;font-size:13px;color:#64748b;">Phương thức thanh toán</td>
-                              <td style="padding:6px 0;font-size:13px;color:#0f172a;text-align:right;font-weight:500;">%s</td>
-                            </tr>
-                          </table>
-                        </td>
+                        <td style="padding:7px 12px;font-size:13px;color:#666;border-bottom:1px solid #eee;
+                                    background:#fafafa;border-right:1px solid #eee;">Dien thoai</td>
+                        <td style="padding:7px 12px;font-size:13px;color:#222;border-bottom:1px solid #eee;">%s</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:7px 12px;font-size:13px;color:#666;border-bottom:1px solid #eee;
+                                    background:#fafafa;border-right:1px solid #eee;">Dia chi giao hang</td>
+                        <td style="padding:7px 12px;font-size:13px;color:#222;border-bottom:1px solid #eee;">%s</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:7px 12px;font-size:13px;color:#666;background:#fafafa;
+                                    border-right:1px solid #eee;">Thanh toan</td>
+                        <td style="padding:7px 12px;font-size:13px;color:#222;">%s</td>
                       </tr>
                     </table>
                   </td>
@@ -243,48 +227,47 @@ public class OrderEmailService {
 
                 <!-- ORDER ITEMS -->
                 <tr>
-                  <td style="padding:24px 48px 0;">
+                  <td style="padding:20px 32px 0;">
+                    <p style="margin:0 0 8px;font-size:11px;font-weight:bold;letter-spacing:2px;
+                               text-transform:uppercase;color:#888;">SAN PHAM DA DAT</p>
                     <table width="100%%" cellpadding="0" cellspacing="0"
-                           style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-                      <tr>
-                        <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
-                          <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:2px;
-                                     text-transform:uppercase;color:#94a3b8;">SẢN PHẨM ĐÃ ĐẶT</p>
-                        </td>
+                           style="border:1px solid #ddd;border-collapse:collapse;">
+                      <tr style="background:#f5f5f5;">
+                        <th style="padding:8px 8px;font-size:12px;color:#555;text-align:left;
+                                    border-bottom:1px solid #ddd;font-weight:bold;">San pham</th>
+                        <th style="padding:8px 8px;font-size:12px;color:#555;text-align:center;
+                                    border-bottom:1px solid #ddd;font-weight:bold;white-space:nowrap;">S.L</th>
+                        <th style="padding:8px 8px;font-size:12px;color:#555;text-align:right;
+                                    border-bottom:1px solid #ddd;font-weight:bold;white-space:nowrap;">Don gia</th>
+                        <th style="padding:8px 8px;font-size:12px;color:#555;text-align:right;
+                                    border-bottom:1px solid #ddd;font-weight:bold;white-space:nowrap;">Thanh tien</th>
                       </tr>
-                      <tr>
-                        <td style="padding:0 20px;">
-                          <table width="100%%" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <th style="padding:10px 0 6px;font-size:11px;color:#94a3b8;text-align:left;font-weight:600;border-bottom:1px solid #e2e8f0;">Sản phẩm</th>
-                              <th style="padding:10px 0 6px;font-size:11px;color:#94a3b8;text-align:center;font-weight:600;border-bottom:1px solid #e2e8f0;">SL</th>
-                              <th style="padding:10px 0 6px;font-size:11px;color:#94a3b8;text-align:right;font-weight:600;border-bottom:1px solid #e2e8f0;">Đơn giá</th>
-                              <th style="padding:10px 0 6px;font-size:11px;color:#94a3b8;text-align:right;font-weight:600;border-bottom:1px solid #e2e8f0;">Thành tiền</th>
-                            </tr>
-                            %s
-                          </table>
-                        </td>
-                      </tr>
+                      %s
                     </table>
                   </td>
                 </tr>
 
-                <!-- SUMMARY + INVOICE BADGE -->
+                <!-- SUMMARY + INVOICE -->
                 <tr>
-                  <td style="padding:20px 48px 0;">
+                  <td style="padding:12px 32px 0;">
                     <table width="100%%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <!-- Invoice badge trái -->
-                        <td width="48%%" valign="top">
-                          <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;
-                                      padding:14px 16px;display:inline-block;">
-                            <p style="margin:0 0 4px;font-size:11px;color:#86efac;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Hóa đơn đính kèm</p>
-                            <p style="margin:0;font-size:13px;color:#16a34a;font-weight:600;">📎 &nbsp;%s</p>
-                          </div>
+                        <!-- Invoice badge left -->
+                        <td width="46%%" valign="top">
+                          <table cellpadding="0" cellspacing="0"
+                                 style="border:1px solid #c3dcc3;background:#f4fbf4;border-collapse:collapse;">
+                            <tr>
+                              <td style="padding:10px 14px;">
+                                <p style="margin:0 0 2px;font-size:11px;font-weight:bold;color:#888;
+                                           letter-spacing:1px;text-transform:uppercase;">Hoa don dinh kem</p>
+                                <p style="margin:0;font-size:13px;color:#2a6e2a;font-weight:bold;">%s</p>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
-                        <!-- Summary phải -->
-                        <td width="4%%"></td>
-                        <td width="48%%" valign="top">
+                        <td width="8%%"></td>
+                        <!-- Summary right -->
+                        <td width="46%%" valign="top">
                           <table width="100%%" cellpadding="0" cellspacing="0">
                             %s
                           </table>
@@ -296,17 +279,16 @@ public class OrderEmailService {
 
                 <!-- TOTAL -->
                 <tr>
-                  <td style="padding:16px 48px 0;">
+                  <td style="padding:12px 32px 0;">
                     <table width="100%%" cellpadding="0" cellspacing="0"
-                           style="background:linear-gradient(135deg,#052e16,#14532d);border-radius:10px;">
+                           style="background:#1a2744;border-collapse:collapse;">
                       <tr>
-                        <td style="padding:16px 20px;font-size:13px;font-weight:700;color:#86efac;
+                        <td style="padding:14px 16px;font-size:13px;font-weight:bold;color:#aabbd4;
                                     text-transform:uppercase;letter-spacing:1px;">
-                          Tổng thanh toán
+                          Tong thanh toan
                         </td>
-                        <td style="padding:16px 20px;text-align:right;">
-                          <span style="font-size:22px;font-weight:800;color:#fff;">%s</span>
-                          <span style="font-size:15px;font-weight:600;color:#86efac;margin-left:4px;">₫</span>
+                        <td style="padding:14px 16px;text-align:right;">
+                          <span style="font-size:20px;font-weight:bold;color:#ffffff;">%s d</span>
                         </td>
                       </tr>
                     </table>
@@ -315,26 +297,24 @@ public class OrderEmailService {
 
                 <!-- DIVIDER -->
                 <tr>
-                  <td style="padding:32px 48px 0;">
-                    <hr style="border:none;border-top:1px solid #e2e8f0;margin:0;"/>
+                  <td style="padding:24px 32px 0;">
+                    <hr style="border:none;border-top:1px solid #ddd;margin:0;"/>
                   </td>
                 </tr>
 
                 <!-- FOOTER -->
                 <tr>
-                  <td style="padding:24px 48px 36px;text-align:center;">
-                    <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#475569;">
-                      TechStore — Nơi công nghệ gặp gỡ niềm tin
-                    </p>
-                    <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.8;">
-                      Nếu bạn có thắc mắc, hãy liên hệ
-                      <a href="mailto:support@nguyenduc.me" style="color:#16a34a;text-decoration:none;">
+                  <td style="padding:18px 32px 28px;text-align:center;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:bold;color:#555;">TechStore</p>
+                    <p style="margin:0;font-size:12px;color:#999;line-height:1.7;">
+                      Lien he ho tro:
+                      <a href="mailto:support@nguyenduc.me" style="color:#1a2744;text-decoration:underline;">
                         support@nguyenduc.me
                       </a><br/>
-                      Email này được gửi tự động, vui lòng không trả lời trực tiếp.
+                      Email nay duoc gui tu dong, vui long khong tra loi truc tiep.
                     </p>
-                    <p style="margin:16px 0 0;font-size:11px;color:#cbd5e1;">
-                      © 2025 TechStore. All rights reserved.
+                    <p style="margin:12px 0 0;font-size:11px;color:#bbb;">
+                      (c) 2025 TechStore. All rights reserved.
                     </p>
                   </td>
                 </tr>
