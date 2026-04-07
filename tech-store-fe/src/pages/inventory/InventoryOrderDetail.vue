@@ -6,7 +6,6 @@
         <h1>PHIẾU GIAO HÀNG</h1>
         <p>Tech Store</p>
       </div>
-
       <div class="print-info">
         <div class="print-info-left">
           <strong>Thông tin khách hàng:</strong><br>
@@ -20,57 +19,43 @@
           <strong>Trạng thái:</strong> {{ statusLabel(order.status) }}
         </div>
       </div>
-
       <table class="print-table">
         <thead>
           <tr>
             <th>STT</th>
             <th>Tên sản phẩm</th>
-            <th style="text-align: center;">SKU</th>
-            <th style="text-align: center;">SL</th>
-            <th style="text-align: right;">Đơn giá</th>
-            <th style="text-align: right;">Thành tiền</th>
+            <th style="text-align:center">Serial</th>
+            <th style="text-align:center">SKU</th>
+            <th style="text-align:right">Đơn giá</th>
+            <th style="text-align:right">Thành tiền</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, index) in order.items" :key="item.id || index">
-            <td style="text-align: center;">{{ index + 1 }}</td>
-            <td>{{ item.productName }}</td>
-            <td style="text-align: center;">{{ item.sku || '-' }}</td>
-            <td style="text-align: center;">{{ item.quantity }}</td>
-            <td style="text-align: right;">{{ formatVND(item.price) }}</td>
-            <td style="text-align: right;">{{ formatVND(item.quantity * item.price) }}</td>
+          <tr v-for="(row, index) in tableRows" :key="index">
+            <td style="text-align:center">{{ index + 1 }}</td>
+            <td>{{ row.productName }}<br><small>{{ row.variantName }}</small></td>
+            <td style="text-align:center;font-family:monospace">{{ row.serial || '—' }}</td>
+            <td style="text-align:center">{{ row.sku || '-' }}</td>
+            <td style="text-align:right">{{ formatVND(row.unitPrice) }}</td>
+            <td style="text-align:right">{{ row.isFirst ? formatVND(row.lineTotal) : '' }}</td>
           </tr>
         </tbody>
       </table>
-
       <div class="print-summary">
         <div class="print-summary-row">
-          <span>Tạm tính:</span>
-          <span>{{ formatVND(order.subtotal) }}</span>
+          <span>Tạm tính:</span><span>{{ formatVND(order.subtotal) }}</span>
         </div>
-        <div class="print-summary-row" v-if="order.vipDiscount > 0">
-          <span>Giảm giá VIP:</span>
-          <span>-{{ formatVND(order.vipDiscount) }}</span>
-        </div>
-        <div class="print-summary-row" v-if="order.couponDiscount > 0">
-          <span>Mã giảm giá ({{ order.couponCode }}):</span>
-          <span>-{{ formatVND(order.couponDiscount) }}</span>
-        </div>
-        <div class="print-summary-row" v-if="order.spinDiscount > 0">
-          <span>Giảm giá vòng quay:</span>
-          <span>-{{ formatVND(order.spinDiscount) }}</span>
+        <div class="print-summary-row" v-if="order.discountTotal > 0">
+          <span>Giảm giá:</span><span>-{{ formatVND(order.discountTotal) }}</span>
         </div>
         <div class="print-summary-row">
           <span>Phí vận chuyển:</span>
           <span>{{ order.shippingFee > 0 ? formatVND(order.shippingFee) : 'Miễn phí' }}</span>
         </div>
         <div class="print-summary-row print-total">
-          <span>Tổng cộng:</span>
-          <span>{{ formatVND(order.totalAmount) }}</span>
+          <span>Tổng cộng:</span><span>{{ formatVND(order.totalAmount) }}</span>
         </div>
       </div>
-
       <div class="print-footer">
         Cảm ơn quý khách đã mua sắm tại Tech Store!<br>
         Mọi thắc mắc xin vui lòng liên hệ hotline hỗ trợ.
@@ -147,177 +132,342 @@
               <el-text tag="b">Sản phẩm đặt mua</el-text>
               <el-text type="info" size="small">({{ order.items?.length || 0 }} sản phẩm)</el-text>
             </el-space>
-          </template>
+            <el-text type="info">Kho hàng · Quản lý đơn hàng</el-text>
+          </el-space>
+        </el-col>
+        <el-col :span="8" style="text-align:right">
+          <el-space>
+            <el-button @click="printOrder" plain>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="icon-spacing">
+                <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 14h12v8H6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              In phiếu
+            </el-button>
 
-          <el-table :data="order.items" style="width: 100%">
-            <el-table-column label="Sản phẩm" min-width="200">
-              <template #default="{ row }">
-                <el-space>
-                  <div class="product-thumb">
-                    <!-- SVG Kept but CSS removed -->
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="2" y="2" width="12" height="12" rx="3" fill="currentColor" fill-opacity="0.2"/>
-                      <path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                  </div>
-                  <el-space direction="vertical" alignment="start" :size="0">
-                    <el-text tag="b">{{ row.productName }}</el-text>
-                    <el-text type="info" size="small" v-if="row.sku">SKU: {{ row.sku }}</el-text>
-                  </el-space>
-                </el-space>
-              </template>
-            </el-table-column>
+            <el-tooltip
+              v-if="order.status === 'PAID'"
+              :content="allSerialsAssigned ? '' : `Cần gán đủ serial (${totalAssigned}/${totalRequired})`"
+              placement="top"
+              :disabled="allSerialsAssigned"
+            >
+              <span>
+                <el-button
+                  type="warning"
+                  plain
+                  :loading="loading"
+                  :disabled="!allSerialsAssigned"
+                  @click="markProcessing"
+                >
+                  Đóng gói
+                </el-button>
+              </span>
+            </el-tooltip>
 
-            <el-table-column label="Đơn giá" width="140" align="right">
-              <template #default="{ row }">
-                <el-text>{{ formatVND(row.price) }}</el-text>
-              </template>
-            </el-table-column>
+            <el-button
+              v-if="order.status === 'PROCESSING'"
+              type="primary"
+              plain
+              :loading="loading"
+              @click="markShipping"
+            >
+              Chuyển giao vận
+            </el-button>
+          </el-space>
+        </el-col>
+      </el-row>
 
-            <el-table-column label="Số lượng" width="100" align="center">
-              <template #default="{ row }">
-                <el-tag type="info" effect="plain">{{ row.quantity }}</el-tag>
-              </template>
-            </el-table-column>
-
-            <el-table-column label="Thành tiền" width="150" align="right">
-              <template #default="{ row }">
-                <el-text tag="b">{{ formatVND(row.quantity * row.price) }}</el-text>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <!-- TOTAL -->
-          <el-row justify="end" class="total-section">
-            <el-col :span="8">
-              <el-space direction="vertical" alignment="stretch" :size="8" style="width: 100%">
-                <el-row justify="space-between">
-                  <el-text type="info">Tạm tính</el-text>
-                  <el-text>{{ formatVND(order.subtotal) }}</el-text>
-                </el-row>
-                <el-row justify="space-between" v-if="order.vipDiscount > 0">
-                  <el-text type="info">Chiết khấu VIP</el-text>
-                  <el-text type="success">-{{ formatVND(order.vipDiscount) }}</el-text>
-                </el-row>
-                <el-row justify="space-between" v-if="order.couponDiscount > 0">
-                  <el-text type="info">Mã giảm giá ({{ order.couponCode }})</el-text>
-                  <el-text type="success">-{{ formatVND(order.couponDiscount) }}</el-text>
-                </el-row>
-                <el-row justify="space-between" v-if="order.spinDiscount > 0">
-                  <el-text type="info">Vòng quay may mắn</el-text>
-                  <el-text type="warning">-{{ formatVND(order.spinDiscount) }}</el-text>
-                </el-row>
-                <el-row justify="space-between">
-                  <el-text type="info">Phí vận chuyển</el-text>
-                  <el-text>{{ order.shippingFee > 0 ? formatVND(order.shippingFee) : 'Miễn phí' }}</el-text>
-                </el-row>
-                <el-divider class="my-divider" />
-                <el-row justify="space-between">
-                  <el-text tag="b" size="large">Tổng cộng</el-text>
-                  <el-text tag="b" size="large">{{ formatVND(order.totalAmount) }}</el-text>
-                </el-row>
-              </el-space>
-            </el-col>
-          </el-row>
-        </el-card>
-      </el-col>
-
-      <!-- RIGHT COLUMN -->
-      <el-col :span="8">
-        <el-space direction="vertical" alignment="stretch" :size="16" style="width: 100%">
-          <!-- ORDER INFO -->
+      <el-row :gutter="20">
+        <el-col :span="16">
           <el-card shadow="never">
             <template #header>
-              <el-text tag="b">Thông tin đơn hàng</el-text>
-            </template>
-            <el-space direction="vertical" alignment="stretch" :size="12" style="width: 100%">
-              <el-row justify="space-between">
-                <el-text type="info">Mã đơn hàng</el-text>
-                <el-text>#{{ order.orderNumber }}</el-text>
-              </el-row>
-              <el-row justify="space-between">
-                <el-text type="info">Trạng thái</el-text>
-                <el-tag :type="statusType(order.status)" effect="light" size="small" round>
-                  {{ statusLabel(order.status) }}
+              <el-row justify="space-between" align="middle">
+                <el-space>
+                  <el-text tag="b">Sản phẩm đặt mua</el-text>
+                  <el-text type="info" size="small">({{ order.items?.length || 0 }} sản phẩm)</el-text>
+                </el-space>
+                <el-tag
+                  v-if="order.status === 'PAID'"
+                  :type="allSerialsAssigned ? 'success' : 'warning'"
+                  effect="light"
+                  round
+                  size="small"
+                >
+                  {{ totalAssigned }}/{{ totalRequired }} serial đã gán
                 </el-tag>
               </el-row>
-              <el-row justify="space-between">
-                <el-text type="info">Ngày tạo</el-text>
-                <el-text>{{ formatDateTime(order.createdAt) }}</el-text>
-              </el-row>
-            </el-space>
-          </el-card>
-
-          <!-- CUSTOMER INFO -->
-          <el-card shadow="never">
-            <template #header>
-              <el-text tag="b">Thông tin khách hàng</el-text>
             </template>
-            <el-space direction="vertical" alignment="stretch" :size="16" style="width: 100%">
-              <el-space :size="12">
-                <el-avatar :size="42">{{ initials(order.customerName) }}</el-avatar>
-                <el-text tag="b" size="large">{{ order.customerName }}</el-text>
-              </el-space>
-              <el-space direction="vertical" alignment="stretch" :size="12" style="width: 100%">
-                <el-row justify="space-between">
-                  <el-text type="info">Số điện thoại</el-text>
-                  <el-text>{{ order.customerPhone }}</el-text>
-                </el-row>
-                <el-row justify="space-between">
-                  <el-text type="info">Địa chỉ</el-text>
-                  <el-text class="text-right">{{ order.customerAddress }}</el-text>
-                </el-row>
-              </el-space>
-            </el-space>
+
+            <!-- Bảng: mỗi slot serial = 1 dòng -->
+            <el-table :data="tableRows" style="width:100%" :row-class-name="rowClass">
+              <el-table-column label="Sản phẩm" min-width="180">
+                <template #default="{ row }">
+                  <template v-if="row.isFirst">
+                    <el-space direction="vertical" alignment="start" :size="0">
+                      <el-text tag="b">{{ row.productName }}</el-text>
+                      <el-text type="info" size="small"
+                        v-if="row.variantName && row.variantName !== row.productName">
+                        {{ row.variantName }}
+                      </el-text>
+                      <el-text type="info" size="small" v-if="row.sku">SKU: {{ row.sku }}</el-text>
+                    </el-space>
+                  </template>
+                </template>
+              </el-table-column>
+
+              <!-- Cột serial: input khi PAID + chưa có, tag khi đã có, dash khi không PAID -->
+              <el-table-column label="Serial Number" width="270">
+                <template #default="{ row }">
+                  <!-- Đã có serial → hiển thị tag, có thể xóa nếu đang PAID -->
+                  <el-space v-if="row.serial" :size="6">
+                    <el-tag
+                      type="success"
+                      effect="light"
+                      :closable="order.status === 'PAID'"
+                      @close="handleRemoveSerial(row)"
+                      style="font-family:monospace;font-size:13px"
+                    >
+                      {{ row.serial }}
+                    </el-tag>
+                  </el-space>
+
+                  <!-- Chưa có serial + đang PAID → cho nhập -->
+                  <el-space v-else-if="order.status === 'PAID'" :size="4">
+                    <el-input
+                      v-model="serialInputs[row.slotKey]"
+                      :placeholder="`Serial ${row.slotIndex + 1}...`"
+                      size="small"
+                      style="width:160px"
+                      clearable
+                      @keyup.enter="handleAssignSerial(row)"
+                      :ref="el => { if (el) serialInputRefs[row.slotKey] = el }"
+                    />
+                    <el-button
+                      type="primary"
+                      size="small"
+                      :loading="assigningSlot === row.slotKey"
+                      @click="handleAssignSerial(row)"
+                    >
+                      Gán
+                    </el-button>
+                  </el-space>
+
+                  <!-- Trạng thái khác, không có serial -->
+                  <el-text v-else type="info" size="small">—</el-text>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="Đơn giá" width="130" align="right">
+                <template #default="{ row }">
+                  <el-text v-if="row.isFirst">{{ formatVND(row.unitPrice) }}</el-text>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="Thành tiền" width="140" align="right">
+                <template #default="{ row }">
+                  <el-text tag="b" v-if="row.isFirst">{{ formatVND(row.lineTotal) }}</el-text>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <!-- TOTAL -->
+            <el-row justify="end" class="total-section">
+              <el-col :span="8">
+                <el-space direction="vertical" alignment="stretch" :size="8" style="width:100%">
+                  <el-row justify="space-between">
+                    <el-text type="info">Tạm tính</el-text>
+                    <el-text>{{ formatVND(order.subtotal) }}</el-text>
+                  </el-row>
+                  <el-row justify="space-between" v-if="order.discountTotal > 0">
+                    <el-text type="info">Giảm giá</el-text>
+                    <el-text type="success">-{{ formatVND(order.discountTotal) }}</el-text>
+                  </el-row>
+                  <el-row justify="space-between">
+                    <el-text type="info">Phí vận chuyển</el-text>
+                    <el-text>{{ order.shippingFee > 0 ? formatVND(order.shippingFee) : 'Miễn phí' }}</el-text>
+                  </el-row>
+                  <el-divider class="my-divider"/>
+                  <el-row justify="space-between">
+                    <el-text tag="b" size="large">Tổng cộng</el-text>
+                    <el-text tag="b" size="large">{{ formatVND(order.totalAmount) }}</el-text>
+                  </el-row>
+                </el-space>
+              </el-col>
+            </el-row>
           </el-card>
-        </el-space>
-      </el-col>
-    </el-row>
+        </el-col>
+
+        <el-col :span="8">
+          <el-space direction="vertical" alignment="stretch" :size="16" style="width:100%">
+            <el-card shadow="never">
+              <template #header><el-text tag="b">Thông tin đơn hàng</el-text></template>
+              <el-space direction="vertical" alignment="stretch" :size="12" style="width:100%">
+                <el-row justify="space-between">
+                  <el-text type="info">Mã đơn hàng</el-text>
+                  <el-text>#{{ order.orderNumber }}</el-text>
+                </el-row>
+                <el-row justify="space-between">
+                  <el-text type="info">Kênh bán</el-text>
+                  <el-tag size="small" effect="plain">{{ order.channel || '-' }}</el-tag>
+                </el-row>
+                <el-row justify="space-between">
+                  <el-text type="info">Trạng thái</el-text>
+                  <el-tag :type="statusType(order.status)" effect="light" size="small" round>
+                    {{ statusLabel(order.status) }}
+                  </el-tag>
+                </el-row>
+                <el-row justify="space-between">
+                  <el-text type="info">Ngày tạo</el-text>
+                  <el-text>{{ formatDateTime(order.createdAt) }}</el-text>
+                </el-row>
+              </el-space>
+            </el-card>
+
+            <el-card shadow="never">
+              <template #header><el-text tag="b">Thông tin khách hàng</el-text></template>
+              <el-space direction="vertical" alignment="stretch" :size="16" style="width:100%">
+                <el-space :size="12">
+                  <el-avatar :size="42">{{ initials(order.customerName) }}</el-avatar>
+                  <el-text tag="b" size="large">{{ order.customerName }}</el-text>
+                </el-space>
+                <el-space direction="vertical" alignment="stretch" :size="12" style="width:100%">
+                  <el-row justify="space-between">
+                    <el-text type="info">Số điện thoại</el-text>
+                    <el-text>{{ order.customerPhone }}</el-text>
+                  </el-row>
+                  <el-row justify="space-between">
+                    <el-text type="info">Địa chỉ</el-text>
+                    <el-text class="text-right">{{ order.customerAddress }}</el-text>
+                  </el-row>
+                </el-space>
+              </el-space>
+            </el-card>
+          </el-space>
+        </el-col>
+      </el-row>
     </el-space>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ordersApi } from "../../api/orders.api";
 import { paymentsApi } from "../../api/payments";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { formatVND, formatDateTime, initials } from "../../utils/format";
 
-const route  = useRoute();
-const router = useRouter();
-const order  = ref(null);
+const route   = useRoute();
+const router  = useRouter();
+const order   = ref(null);
 const loading = ref(false);
 
+const serialInputs    = ref({});
+const serialInputRefs = ref({});
+const assigningSlot   = ref(null);
+
+// Mỗi sản phẩm × quantity = N dòng riêng biệt
+const tableRows = computed(() => {
+  if (!order.value?.items) return []
+  const rows = []
+  for (const item of order.value.items) {
+    for (let i = 0; i < item.quantity; i++) {
+      rows.push({
+        itemId:      item.id,
+        slotKey:     `${item.id}_${i}`,
+        slotIndex:   i,
+        isFirst:     i === 0,
+        productName: item.productName,
+        variantName: item.variantName,
+        sku:         item.sku,
+        unitPrice:   item.unitPrice,
+        lineTotal:   item.lineTotal,
+        serial:      item.serialNumbers?.[i] ?? null,
+      })
+    }
+  }
+  return rows
+})
+
+const allSerialsAssigned = computed(() => {
+  if (!order.value?.items?.length) return false
+  if (order.value.channel === 'OFFLINE') return true
+  return order.value.items.every(
+    item => (item.serialNumbers?.length || 0) >= item.quantity
+  )
+})
+
+const totalAssigned = computed(() =>
+  order.value?.items?.reduce((s, i) => s + (i.serialNumbers?.length || 0), 0) ?? 0
+)
+
+const totalRequired = computed(() =>
+  order.value?.items?.reduce((s, i) => s + i.quantity, 0) ?? 0
+)
+
+// Dòng không phải đầu nhóm → bỏ viền trên
+const rowClass = ({ row }) => row.isFirst ? '' : 'row-continuation'
+
 const statusLabel = (s) => ({
-  PAID: "Đã thanh toán",
-  PROCESSING: "Đang xử lý",
-  SHIPPING: "Đang giao",
-  DONE: "Hoàn thành",
-}[s] ?? s);
+  PAID: "Đã thanh toán", PROCESSING: "Đang xử lý",
+  SHIPPING: "Đang giao", DELIVERED: "Đã giao", DONE: "Hoàn thành",
+}[s] ?? s)
 
 const statusType = (s) => ({
-  PAID: "success",
-  PROCESSING: "warning",
-  SHIPPING: "primary",
-  DONE: "info",
-}[s] ?? "info");
+  PAID: "success", PROCESSING: "warning",
+  SHIPPING: "primary", DELIVERED: "info", DONE: "info",
+}[s] ?? "info")
 
-const printOrder = () => {
-  window.print();
-};
+const printOrder = () => window.print()
 
 const load = async () => {
   try {
-    const res = await ordersApi.getById(route.params.orderId);
-    order.value = res.data;
-  } catch (error) {
-    ElMessage.error(error.response?.data?.message || "Không thể tải thông tin đơn hàng");
+    const res = await ordersApi.getById(route.params.orderId)
+    order.value = res.data
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || "Không thể tải đơn hàng")
   }
-};
+}
+
+const handleAssignSerial = async (row) => {
+  const sn = serialInputs.value[row.slotKey]?.trim()
+  if (!sn) { ElMessage.warning("Vui lòng nhập serial number"); return }
+  try {
+    assigningSlot.value = row.slotKey
+    await ordersApi.assignSerial(order.value.orderId, row.itemId, sn)
+    ElMessage.success(`Đã gán serial: ${sn}`)
+    serialInputs.value[row.slotKey] = ""
+    await load()
+    // Auto-focus slot tiếp theo của cùng item
+    const next = tableRows.value.find(
+      r => r.itemId === row.itemId && r.slotIndex === row.slotIndex + 1 && !r.serial
+    )
+    if (next) setTimeout(() => serialInputRefs.value[next.slotKey]?.focus(), 120)
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || "Serial không hợp lệ hoặc đã dùng")
+  } finally {
+    assigningSlot.value = null
+  }
+}
+
+const handleRemoveSerial = async (row) => {
+  try {
+    await ElMessageBox.confirm(`Bỏ gán serial "${row.serial}"?`, "Xác nhận", {
+      type: "warning", confirmButtonText: "Bỏ gán", cancelButtonText: "Hủy"
+    })
+    await ordersApi.removeSerial(order.value.orderId, row.itemId, row.serial)
+    ElMessage.success("Đã bỏ gán serial")
+    await load()
+  } catch (e) {
+    if (e !== "cancel") ElMessage.error(e.response?.data?.message || "Không thể xóa serial")
+  }
+}
 
 const markProcessing = async () => {
+  if (!allSerialsAssigned.value) {
+    ElMessage.warning(`Cần gán đủ serial (${totalAssigned.value}/${totalRequired.value})`)
+    return
+  }
   try {
     await ElMessageBox.confirm(
       'Bạn có chắc chắn muốn bắt đầu xử lý đơn hàng này?',
@@ -347,177 +497,66 @@ const markProcessing = async () => {
         ElMessage.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái");
     }
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const markShipping = async () => {
   try {
-    await ElMessageBox.confirm(
-      'Bạn có chắc chắn muốn chuyển đơn hàng này cho đơn vị vận chuyển?',
-      'Xác nhận giao vận',
-      {
-        confirmButtonText: 'Đồng ý',
-        cancelButtonText: 'Hủy',
-        type: 'primary',
-      }
-    );
-    loading.value = true;
-    await ordersApi.markAsShipping(order.value.orderId);
-    ElMessage.success("Đã chuyển đơn hàng sang trạng thái Đang giao hàng");
-    await load();
-  } catch (error) {
-    if (error !== 'cancel') {
-        ElMessage.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái");
-    }
+    await ElMessageBox.confirm("Chuyển đơn cho đơn vị vận chuyển?", "Xác nhận giao vận", {
+      confirmButtonText: "Đồng ý", cancelButtonText: "Hủy", type: "primary"
+    })
+    loading.value = true
+    await ordersApi.markAsShipping(order.value.orderId)
+    ElMessage.success("Đã chuyển sang Đang giao hàng")
+    await load()
+  } catch (e) {
+    if (e !== "cancel") ElMessage.error(e.response?.data?.message || "Có lỗi xảy ra")
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
-let timer;
-onMounted(() => {
-  load();
-});
+onMounted(load)
 </script>
 
 <style scoped>
-.icon-spacing {
-  margin-right: 6px;
-}
-.product-thumb {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.total-section {
-  margin-top: 16px;
-}
-.my-divider {
-  margin: 8px 0;
-}
-.text-right {
-  text-align: right;
-  max-width: 160px;
-}
-h2 {
-  margin: 0;
+h2 { margin: 0; }
+.icon-spacing { margin-right: 6px; }
+.total-section { margin-top: 16px; }
+.my-divider { margin: 8px 0; }
+.text-right { text-align: right; max-width: 160px; }
+
+:deep(.row-continuation td) {
+  border-top: none !important;
+  padding-top: 2px !important;
 }
 
-@media screen {
-  .print-section {
-    display: none;
-  }
-}
+@media screen { .print-section { display: none; } }
 
 @media print {
-  .no-print {
-    display: none !important;
-  }
-  
-  @page {
-    size: A4;
-    margin: 0;
-  }
-  
-  .print-section {
-    display: block;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #000;
-    padding: 15mm;
-  }
-  
-  .print-header {
-    text-align: center;
-    margin-bottom: 30px;
-    border-bottom: 2px solid #000;
-    padding-bottom: 15px;
-  }
-  
-  .print-header h1 {
-    font-size: 24px;
-    margin: 0 0 5px 0;
-    text-transform: uppercase;
-  }
-  
-  .print-info {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 30px;
-    line-height: 1.5;
-  }
-  
-  .print-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 30px;
-  }
-  
-  .print-table th, .print-table td {
-    padding: 10px;
-    text-align: left;
-  }
-  
-  .print-table th {
-    background-color: #f9f9f9 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    border: 1px solid #000;
-  }
-  .print-table td {
-    border-bottom: 1px dashed #ccc;
-  }
-  
-  .print-summary {
-    width: 300px;
-    float: right;
-    margin-bottom: 30px;
-  }
-  
-  .print-summary-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  
-  .print-total {
-    font-weight: bold;
-    font-size: 1.2em;
-    border-top: 1px solid #000;
-    padding-top: 8px;
-    margin-top: 8px;
-  }
-  
-  .print-footer {
-    clear: both;
-    text-align: center;
-    margin-top: 50px;
-    font-style: italic;
-  }
+  .no-print { display: none !important; }
+  @page { size: A4; margin: 0; }
+  .print-section { display: block; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #000; padding: 15mm; }
+  .print-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+  .print-header h1 { font-size: 24px; margin: 0 0 5px 0; text-transform: uppercase; }
+  .print-info { display: flex; justify-content: space-between; margin-bottom: 30px; line-height: 1.5; }
+  .print-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+  .print-table th, .print-table td { padding: 10px; text-align: left; }
+  .print-table th { background-color: #f9f9f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #000; }
+  .print-table td { border-bottom: 1px dashed #ccc; }
+  .print-summary { width: 300px; float: right; margin-bottom: 30px; }
+  .print-summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .print-total { font-weight: bold; font-size: 1.2em; border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; }
+  .print-footer { clear: both; text-align: center; margin-top: 50px; font-style: italic; }
 }
 </style>
 
 <style>
 @media print {
-  .el-aside, .el-header, .el-footer {
-    display: none !important;
-  }
-  .el-main {
-    margin-left: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    height: auto !important;
-  }
-  .el-container {
-    height: auto !important;
-    overflow: visible !important;
-  }
-  body, html, #app {
-    height: auto !important;
-    overflow: visible !important;
-    background: white !important;
-  }
+  .el-aside, .el-header, .el-footer { display: none !important; }
+  .el-main { margin-left: 0 !important; padding: 0 !important; overflow: visible !important; height: auto !important; }
+  .el-container { height: auto !important; overflow: visible !important; }
+  body, html, #app { height: auto !important; overflow: visible !important; background: white !important; }
 }
 </style>
