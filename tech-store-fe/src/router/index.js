@@ -13,7 +13,7 @@ import CustomerOrders from "../pages/customer/CustomerOrders.vue";
 import PaymentSuccess from "../pages/customer/PaymentSuccess.vue";
 import Spinwheel from "../pages/customer/Spinwheel.vue";
 import ProductDetail from "../pages/customer/ProductDetail.vue";
-
+import ForgotPassword from "../pages/customer/Forgotpassword.vue";
 // ===== System (Admin) =====
 import SystemLogin from "../pages/system/SystemLogin.vue";
 import SystemShell from "../pages/system/SystemShell.vue";
@@ -22,8 +22,6 @@ import UserManager from "../pages/system/UserManager.vue";
 import CustomerManager from "../pages/system/CustomerManager.vue";
 import CategoryManager from "../pages/system/CategoryManager.vue";
 import ProductManager from "../pages/system/ProductManager.vue";
-import ReturnListPending from "../pages/system/ReturnListPending.vue";
-import ReturnListAll from "../pages/system/ReturnListAll.vue";
 import OrderFilter from "../pages/system/OrderFilter.vue";
 import SystemOrderDetail from "../pages/system/OrderDetail.vue";
 import PricingManager from "../pages/system/PricingManager.vue";
@@ -37,18 +35,21 @@ import ProductDashboard from "../pages/system/ProductDashboard.vue";
 import Toployalcustomers from "../pages/system/Toployalcustomers.vue";
 import Loyaltysummaryadmin from "../pages/system/Loyaltysummaryadmin.vue";
 import ReportDashboard from "../pages/system/ReportDashboard.vue";
+import ReturnManager from "../pages/system/ReturnManager.vue";
 
 // ===== Audit =====
 import AuditLog from "../pages/audit/AuditLog.vue";
 import AuditReportDashboard from "../pages/audit/AuditReportDashboard.vue";
 import SecurityLog from "../pages/audit/SecurityLog.vue";
 import AuditDashboard from "../pages/audit/AuditDashboard.vue";
+import UserLoginLog from "../pages/audit/UserLoginLog.vue";
 
 // ===== Inventory =====
 import InventoryShell from "../pages/inventory/InventoryShell.vue";
 import InventoryOrderDetail from "../pages/inventory/InventoryOrderDetail.vue";
 import InventoryOrdersPaid from "../pages/inventory/InventoryOrdersPaid.vue";
 import InventoryOrdersProcessing from "../pages/inventory/InventoryOrdersProcessing.vue";
+import InventoryOrdersShipping from "../pages/inventory/InventoryOrdersShipping.vue";
 import Changepassword from "../pages/customer/Changepassword.vue";
 
 // ===== Sales (POS) =====
@@ -56,6 +57,7 @@ import SalesShell from "../pages/sales/SalesShell.vue";
 import SalesPOS from "../pages/sales/SalesPOS.vue";
 import SalesPickup from "../pages/sales/SalesPickup.vue";
 import SalesCustomerManager from "../pages/sales/SalesCustomerManager.vue";
+import SalesReturn from "../pages/sales/SalesReturn.vue";
 // import SalesOrderHistory from "../pages/sales/SalesOrderHistory.vue"; // TODO
 
 //===== 403 =====
@@ -123,6 +125,13 @@ const routes = [
     component: CartPage,
     meta: { portal: "customer", requiresAuth: true },
   },
+  {
+  path: "/forgot-password",
+  name: "forgot-password",
+  component: ForgotPassword,
+  meta: { portal: "customer", hideHeader: true },
+},
+  
   {
     path: "/my-orders",
     name: "my orders",
@@ -228,19 +237,6 @@ const routes = [
       },
 
       {
-        path: "returns/pending",
-        name: "system-returns-pending",
-        component: ReturnListPending,
-        meta: { title: "Returns (Pending)" },
-      },
-      {
-        path: "returns/all",
-        name: "system-returns-all",
-        component: ReturnListAll,
-        meta: { title: "All Returns" },
-      },
-
-      {
         path: "orders/filter",
         name: "order-filter",
         component: OrderFilter,
@@ -282,6 +278,13 @@ const routes = [
         meta: { title: "ADMIN - LOYALTY SUMMARY" },
       },
 
+      {
+        path: "return-manager",
+        name: "return-manager",
+        component: ReturnManager,
+        meta: { title: "Return Manager" },
+      },
+
       // ===== Audit =====
       {
         path: "audit-logs",
@@ -313,6 +316,14 @@ const routes = [
         component: AuditDashboard,
         meta: { title: "Audit-dashboard" },
       },
+
+      // ===== UserLogin log =====
+      {
+    path: "user-login-logs",
+    name: "system-user-login-logs",
+    component: UserLoginLog,
+    meta: { title: "User Login Logs" },
+    },
     ],
   },
 
@@ -333,6 +344,12 @@ const routes = [
         name: "Inventory Orders Processing",
         component: InventoryOrdersProcessing,
         meta: { title: "Inventory Orders Processing" },
+      },
+      {
+        path: "orders/shipping",
+        name: "Inventory Orders Shipping",
+        component: InventoryOrdersShipping,
+        meta: { title: "Inventory Orders Shipping" },
       },
       {
         path: "orders/:orderId",
@@ -383,12 +400,12 @@ const routes = [
         component: SalesCustomerManager,
         meta: { title: "Khách hàng tại quầy" },
       },
-      // {
-      //   path: "history",
-      //   name: "sales-history",
-      //   component: SalesOrderHistory,
-      //   meta: { title: "Lịch sử đơn hàng" },
-      // },
+        {
+        path: "returns",
+        name: "sales-returns",
+        component: SalesReturn,
+        meta: { title: "Trả hàng tại quầy" },
+      },
     ],
   },
 ];

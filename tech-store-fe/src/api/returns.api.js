@@ -41,4 +41,9 @@ export const returnsApi = {
   getByStatus(status) {
     return http.get(`/api/returns/status/${status}`);
   },
+
+    // ✅ Admin ra quyết định — payload: { refundType: 'FULL'|'PARTIAL'|'REJECT', note: '...' }
+  decide(returnId, payload) {
+    return http.post(`/api/returns/${returnId}/decide`, payload);
+  },
 };

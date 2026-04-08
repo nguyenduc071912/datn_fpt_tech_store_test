@@ -191,26 +191,34 @@ public class SpinWheelService {
     // ================================================================
 
     @Transactional
-    public void useBonus(Integer customerId, Long orderId) {
-        // Lock customer trước để tránh race condition
+    public void useBonus(Integer customerId, Long orderId, Long spinHistoryId) {
         Customer customer = customerRepository.findByIdWithLock(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-        // Double-check: nếu bonus đã bị dùng bởi request khác thì skip
         if (customer.getSpinDiscountBonus() == null ||
                 customer.getSpinDiscountBonus().compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
 
-        Optional<SpinWheelHistory> activeBonus =
-                spinWheelHistoryRepository.findMostRecentActiveBonus(customerId, LocalDateTime.now());
+        Optional<SpinWheelHistory> activeBonus;
+
+        if (spinHistoryId != null) {
+            // Khách tự chọn bonus cụ thể
+            activeBonus = spinWheelHistoryRepository.findById(spinHistoryId)
+                    .filter(s -> !s.getIsUsed()
+                            && s.getExpiresAt().isAfter(LocalDateTime.now())
+                            && s.getCustomer().getId().equals(customerId));
+        } else {
+            // Chỉ có 1 bonus → hệ thống tự lấy
+            activeBonus = spinWheelHistoryRepository
+                    .findMostRecentActiveBonus(customerId, LocalDateTime.now());
+        }
 
         if (activeBonus.isPresent()) {
             SpinWheelHistory bonus = activeBonus.get();
             bonus.setIsUsed(true);
             bonus.setUsedOrderId(orderId);
             spinWheelHistoryRepository.save(bonus);
-
             customerRepository.updateSpinBonus(customerId, BigDecimal.ZERO);
         }
     }

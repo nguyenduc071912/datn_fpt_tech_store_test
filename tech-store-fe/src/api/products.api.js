@@ -6,16 +6,13 @@ export const productsApi = {
   },
 
   create(formData) {
-    return http.post("/api/products", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    return http.post("/api/products", formData);
   },
 
   update(id, formData) {
-    return http.put(`/api/products/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    return http.put(`/api/products/${id}`, formData);
   },
+
 
   remove(id) {
     return http.delete(`/api/products/${id}`);
@@ -53,6 +50,18 @@ export const productsApi = {
     });
   },
 
+  importVariantSerials(variantId, file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    return http.post(`/api/products/variants/${variantId}/serials/import`, fd, {
+      transformRequest: [(data, headers) => {
+        if (headers.delete) headers.delete('Content-Type');
+        else delete headers['Content-Type'];
+        return data;
+      }]
+    });
+  },
+
   generateSerials(variantId, quantity = 1) {
     return http.post(
       `/api/products/variants/${variantId}/serials/generate`,
@@ -83,20 +92,18 @@ export const productsApi = {
 
   exportReport() {
     return http.get("/api/reports/export/excel", {
-      responseType: 'blob' 
+      responseType: 'blob'
     });
   },
   importFromExcel(file) {
-  const fd = new FormData()
-  fd.append('file', file)
-  return http.post('/api/products/import', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
-},
+    const fd = new FormData();
+    fd.append('file', file);
+    return http.post('/api/products/import', fd);
+  },
 
-downloadTemplate() {
-  return http.get('/api/products/import/template', {
-    responseType: 'blob'
-  })
-},
+  downloadTemplate() {
+    return http.get('/api/products/import/template', {
+      responseType: 'blob'
+    })
+  },
 };

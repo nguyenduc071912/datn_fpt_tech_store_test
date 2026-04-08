@@ -8,6 +8,9 @@ import com.retailmanagement.dto.request.CustomerRequest;
 import com.retailmanagement.dto.response.CustomerResponse;
 import com.retailmanagement.entity.*;
 import com.retailmanagement.repository.*;
+import com.retailmanagement.security.log.ActionType;
+import com.retailmanagement.security.log.SensitiveOperation;
+import com.retailmanagement.security.log.SeverityLevel;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
@@ -33,7 +36,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CustomerService {
     private static final Logger log = LoggerFactory.getLogger(CustomerService.class);
-
+private final EmailService emailService;
     private final CustomRes customRes;
     private final LoyaltyLedgerRepository loyaltyLedgerRepository;
     private final UserRepository userRepository;
@@ -43,6 +46,12 @@ public class CustomerService {
     @Lazy
     private final CustomerEventNotificationService eventNotificationService; // ✅ THÊM
 
+    @SensitiveOperation(
+            action = ActionType.UPDATE_OPERATION,
+            entity = "CUSTOMER",
+            description = "Save loyalty ledger",
+            severity = SeverityLevel.LOW
+    )
     @Audit(
             module = AuditModule.CUSTOMER,
             action = AuditAction.UPDATE,
@@ -99,9 +108,16 @@ public class CustomerService {
         };
     }
 
+    @SensitiveOperation(
+            action = ActionType.CREATE_OPERATION,
+            entity = "CUSTOMER",
+            description = "Create new customer",
+            severity = SeverityLevel.MEDIUM
+    )
     @Audit(module = AuditModule.CUSTOMER, action = AuditAction.CREATE, targetType = TargetType.CUSTOMER)
     @Transactional
     public CustomerResponse create(CustomerRequest customerRequest) {
+
         // Validate trùng email/phone
         if (customRes.findByEmail(customerRequest.getEmail()).isPresent()) {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
@@ -109,6 +125,7 @@ public class CustomerService {
         if (customRes.findByPhone(customerRequest.getPhone()).isPresent()) {
             throw new RuntimeException("Số điện thoại đã tồn tại trong hệ thống");
         }
+
 
         // ✅ TỰ ĐỘNG TẠO USER với username = email, password = SĐT
         User user = null;
@@ -149,6 +166,14 @@ public class CustomerService {
 
         Customer saved = customRes.save(customer);
         eventNotificationService.onCustomerRegistered(saved);
+        if (saved.getEmail() != null && !saved.getEmail().isBlank()) {
+            emailService.sendWelcomePasswordEmail(
+                    saved.getEmail(),
+                    saved.getName(),
+                    saved.getEmail(),
+                    customerRequest.getPhone()
+            );
+        }
         return mapToResponse(saved);
     }
 
@@ -314,6 +339,12 @@ public class CustomerService {
                 .map(this::mapToResponse).collect(Collectors.toList());
     }
 
+    @SensitiveOperation(
+            action = ActionType.DELETE_OPERATION,
+            entity = "CUSTOMER",
+            description = "Delete Customer",
+            severity = SeverityLevel.MEDIUM
+    )
     @Audit(
             module = AuditModule.CUSTOMER,
             action = AuditAction.DELETE,
@@ -325,6 +356,12 @@ public class CustomerService {
         customRes.save(customer);
     }
 
+    @SensitiveOperation(
+            action = ActionType.UPDATE_OPERATION,
+            entity = "CUSTOMER",
+            description = "Update Customer",
+            severity = SeverityLevel.LOW
+    )
     @Audit(
             module = AuditModule.CUSTOMER,
             action = AuditAction.UPDATE,
@@ -372,12 +409,11 @@ public class CustomerService {
     }
 
     public CustomerResponse findByEmail(String email) {
+        // 1. Tìm theo email trong bảng customers
         Optional<Customer> customerOpt = customRes.findByEmail(email.trim());
         if (customerOpt.isPresent()) return mapToResponse(customerOpt.get());
 
-        customerOpt = customRes.findByName(email.trim());
-        if (customerOpt.isPresent()) return mapToResponse(customerOpt.get());
-
+        // 2. Tìm qua bảng users (username = email)
         Optional<User> userOpt = userRepository.findByUsername(email.trim());
         if (userOpt.isPresent()) {
             customerOpt = customRes.findByUserId(userOpt.get().getId());

@@ -52,7 +52,6 @@ public class CreateOrderResponse {
     private BigDecimal promoDiscount;
 
     @Data
-    @AllArgsConstructor
     public static class Item {
         private Long id;
         private Integer productId;
@@ -68,5 +67,37 @@ public class CreateOrderResponse {
         private BigDecimal discount;
         private BigDecimal lineTotal;
         private BigDecimal shippingFee;
+
+        private List<String> serialNumbers; // ← thêm mới
+
+        // Constructor cũ (giữ nguyên để không break createOrder)
+        public Item(Long id, Integer productId, Integer variantId,
+                    String productName, String variantName, String sku,
+                    Integer quantity, BigDecimal price, BigDecimal discount,
+                    BigDecimal shippingFee, BigDecimal lineTotal) {
+            this.id = id;
+            this.productId = productId;
+            this.variantId = variantId;
+            this.productName = productName;
+            this.variantName = variantName;
+            this.sku = sku;
+            this.quantity = quantity;
+            this.price = price;
+            this.discount = discount;
+            this.shippingFee = shippingFee;
+            this.lineTotal = lineTotal;
+            this.serialNumbers = List.of();
+        }
+
+        // Constructor mới có serial
+        public Item(Long id, Integer productId, Integer variantId,
+                    String productName, String variantName, String sku,
+                    Integer quantity, BigDecimal price, BigDecimal discount,
+                    BigDecimal shippingFee, BigDecimal lineTotal,
+                    List<String> serialNumbers) {
+            this(id, productId, variantId, productName, variantName, sku,
+                    quantity, price, discount, shippingFee, lineTotal);
+            this.serialNumbers = serialNumbers != null ? serialNumbers : List.of();
+        }
     }
 }

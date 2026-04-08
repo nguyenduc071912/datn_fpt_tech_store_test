@@ -1,131 +1,148 @@
 <template>
-  <div class="page">
+  <el-space direction="vertical" alignment="stretch" :size="20" style="width: 100%">
     <!-- PAGE HEADER -->
-    <div class="page-header">
-      <div class="page-header-left">
-        <div class="page-kicker">
-          <span class="kicker-dot"></span>
-          Inventory
-        </div>
-        <h1 class="page-title">Đơn đang xử lý</h1>
-        <p class="page-desc">Các đơn hàng đang được kho chuẩn bị đóng gói</p>
-      </div>
-      <div class="page-header-right">
-        <el-button class="btn-outline" @click="loadOrders">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-right:6px">
-            <path d="M12 7A5 5 0 1 1 7 2a5 5 0 0 1 3.54 1.46M12 2v3.5H8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+    <el-row type="flex" justify="space-between" align="bottom">
+      <el-col :span="16">
+        <el-space direction="vertical" alignment="start" :size="4">
+          <el-text type="warning" size="small" tag="b">KHO HÀNG</el-text>
+          <h2>Đơn đang xử lý</h2>
+          <el-text type="info">Các đơn hàng đang được kho chuẩn bị đóng gói</el-text>
+        </el-space>
+      </el-col>
+      <el-col :span="8" style="text-align: right;">
+        <el-button plain @click="loadOrders">
           Làm mới
         </el-button>
-      </div>
-    </div>
+      </el-col>
+    </el-row>
+
+    <!-- URGENT ALERT -->
+    <el-alert
+      v-if="urgentOrders.length > 0"
+      title="CẢNH BÁO TIẾN ĐỘ"
+      type="error"
+      :description="`Có ${urgentOrders.length} đơn hàng đang xử lý quá lâu (hơn 2 giờ). Vui lòng kiểm tra và bàn giao vận chuyển sớm!`"
+      show-icon
+      :closable="false"
+      class="priority-alert"
+    />
 
     <!-- STATS ROW -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon stat-icon-amber">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="9" r="7" stroke="#d97706" stroke-width="1.5"/>
-            <path d="M9 5v4l3 3" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="stat-body">
-          <span class="stat-value">{{ orders.length }}</span>
-          <span class="stat-label">Đang xử lý</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon stat-icon-blue">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M2 9h14M9 2v14" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="stat-body">
-          <span class="stat-value">{{ formatVND(totalAmount) }}</span>
-          <span class="stat-label">Tổng giá trị</span>
-        </div>
-      </div>
-    </div>
+    <el-row :gutter="16">
+      <el-col :span="6">
+        <el-card shadow="never">
+          <el-space>
+            <el-avatar :size="40" class="stat-icon-amber" shape="square">
+              <el-icon :size="20"><Timer /></el-icon>
+            </el-avatar>
+            <el-space direction="vertical" alignment="start" :size="0">
+              <el-text tag="b" size="large">{{ orders.length }}</el-text>
+              <el-text type="info" size="small">Đang xử lý</el-text>
+            </el-space>
+          </el-space>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="never">
+          <el-space>
+            <el-avatar :size="40" class="stat-icon-blue" shape="square">
+              <el-icon :size="20"><Money /></el-icon>
+            </el-avatar>
+            <el-space direction="vertical" alignment="start" :size="0">
+              <el-text tag="b" size="large">{{ formatVND(totalAmount) }}</el-text>
+              <el-text type="info" size="small">Tổng giá trị</el-text>
+            </el-space>
+          </el-space>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- TABLE CARD -->
     <el-card shadow="never" class="table-card">
-      <div class="table-toolbar">
-        <el-input
-          v-model="search"
-          placeholder="Tìm mã đơn hàng..."
-          clearable
-          class="search-input"
-        >
-          <template #prefix>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="6" cy="6" r="4" stroke="#9ca3af" stroke-width="1.5"/>
-              <path d="M10 10l2 2" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </template>
-        </el-input>
-        <el-tag type="warning" class="count-tag" effect="light">
-          {{ filteredOrders.length }} đơn hàng
-        </el-tag>
-      </div>
+      <template #header>
+        <el-row type="flex" justify="space-between" align="middle">
+          <el-space>
+            <el-input
+              v-model="search"
+              placeholder="Tìm mã, tên, SĐT..."
+              clearable
+              class="search-input"
+            />
+            <el-button 
+              v-if="selectedOrders.length > 0"
+              type="primary" 
+              @click="bulkMarkShipping"
+            >
+              Giao vận {{ selectedOrders.length }} đơn đã chọn
+            </el-button>
+          </el-space>
+          <el-tag type="warning" effect="light">
+            {{ filteredOrders.length }} đơn hàng
+          </el-tag>
+        </el-row>
+      </template>
 
-      <el-table
-        :data="filteredOrders"
-        style="width: 100%"
-        class="orders-table"
-        :row-class-name="() => 'table-row'"
+      <el-table 
+        :data="filteredOrders" 
+        style="width: 100%" 
         empty-text="Không có đơn hàng nào"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="45" />
+
         <!-- Order number -->
-        <el-table-column label="Mã đơn hàng" min-width="160">
+        <el-table-column label="Mã đơn hàng" min-width="140">
           <template #default="{ row }">
-            <div class="order-num-cell">
-              <span class="order-hash">#</span>
-              <span class="order-num">{{ row.orderNumber }}</span>
-            </div>
+            <el-space>
+              <el-text tag="b">#{{ row.orderNumber }}</el-text>
+              <el-tag v-if="isUrgent(row.createdAt)" type="danger" size="small" effect="dark" class="pulse-tag">
+                RẤT GẤP
+              </el-tag>
+            </el-space>
           </template>
         </el-table-column>
 
         <!-- Customer -->
         <el-table-column prop="customerName" label="Khách hàng" min-width="160">
           <template #default="{ row }">
-            <div class="customer-cell">
-              <div class="customer-avatar">{{ initials(row.customerName) }}</div>
-              <span>{{ row.customerName }}</span>
-            </div>
+            <el-space>
+              <el-avatar :size="28">{{ initials(row.customerName) }}</el-avatar>
+              <el-text>{{ row.customerName }}</el-text>
+            </el-space>
           </template>
         </el-table-column>
 
         <!-- Amount -->
         <el-table-column label="Giá trị" min-width="130" align="right">
           <template #default="{ row }">
-            <span class="amount-cell">{{ formatVND(row.totalAmount) }}</span>
+            <el-text tag="b">{{ formatVND(row.totalAmount) }}</el-text>
           </template>
         </el-table-column>
 
         <!-- Status -->
         <el-table-column label="Trạng thái" width="140" align="center">
           <template #default>
-            <span class="status-badge status-processing">
-              <span class="status-dot"></span>
+            <el-tag type="warning" effect="light" round>
               Đang xử lý
-            </span>
+            </el-tag>
           </template>
         </el-table-column>
 
         <!-- Date -->
         <el-table-column prop="createdAt" label="Ngày tạo" width="140">
           <template #default="{ row }">
-            <span class="date-cell">{{ formatDate(row.createdAt) }}</span>
+            <el-text type="info">{{ formatDate(row.createdAt) }}</el-text>
           </template>
         </el-table-column>
 
         <!-- Actions -->
         <el-table-column label="Thao tác" width="200" align="center">
           <template #default="{ row }">
-            <div class="action-cell">
+            <el-space>
               <el-button
                 size="small"
-                class="btn-shipping"
+                type="primary"
+                plain
                 @click="markShipping(row.orderId)"
                 :loading="loadingId === row.orderId"
               >
@@ -133,298 +150,139 @@
               </el-button>
               <el-button
                 size="small"
-                class="btn-ghost"
+                plain
                 @click="goDetail(row.orderId)"
               >
                 Chi tiết
               </el-button>
-            </div>
+            </el-space>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
-  </div>
+  </el-space>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { ordersApi } from "../../api/orders.api";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { Money, Timer } from "@element-plus/icons-vue";
+import { formatVND, formatDate, initials, parseSafeDate } from "../../utils/format";
 
 const router = useRouter();
 const orders = ref([]);
 const search = ref("");
 const loadingId = ref(null);
+const selectedOrders = ref([]);
 
-const filteredOrders = computed(() =>
-  search.value
-    ? orders.value.filter(o =>
-        o.orderNumber?.toLowerCase().includes(search.value.toLowerCase())
-      )
-    : orders.value
-);
+const isUrgent = (createdAt) => {
+  if (!createdAt) return false;
+  const date = parseSafeDate(createdAt);
+  if (!date) return false;
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  return date < twoHoursAgo;
+};
+
+const urgentOrders = computed(() => {
+  return orders.value.filter(o => isUrgent(o.createdAt));
+});
+
+const filteredOrders = computed(() => {
+  const q = search.value.toLowerCase();
+  const res = orders.value.filter(o => 
+    o.orderNumber?.toLowerCase().includes(q) ||
+    o.customerName?.toLowerCase().includes(q) ||
+    o.customerPhone?.includes(q)
+  );
+  // Sort: Oldest first (FIFO)
+  return res.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+});
 
 const totalAmount = computed(() =>
   orders.value.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
 );
 
-const loadOrders = async () => {
-  const res = await ordersApi.listProcessing();
-  orders.value = res.data;
+const handleSelectionChange = (val) => {
+  selectedOrders.value = val;
+};
+
+const loadOrders = async (silent = false) => {
+  try {
+    const res = await ordersApi.listProcessing();
+    orders.value = res.data;
+  } catch (error) {
+    if (!silent) ElMessage.error("Không thể tải danh sách đơn hàng");
+  }
 };
 
 const markShipping = async (orderId) => {
-  loadingId.value = orderId;
   try {
+    await ElMessageBox.confirm('Xác nhận chuyển đơn hàng này cho đơn vị vận chuyển?', 'Kiểm tra', { type: 'primary' });
+    loadingId.value = orderId;
     await ordersApi.markAsShipping(orderId);
-    await loadOrders();
+    ElMessage.success("Đã hoàn tất chuẩn bị và chuyển giao vận");
+    await loadOrders(true);
+  } catch (error) {
+    if (error !== 'cancel') {
+         ElMessage.error(error.response?.data?.message || "Có lỗi xảy ra");
+    }
   } finally {
     loadingId.value = null;
   }
 };
 
+const bulkMarkShipping = async () => {
+  if (selectedOrders.value.length === 0) return;
+  try {
+    await ElMessageBox.confirm(
+      `Xác nhận bàn giao ${selectedOrders.value.length} đơn hàng cho đơn vị vận chuyển?`,
+      'Giao vận hàng loạt',
+      { type: 'primary' }
+    );
+    await Promise.all(selectedOrders.value.map(o => ordersApi.markAsShipping(o.orderId)));
+    ElMessage.success(`Đã giao vận ${selectedOrders.value.length} đơn hàng`);
+    await loadOrders();
+  } catch (error) {
+    if (error !== 'cancel') ElMessage.error("Có lỗi xảy ra khi xử lý hàng loạt");
+  }
+};
+
 const goDetail = (orderId) => router.push(`/inventory/orders/${orderId}`);
 
-const formatVND = (v) =>
-  v ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v) : "—";
+let timer;
+onMounted(() => {
+  loadOrders();
+  timer = setInterval(() => loadOrders(true), 30000); // 30s
+});
 
-const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString("vi-VN") : "—";
-
-const initials = (name) =>
-  name ? name.split(" ").slice(-2).map(n => n[0]).join("").toUpperCase() : "?";
-
-onMounted(loadOrders);
+onUnmounted(() => {
+  if (timer) clearInterval(timer);
+});
 </script>
 
 <style scoped>
-.page { display: flex; flex-direction: column; gap: 20px; }
-
-.page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.page-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #d97706;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.kicker-dot {
-  width: 6px; height: 6px;
-  background: #d97706;
-  border-radius: 50%;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 4px;
-  letter-spacing: -0.5px;
-}
-
-.page-desc {
-  font-size: 13.5px;
-  color: #64748b;
+h2 {
   margin: 0;
 }
-
-.stats-row { display: flex; gap: 16px; flex-wrap: wrap; }
-
-.stat-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 200px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+.search-input {
+  width: 240px;
 }
-
-.stat-icon {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.table-card :deep(.el-card__body) {
+  padding: 0;
 }
-
-.stat-icon-amber { background: #fef3c7; }
-.stat-icon-blue  { background: #dbeafe; }
-
-.stat-body { display: flex; flex-direction: column; gap: 2px; }
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.1;
+.priority-alert {
+  border: 1px solid var(--el-color-error-light-3);
+  box-shadow: 0 2px 12px 0 rgba(245, 108, 108, 0.1);
+  margin-bottom: 5px;
 }
-
-.stat-label { font-size: 12px; color: #64748b; font-weight: 500; }
-
-.table-card {
-  border-radius: 12px !important;
-  border: 1px solid #e2e8f0 !important;
+.pulse-tag {
+  animation: pulse-red 2s infinite;
 }
-
-.table-card :deep(.el-card__body) { padding: 0; }
-
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.search-input { width: 240px; }
-
-.count-tag {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.orders-table :deep(.el-table__header) th {
-  background: #f8fafc !important;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.orders-table :deep(.table-row td) {
-  border-bottom: 1px solid #f1f5f9;
-  padding: 14px 12px;
-}
-
-.orders-table :deep(.table-row:hover td) {
-  background: #fffbeb !important;
-}
-
-.order-num-cell {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.order-hash { color: #94a3b8; font-size: 13px; }
-.order-num  { font-size: 14px; }
-
-.customer-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13.5px;
-  color: #374151;
-}
-
-.customer-avatar {
-  width: 28px; height: 28px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #92400e;
-  font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.amount-cell {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #0f172a;
-  font-variant-numeric: tabular-nums;
-}
-
-.date-cell { font-size: 12.5px; color: #64748b; }
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-}
-
-.status-processing {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
-
-.status-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: pulse-status 2s ease-in-out infinite;
-}
-
-@keyframes pulse-status {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.action-cell {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-}
-
-.btn-shipping {
-  background: #2563eb !important;
-  border-color: #2563eb !important;
-  color: #fff !important;
-  font-weight: 600 !important;
-  font-size: 12px !important;
-  border-radius: 6px !important;
-  padding: 0 12px !important;
-}
-
-.btn-shipping:hover {
-  background: #1d4ed8 !important;
-  border-color: #1d4ed8 !important;
-}
-
-.btn-ghost {
-  background: #f1f5f9 !important;
-  border-color: #e2e8f0 !important;
-  color: #475569 !important;
-  font-weight: 500 !important;
-  font-size: 12px !important;
-  border-radius: 6px !important;
-}
-
-.btn-ghost:hover { background: #e2e8f0 !important; }
-
-.btn-outline {
-  border-color: #e2e8f0 !important;
-  color: #374151 !important;
-  font-size: 13px !important;
-  border-radius: 8px !important;
+@keyframes pulse-red {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 108, 108, 0.7); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(245, 108, 108, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 108, 108, 0); }
 }
 </style>

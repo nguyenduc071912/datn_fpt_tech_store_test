@@ -34,9 +34,13 @@ public class OrderController {
             @RequestBody CreateOrderRequest request,
             @AuthenticationPrincipal CustomUserDetails user) {
 
-        CreateOrderResponse response =
-                orderService.createOrder(request, user.getUserId());
+        System.out.println("=== CREATE ORDER DEBUG ===");
+        System.out.println("user: " + user);
+        System.out.println("userId: " + (user != null ? user.getUserId() : "NULL"));
+        System.out.println("customerId from request: " + request.getCustomerId());
+        System.out.println("==========================");
 
+        CreateOrderResponse response = orderService.createOrder(request, user.getUserId());
         return ResponseEntity.ok(response);
     }
 
@@ -78,10 +82,8 @@ public class OrderController {
     public ResponseEntity<List<OrderListResponse>> getMyOrders(
             @AuthenticationPrincipal CustomUserDetails user) {
         return ResponseEntity.ok(
-                orderQueryService.getOrdersByCustomer(user.getCustomerId())
-        );
+                orderQueryService.getOrdersByCustomer(user.getCustomerId()));
     }
-
 
     // =========================================================
     // ORDER DETAIL
@@ -92,8 +94,7 @@ public class OrderController {
             @AuthenticationPrincipal CustomUserDetails user) {
 
         return ResponseEntity.ok(
-                orderService.getOrderDetail(orderId, user)
-        );
+                orderService.getOrderDetail(orderId, user));
     }
 
     // =========================================================
@@ -147,8 +148,7 @@ public class OrderController {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "Đơn hàng đã được hủy thành công",
-                "orderId", orderId
-        ));
+                "orderId", orderId));
     }
 
     // =========================================================
@@ -163,11 +163,9 @@ public class OrderController {
     @GetMapping("/by-date")
     public ResponseEntity<List<OrderListResponse>> getOrdersByDate(
             @RequestParam Instant from,
-            @RequestParam Instant to
-    ) {
+            @RequestParam Instant to) {
         return ResponseEntity.ok(
-                orderQueryService.getOrdersByDate(from, to)
-        );
+                orderQueryService.getOrdersByDate(from, to));
     }
 
     @GetMapping("/filter")
@@ -176,36 +174,30 @@ public class OrderController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) String channel,
-            @RequestParam(required = false) String status
-    ) {
+            @RequestParam(required = false) String status) {
         return ResponseEntity.ok(
-                orderQueryService.filterOrders(customerId, from, to, channel, status)
-        );
+                orderQueryService.filterOrders(customerId, from, to, channel, status));
     }
 
     @GetMapping("/revenue-by-customer")
     public ResponseEntity<List<RevenueByCustomerResponse>> revenueByCustomer() {
         return ResponseEntity.ok(
-                orderQueryService.getRevenueByCustomer()
-        );
+                orderQueryService.getRevenueByCustomer());
     }
 
     // =========================================================
-// LIST ORDERS BY STAFF
-// =========================================================
+    // LIST ORDERS BY STAFF
+    // =========================================================
     @GetMapping("/staff/{staffId}")
     public ResponseEntity<List<OrderListResponse>> getOrdersByStaff(
-            @PathVariable Integer staffId
-    ) {
+            @PathVariable Integer staffId) {
         return ResponseEntity.ok(
-                orderQueryService.getOrdersByStaff(staffId)
-        );
+                orderQueryService.getOrdersByStaff(staffId));
     }
 
     @GetMapping("/{orderId}/pdf")
     public ResponseEntity<byte[]> downloadInvoice(
-            @PathVariable Long orderId
-    ) {
+            @PathVariable Long orderId) {
 
         byte[] pdf = orderQueryService.generateOrderPdf(orderId);
 
@@ -216,5 +208,38 @@ public class OrderController {
                 .body(pdf);
     }
 
+    @GetMapping("/number/{orderNumber}")
+    public ResponseEntity<OrderDetailResponse> getOrderDetailByNumber(
+            @PathVariable String orderNumber,
+            @AuthenticationPrincipal CustomUserDetails user) {
 
+        return ResponseEntity.ok(
+                orderService.getOrderDetailByNumber(orderNumber, user));
+    }
+
+    @GetMapping("/by-serial/{serialNumber:.+}")
+    public ResponseEntity<OrderDetailResponse> getOrderBySerial(
+            @PathVariable String serialNumber,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        return ResponseEntity.ok(
+                orderService.getOrderBySerial(serialNumber, user));
+    }
+
+    @PostMapping("/{orderId}/items/{itemId}/serials/assign")
+    public ResponseEntity<?> assignSerial(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId,
+            @RequestBody java.util.Map<String, String> body) {
+        orderService.assignSerialToOrderItem(orderId, itemId, body.get("serialNumber"));
+        return ResponseEntity.ok(java.util.Map.of("message", "Đã gán serial thành công"));
+    }
+
+    @DeleteMapping("/{orderId}/items/{itemId}/serials/remove")
+    public ResponseEntity<?> removeSerial(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId,
+            @RequestParam String serialNumber) {
+        orderService.removeSerialFromOrderItem(orderId, itemId, serialNumber);
+        return ResponseEntity.ok(java.util.Map.of("message", "Đã xóa serial"));
+    }
 }

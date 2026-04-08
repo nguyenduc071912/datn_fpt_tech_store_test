@@ -35,34 +35,36 @@ import java.util.List;
 @Transactional
 public class OrderService {
     private final ProductSerialRepository productSerialRepository;
+
     @lombok.Data
     private static class DiscountCalculation {
-        private BigDecimal vipDiscountRate      = BigDecimal.ZERO;
-        private BigDecimal vipDiscount          = BigDecimal.ZERO;
-        private BigDecimal spinDiscountRate     = BigDecimal.ZERO;
-        private BigDecimal spinDiscount         = BigDecimal.ZERO;
-        private BigDecimal promoDiscount        = BigDecimal.ZERO;
-        private String     promoCode            = null;
-        private Integer    promotionId          = null;
+        private BigDecimal vipDiscountRate = BigDecimal.ZERO;
+        private BigDecimal vipDiscount = BigDecimal.ZERO;
+        private BigDecimal spinDiscountRate = BigDecimal.ZERO;
+        private BigDecimal spinDiscount = BigDecimal.ZERO;
+        private BigDecimal promoDiscount = BigDecimal.ZERO;
+        private String promoCode = null;
+        private Integer promotionId = null;
 
-        private BigDecimal totalDiscount        = BigDecimal.ZERO;
-        private boolean    hasSpinBonus         = false;
-        private String     discountType         = "NONE";
+        private BigDecimal totalDiscount = BigDecimal.ZERO;
+        private boolean hasSpinBonus = false;
+        private String discountType = "NONE";
     }
 
-    private final OrderRepository            orderRepository;
-    private final OrderItemRepository        orderItemRepository;
-    private final ProductVariantRepository   variantRepository;
+    private final OrderItemSerialRepository orderItemSerialRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final ProductVariantRepository variantRepository;
     private final StockTransactionRepository stockTransactionRepository;
-    private final CustomRes                  customerRepository;
-    private final UserRepository             userRepository;
-    private final CustomerService            customerService;
-    private final SpinWheelService           spinWheelService;
-    private final EmailService               emailService;
-    private final OrderEmailService          orderEmailService;
+    private final CustomRes customerRepository;
+    private final UserRepository userRepository;
+    private final CustomerService customerService;
+    private final SpinWheelService spinWheelService;
+    private final EmailService emailService;
+    private final OrderEmailService orderEmailService;
     private final LoyaltyResetService loyaltyResetService;
-    private final PromotionRepository        promotionRepository;
-    private final PromotionService           promotionService;
+    private final PromotionRepository promotionRepository;
+    private final PromotionService promotionService;
 
     private String generateOrderNumber() {
         LocalDate today = LocalDate.now();
@@ -81,22 +83,22 @@ public class OrderService {
         System.out.println("   vipTier = " + customer.getVipTier());
         System.out.println("   subtotal = " + subtotal);
 
-        BigDecimal vipDiscount  = BigDecimal.ZERO;
-        BigDecimal vipRate      = BigDecimal.ZERO;
-        String     discountType = "NONE";
+        BigDecimal vipDiscount = BigDecimal.ZERO;
+        BigDecimal vipRate = BigDecimal.ZERO;
+        String discountType = "NONE";
 
         VipTier tier = customer.getVipTier();
         if (tier != null) {
             BigDecimal minOrder = tier.getMinOrderToApply();
             if (subtotal.compareTo(minOrder) >= 0) {
                 if (tier.isPercentageDiscount()) {
-                    vipRate     = BigDecimal.valueOf(tier.getDiscountRate() * 100);
+                    vipRate = BigDecimal.valueOf(tier.getDiscountRate() * 100);
                     vipDiscount = subtotal
                             .multiply(BigDecimal.valueOf(tier.getDiscountRate()))
                             .setScale(0, RoundingMode.HALF_UP);
                     discountType = "PERCENTAGE";
                 } else {
-                    vipDiscount  = tier.getDiscountAmount();
+                    vipDiscount = tier.getDiscountAmount();
                     discountType = "FIXED";
                 }
             }
@@ -108,7 +110,7 @@ public class OrderService {
 
         if (customer.getSpinDiscountBonus() != null
                 && customer.getSpinDiscountBonus().compareTo(BigDecimal.ZERO) > 0) {
-            spinRate     = customer.getSpinDiscountBonus();
+            spinRate = customer.getSpinDiscountBonus();
             spinDiscount = subtotal
                     .multiply(spinRate.divide(BigDecimal.valueOf(100)))
                     .setScale(0, RoundingMode.HALF_UP);
@@ -130,9 +132,9 @@ public class OrderService {
             String promoCode,
             Customer customer,
             BigDecimal subtotal,
-            DiscountCalculation discountResult
-    ) {
-        if (promoCode == null || promoCode.isBlank()) return BigDecimal.ZERO;
+            DiscountCalculation discountResult) {
+        if (promoCode == null || promoCode.isBlank())
+            return BigDecimal.ZERO;
 
         String code = promoCode.trim().toUpperCase();
 
@@ -152,8 +154,7 @@ public class OrderService {
                     "Mã '%s' yêu cầu đơn hàng tối thiểu %s (đơn hiện tại: %s)",
                     code,
                     formatMoney(promotion.getMinOrderAmount()),
-                    formatMoney(subtotal)
-            ));
+                    formatMoney(subtotal)));
         }
 
         if (!promotionService.isUsableByLimit(promotion)) {
@@ -176,15 +177,15 @@ public class OrderService {
         if (app.vip_tiers != null && !app.vip_tiers.isEmpty() && customer != null) {
             String tierStr = customer.getVipTier() != null ? customer.getVipTier().name() : null;
             if (tierStr == null || !app.vip_tiers.contains(tierStr)) {
-                throw new RuntimeException("Mã '" + code + "' chỉ áp dụng cho hạng VIP: " + String.join(", ", app.vip_tiers));
+                throw new RuntimeException(
+                        "Mã '" + code + "' chỉ áp dụng cho hạng VIP: " + String.join(", ", app.vip_tiers));
             }
         }
 
         BigDecimal afterDiscount = promotionService.applyDiscount(
                 subtotal,
                 promotion.getDiscountType(),
-                promotion.getDiscountValue()
-        );
+                promotion.getDiscountValue());
         BigDecimal promoDiscount = subtotal.subtract(afterDiscount);
         if (promoDiscount.compareTo(subtotal) > 0) {
             promoDiscount = subtotal;
@@ -197,12 +198,7 @@ public class OrderService {
         return promoDiscount;
     }
 
-    @SensitiveOperation(
-            action = ActionType.CREATE_OPERATION,
-            entity = "ORDER",
-            description = "Create new order",
-            severity = SeverityLevel.MEDIUM
-    )
+    @SensitiveOperation(action = ActionType.CREATE_OPERATION, entity = "ORDER", description = "Create new order", severity = SeverityLevel.MEDIUM)
     @Audit(module = AuditModule.ORDER, action = AuditAction.CREATE, targetType = TargetType.ORDER)
     public CreateOrderResponse createOrder(CreateOrderRequest request, Integer userId) {
 
@@ -232,6 +228,7 @@ public class OrderService {
         order.setUpdatedAt(Instant.now());
 
         order = orderRepository.save(order);
+        System.out.println(">>> STEP 1: order saved, id=" + order.getId());
 
         BigDecimal shippingFee = request.getShippingFee() != null
                 ? request.getShippingFee()
@@ -246,8 +243,7 @@ public class OrderService {
             ProductVariant variant = variantRepository.findById(itemReq.getVariantId())
                     .orElseThrow(() -> new RuntimeException("Variant not found"));
             subtotal = subtotal.add(
-                    variant.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()))
-            );
+                    variant.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
         }
 
         DiscountCalculation discountCalc = calculateDiscount(customer, subtotal);
@@ -256,8 +252,7 @@ public class OrderService {
         if (promoCode != null && !promoCode.isBlank()) {
             BigDecimal promoDiscount = applyPromotionCode(promoCode, customer, subtotal, discountCalc);
             discountCalc.setTotalDiscount(
-                    discountCalc.getTotalDiscount().add(promoDiscount)
-            );
+                    discountCalc.getTotalDiscount().add(promoDiscount));
             order.setAppliedPromotionCode(discountCalc.getPromoCode());
         }
 
@@ -338,17 +333,30 @@ public class OrderService {
             item.setQuantity(itemReq.getQuantity());
             item.setUnitPrice(variant.getPrice());
             item.setDiscount(lineDiscount);
-            item.setShippingFee(lineShipping);  // cột mới
+            item.setShippingFee(lineShipping); // cột mới
             item.setLineTotal(lineTotal);
             item.setCreatedAt(Instant.now());
             orderItemRepository.save(item);
+            System.out.println(">>> STEP 2: item saved, id=" + item.getId());
 
             // OFFLINE: đánh dấu serial cụ thể nhân viên chọn → SOLD ngay
-            if ("OFFLINE".equals(request.getChannel()) && itemReq.getSerialId() != null) {
-                productSerialRepository.findById(itemReq.getSerialId()).ifPresent(serial -> {
+            // OFFLINE: đánh dấu serial cụ thể nhân viên chọn → SOLD ngay
+            if ("OFFLINE".equals(request.getChannel())) {
+                List<ProductSerial> inStockSerials = productSerialRepository
+                        .findByVariantIdAndStatus(variant.getId(), "IN_STOCK");
+                if (inStockSerials.size() < itemReq.getQuantity()) {
+                    throw new RuntimeException("Không đủ serial IN_STOCK cho: " + variant.getVariantName());
+                }
+                for (int i = 0; i < itemReq.getQuantity(); i++) {
+                    ProductSerial serial = inStockSerials.get(i);
                     serial.setStatus("SOLD");
                     productSerialRepository.save(serial);
-                });
+
+                    OrderItemSerial ois = new OrderItemSerial();
+                    ois.setOrderItem(item);
+                    ois.setProductSerial(serial);
+                    orderItemSerialRepository.save(ois);
+                }
             }
 
             variant.setReservedQty(variant.getReservedQty() + itemReq.getQuantity());
@@ -363,6 +371,12 @@ public class OrderService {
             st.setCreatedBy(user);
             st.setCreatedAt(Instant.now());
             stockTransactionRepository.save(st);
+            System.out.println(">>> STEP 3: stock transaction saved");
+            List<String> savedSerials = orderItemSerialRepository
+                    .findByOrderItem(item)
+                    .stream()
+                    .map(ois -> ois.getProductSerial().getSerialNumber())
+                    .toList();
 
             responseItems.add(new CreateOrderResponse.Item(
                     item.getId(),
@@ -374,16 +388,16 @@ public class OrderService {
                     item.getQuantity(),
                     item.getUnitPrice(),
                     item.getDiscount(),
-                    item.getShippingFee(),  // thêm vào response
-                    item.getLineTotal()
+                    item.getShippingFee(),
+                    item.getLineTotal(),
+                    savedSerials // ← thêm vào
             ));
         }
 
         order.setSubtotal(subtotal);
         order.setDiscountTotal(discountCalc.getTotalDiscount());
         order.setTotalAmount(
-                subtotal.subtract(discountCalc.getTotalDiscount()).add(order.getShippingFee())
-        );
+                subtotal.subtract(discountCalc.getTotalDiscount()).add(order.getShippingFee()));
         order.setSpinDiscountRate(discountCalc.getSpinDiscountRate());
         order.setSpinDiscount(discountCalc.getSpinDiscount());
 
@@ -410,20 +424,23 @@ public class OrderService {
 
         if (tier != null && request.getShippingFee() != null
                 && request.getShippingFee().compareTo(BigDecimal.ZERO) > 0) {
-            if (notes.length() > 0) notes.append(" | ");
+            if (notes.length() > 0)
+                notes.append(" | ");
             notes.append("Ship VIP: -50% (-")
                     .append(formatMoney(request.getShippingFee().subtract(order.getShippingFee())))
                     .append(")");
         }
 
         if (discountCalc.isHasSpinBonus()) {
-            if (notes.length() > 0) notes.append(" | ");
+            if (notes.length() > 0)
+                notes.append(" | ");
             notes.append("Spin: -").append(String.format("%.0f%%", discountCalc.getSpinDiscountRate()))
                     .append(" (-").append(formatMoney(discountCalc.getSpinDiscount())).append(")");
         }
 
         if (discountCalc.getPromoCode() != null) {
-            if (notes.length() > 0) notes.append(" | ");
+            if (notes.length() > 0)
+                notes.append(" | ");
             notes.append("Mã: ").append(discountCalc.getPromoCode())
                     .append(": -").append(formatMoney(discountCalc.getPromoDiscount()));
         }
@@ -431,18 +448,21 @@ public class OrderService {
         order.setNotes(notes.toString());
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
+        System.out.println(">>> STEP 4: order updated");
 
         if (discountCalc.isHasSpinBonus()) {
-            spinWheelService.useBonus(customer.getId(), order.getId());
+            System.out.println(">>> STEP 5: calling useBonus");
+            spinWheelService.useBonus(customer.getId(), order.getId(), request.getSpinHistoryId());
+            System.out.println(">>> STEP 5: useBonus done");
         }
 
+        System.out.println(">>> STEP 6: building response");
         if (discountCalc.getPromotionId() != null) {
             promotionService.recordRedemption(discountCalc.getPromotionId(), 1L);
             promotionService.recordCustomerUsage(
                     discountCalc.getPromotionId(),
                     customer.getId(),
-                    order.getId()
-            );
+                    order.getId());
         }
 
         CreateOrderResponse response = new CreateOrderResponse();
@@ -475,16 +495,12 @@ public class OrderService {
     }
 
     private String formatMoney(BigDecimal amount) {
-        if (amount == null) return "0";
+        if (amount == null)
+            return "0";
         return String.format(java.util.Locale.US, "%,d", amount.longValue());
     }
 
-    @SensitiveOperation(
-            action = ActionType.UPDATE_OPERATION,
-            entity = "ORDER",
-            description = "Update order info",
-            severity = SeverityLevel.MEDIUM
-    )
+    @SensitiveOperation(action = ActionType.UPDATE_OPERATION, entity = "ORDER", description = "Update order info", severity = SeverityLevel.MEDIUM)
     @Audit(module = AuditModule.ORDER, action = AuditAction.UPDATE, targetType = TargetType.ORDER)
     public void updateOrder(Long orderId, UpdateOrderRequest request) {
         Order order = orderRepository.findById(orderId)
@@ -528,19 +544,13 @@ public class OrderService {
                     order.getTotalAmount(),
                     "CANCEL_ORDER",
                     "orders",
-                    orderId
-            );
+                    orderId);
         }
 
         orderRepository.save(order);
     }
 
-    @SensitiveOperation(
-            action = ActionType.DELETE_OPERATION,
-            entity = "ORDER",
-            description = "Delete order",
-            severity = SeverityLevel.HIGH
-    )
+    @SensitiveOperation(action = ActionType.DELETE_OPERATION, entity = "ORDER", description = "Delete order", severity = SeverityLevel.HIGH)
     @Audit(module = AuditModule.ORDER, action = AuditAction.DELETE, targetType = TargetType.ORDER)
     public void deleteOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
@@ -549,6 +559,12 @@ public class OrderService {
             throw new RuntimeException("Chỉ được xóa đơn PENDING");
         orderItemRepository.deleteAll(order.getOrderItems());
         orderRepository.delete(order);
+    }
+
+    public OrderDetailResponse getOrderDetailByNumber(String orderNumber, CustomUserDetails user) {
+        Order order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+        return getOrderDetail(order.getId(), user);
     }
 
     public OrderDetailResponse getOrderDetail(Long orderId, CustomUserDetails user) {
@@ -562,26 +578,33 @@ public class OrderService {
             Long customerIdOfOrder = order.getCustomer().getId().longValue();
             if (!customerIdOfOrder.equals(Long.valueOf(user.getCustomerId()))) {
                 throw new org.springframework.security.access.AccessDeniedException(
-                        "You do not have permission to view this order"
-                );
+                        "You do not have permission to view this order");
             }
         }
 
         List<CreateOrderResponse.Item> items = order.getOrderItems().stream()
-                .map(i -> new CreateOrderResponse.Item(
-                        i.getId(),
-                        i.getProduct().getId(),
-                        i.getVariant().getId(),
-                        i.getProductName(),
-                        i.getVariantName(),
-                        i.getSku(),
-                        i.getQuantity(),
-                        i.getUnitPrice(),
-                        i.getDiscount(),
-                        i.getLineTotal(),
-                        i.getShippingFee()
-                )).toList();
+                .map(i -> {
+                    List<String> serials = orderItemSerialRepository
+                            .findByOrderItem(i)
+                            .stream()
+                            .map(ois -> ois.getProductSerial().getSerialNumber())
+                            .toList();
 
+                    return new CreateOrderResponse.Item(
+                            i.getId(),
+                            i.getProduct().getId(),
+                            i.getVariant().getId(),
+                            i.getProductName(),
+                            i.getVariantName(),
+                            i.getSku(),
+                            i.getQuantity(),
+                            i.getUnitPrice(),
+                            i.getDiscount(),
+                            i.getShippingFee(),
+                            i.getLineTotal(),
+                            serials // ← serial numbers
+                    );
+                }).toList();
         return new OrderDetailResponse(
                 order.getId(),
                 order.getOrderNumber(),
@@ -608,8 +631,7 @@ public class OrderService {
                 order.getPaidAt(),
                 items,
                 order.getAppliedPromotionCode(),
-                order.getAppliedPromotionJson()
-        );
+                order.getAppliedPromotionJson());
     }
 
     @Transactional
@@ -619,6 +641,19 @@ public class OrderService {
         if (!OrderStatuses.PAID.equals(order.getStatus())) {
             throw new IllegalStateException("Only PAID orders can be processed");
         }
+
+        // Với đơn ONLINE: bắt buộc phải gán đủ serial trước khi đóng gói
+        if (!"OFFLINE".equals(order.getChannel())) {
+            for (OrderItem item : order.getOrderItems()) {
+                long assigned = orderItemSerialRepository.findByOrderItem(item).size();
+                if (assigned < item.getQuantity()) {
+                    throw new RuntimeException(
+                            "Chưa đủ serial cho \"" + item.getProductName()
+                                    + "\" (" + assigned + "/" + item.getQuantity() + ")");
+                }
+            }
+        }
+
         order.setStatus(OrderStatuses.PROCESSING);
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
@@ -650,8 +685,7 @@ public class OrderService {
 
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant variant = variantRepository.findById(
-                    item.getVariant().getId()
-            ).orElseThrow();
+                    item.getVariant().getId()).orElseThrow();
 
             int newReserved = Math.max(0, variant.getReservedQty() - item.getQuantity());
             variant.setReservedQty(newReserved);
@@ -659,17 +693,7 @@ public class OrderService {
 
             // Đánh dấu serial SOLD — chỉ với đơn ONLINE
             // Đơn OFFLINE đã đánh dấu ngay khi tạo order
-            if (!"OFFLINE".equals(order.getChannel())) {
-                List<ProductSerial> inStockSerials = productSerialRepository
-                        .findByVariantIdAndStatus(variant.getId(), "IN_STOCK");
-                int soldCount = 0;
-                for (ProductSerial serial : inStockSerials) {
-                    if (soldCount >= item.getQuantity()) break;
-                    serial.setStatus("SOLD");
-                    productSerialRepository.save(serial);
-                    soldCount++;
-                }
-            }
+
 
             int actualStock = productSerialRepository
                     .countByVariantIdAndStatus(variant.getId(), "IN_STOCK");
@@ -696,8 +720,7 @@ public class OrderService {
                 "PAID".equals(order.getPaymentStatus())) {
             customerService.addLoyaltyPoints(
                     order.getCustomer().getId(),
-                    order.getTotalAmount()
-            );
+                    order.getTotalAmount());
         }
         orderEmailService.sendDeliveredEmail(order);
     }
@@ -723,5 +746,112 @@ public class OrderService {
             tx.setCreatedAt(Instant.now());
             stockTransactionRepository.save(tx);
         }
+    }
+
+    public OrderDetailResponse getOrderBySerial(String serialNumber, CustomUserDetails user) {
+
+        // Tìm serial
+        ProductSerial serial = productSerialRepository
+                .findBySerialNumber(serialNumber)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy serial: " + serialNumber));
+
+        // Tìm OrderItemSerial → OrderItem → Order
+        OrderItemSerial ois = orderItemSerialRepository
+                .findByProductSerial(serial)
+                .orElseThrow(() -> new RuntimeException(
+                        "Serial này chưa được gán với đơn hàng nào"));
+
+        Long orderId = ois.getOrderItem().getOrder().getId();
+        return getOrderDetail(orderId, user);
+    }
+
+    @Transactional
+    public void assignSerialToOrderItem(Long orderId, Long itemId, String serialNumber) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        if (!OrderStatuses.PAID.equals(order.getStatus())) {
+            throw new RuntimeException("Chỉ được gán serial cho đơn hàng đã thanh toán (PAID)");
+        }
+
+        OrderItem orderItem = orderItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy order item"));
+
+        if (!orderItem.getOrder().getId().equals(orderId)) {
+            throw new RuntimeException("Order item không thuộc đơn hàng này");
+        }
+
+        // Kiểm tra số serial đã gán
+        List<OrderItemSerial> existing = orderItemSerialRepository.findByOrderItem(orderItem);
+        if (existing.size() >= orderItem.getQuantity()) {
+            throw new RuntimeException("Sản phẩm này đã đủ serial ("
+                    + orderItem.getQuantity() + "/" + orderItem.getQuantity() + ")");
+        }
+
+        // Tìm serial
+        String trimmed = serialNumber.trim();
+        ProductSerial serial = productSerialRepository.findBySerialNumber(trimmed)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy serial: " + trimmed));
+
+        // Kiểm tra trạng thái
+        if (!"IN_STOCK".equals(serial.getStatus())) {
+            throw new RuntimeException("Serial " + trimmed + " không ở trạng thái IN_STOCK"
+                    + " (hiện tại: " + serial.getStatus() + ")");
+        }
+
+        // Kiểm tra đúng variant
+        if (!serial.getVariantId().equals(orderItem.getVariant().getId())) {
+            throw new RuntimeException("Serial " + trimmed + " không thuộc biến thể sản phẩm này");
+        }
+
+        // Kiểm tra chưa gán cho đơn khác
+        if (orderItemSerialRepository.findByProductSerial(serial).isPresent()) {
+            throw new RuntimeException("Serial " + trimmed + " đã được gán cho đơn hàng khác");
+        }
+
+        // Kiểm tra trùng trong cùng item
+        boolean duplicate = existing.stream()
+                .anyMatch(ois -> ois.getProductSerial().getSerialNumber().equals(trimmed));
+        if (duplicate) {
+            throw new RuntimeException("Serial " + trimmed + " đã được gán cho sản phẩm này rồi");
+        }
+
+        // Gán serial
+        serial.setStatus("SOLD");
+        productSerialRepository.save(serial);
+
+        OrderItemSerial ois = new OrderItemSerial();
+        ois.setOrderItem(orderItem);
+        ois.setProductSerial(serial);
+        orderItemSerialRepository.save(ois);
+    }
+
+    @Transactional
+    public void removeSerialFromOrderItem(Long orderId, Long itemId, String serialNumber) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        if (!OrderStatuses.PAID.equals(order.getStatus())) {
+            throw new RuntimeException("Chỉ được xóa serial khi đơn hàng ở trạng thái PAID");
+        }
+
+        OrderItem orderItem = orderItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy order item"));
+
+        String trimmed = serialNumber.trim();
+        List<OrderItemSerial> list = orderItemSerialRepository.findByOrderItem(orderItem);
+        OrderItemSerial toDelete = list.stream()
+                .filter(ois -> ois.getProductSerial().getSerialNumber().equals(trimmed))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException(
+                        "Serial " + trimmed + " chưa được gán cho sản phẩm này"));
+
+        // Trả lại trạng thái IN_STOCK
+        ProductSerial serial = toDelete.getProductSerial();
+        serial.setStatus("IN_STOCK");
+        productSerialRepository.save(serial);
+
+        orderItemSerialRepository.delete(toDelete);
     }
 }
