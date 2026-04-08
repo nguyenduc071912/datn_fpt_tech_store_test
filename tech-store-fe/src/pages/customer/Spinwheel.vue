@@ -275,8 +275,15 @@ export default {
         const startRot = this.currentRotation;
         const idx = this.prizes.findIndex(p => p.discount == resultDiscount);
         const seg = (2 * Math.PI) / this.prizes.length;
-        const target = (idx >= 0 ? idx * seg : 0);
-        const total = Math.PI * 2 * 6 + target;
+
+        // Kim ở đỉnh = -Math.PI/2, cần xoay để giữa ô idx khớp với kim
+        const midAngle = idx * seg + seg / 2;
+        const targetAngle = -midAngle - Math.PI / 2;
+        // Chuẩn hóa về góc dương
+        const normalizedTarget = ((targetAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        // Thêm 6 vòng quay
+        const total = Math.PI * 2 * 6 + normalizedTarget - ((startRot % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI));
+
         const animate = () => {
           const p = Math.min((Date.now() - start) / duration, 1);
           const ease = 1 - Math.pow(1 - p, 4);
@@ -286,7 +293,7 @@ export default {
           else { this.isSpinning = false; resolve(); }
         };
         animate();
-      });
+        });
     },
 
     closeResult() { this.showResult = false; },
