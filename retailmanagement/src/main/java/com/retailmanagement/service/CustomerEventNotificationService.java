@@ -343,13 +343,6 @@ public class CustomerEventNotificationService {
                 message
         );
 
-        if (customer.getEmail() != null) {
-            sendSimpleEmail(
-                    customer.getEmail(),
-                    "Đơn hàng " + order.getOrderNumber() + " đã bị hủy",
-                    buildEmailBody(customer.getName(), message)
-            );
-        }
 
         log.info("✅ [ORDER_CANCELLED] Notified customer #{} for order {}",
                 customer.getId(), order.getOrderNumber());

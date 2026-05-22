@@ -805,7 +805,8 @@ async function confirmPayment() {
       await Promise.allSettled(cart.value.map(i => serialsApi.updateStatus(i.serialId, "SOLD")));
     })();
 
-    resetAll();
+    // Do not reset everything immediately so the success dialog can be shown.
+    // `resetAll()` is triggered by the user via the "ĐƠN MỚI" button.
   } catch (e) { payError.value = e?.response?.data?.message || e?.message || "Lỗi thanh toán."; }
   finally { payLoading.value = false; }
 }
