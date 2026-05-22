@@ -237,6 +237,7 @@ public class ReturnService {
         }
 
         emailService.sendReturnApprovedEmail(returnEntity);
+        customerEventNotificationService.onReturnApproved(returnEntity);
         return mapToResponse(returnEntity);
     }
 
