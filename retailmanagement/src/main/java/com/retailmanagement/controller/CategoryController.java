@@ -5,6 +5,8 @@ import com.retailmanagement.dto.response.ApiResponse;
 import com.retailmanagement.dto.response.CategoryResponse;
 import com.retailmanagement.entity.Category;
 import com.retailmanagement.repository.CategoryRepository;
+import com.retailmanagement.security.permission.CheckPermission;
+import com.retailmanagement.security.permission.PermissionEnum;
 import com.retailmanagement.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ public class CategoryController {
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
 
+    @CheckPermission(PermissionEnum.CATEGORY_CREATE)
     @PostMapping
     public ResponseEntity<ApiResponse<Category>> createCategory(@RequestBody Category category) {
         Category saved = categoryRepository.save(category);
@@ -63,6 +66,7 @@ public class CategoryController {
     }
 
     // 2. Cập nhật (Sửa tên, mô tả, ảnh, cha con...)
+    @CheckPermission(PermissionEnum.CATEGORY_UPDATE)
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<String>> updateCategory(
             @PathVariable Integer id,
@@ -73,6 +77,7 @@ public class CategoryController {
     }
 
     // 3. Xóa mềm (Soft Delete)
+    @CheckPermission(PermissionEnum.CATEGORY_DELETE)
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteCategory(@PathVariable Integer id) {
         categoryService.softDeleteCategory(id);

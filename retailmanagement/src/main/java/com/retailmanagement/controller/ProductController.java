@@ -6,6 +6,8 @@ import com.retailmanagement.repository.OrderItemRepository;
 import com.retailmanagement.repository.ProductRepository;
 import com.retailmanagement.repository.ProductSerialRepository;
 import com.retailmanagement.repository.ProductVariantRepository;
+import com.retailmanagement.security.permission.CheckPermission;
+import com.retailmanagement.security.permission.PermissionEnum;
 import com.retailmanagement.service.ProductService;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -53,18 +55,21 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
+    @CheckPermission(PermissionEnum.PRODUCT_CREATE)
     @PostMapping
     public ResponseEntity<?> createProduct(@ModelAttribute ProductRequest request) throws IOException {
         productService.createProduct(request);
         return ResponseEntity.ok("Thêm sản phẩm thành công");
     }
 
+    @CheckPermission(PermissionEnum.PRODUCT_UPDATE)
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable Integer id, @ModelAttribute ProductRequest request) throws IOException {
         productService.updateProduct(id, request);
         return ResponseEntity.ok("Cập nhật sản phẩm thành công");
     }
 
+    @CheckPermission(PermissionEnum.PRODUCT_DELETE)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Integer id) {
         productService.softDeleteProduct(id);
