@@ -249,4 +249,4 @@ const responseMessage = computed(() => {
   if (!code || code === '00') return '';
   return ERROR_CODES[code] ?? `Giao dịch thất bại (mã lỗi: ${code}).`;
 });
-</script>
+</script>
