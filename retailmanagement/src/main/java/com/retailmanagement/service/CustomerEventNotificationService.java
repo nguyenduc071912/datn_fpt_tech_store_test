@@ -282,7 +282,7 @@ public class CustomerEventNotificationService {
                 "Đơn hàng %s đã được thanh toán thành công.\n\n" +
                         "💳 Phương thức: %s\n" +
                         "💰 Số tiền: %s VNĐ\n" +
-                        "🎯 Điểm tích lũy: +%,d điểm\n" +
+                        "🎯 Điểm tích lũy: +%,d điểm nhận được khi hàng đã giao đến nơi\n" +
                         "📅 Thời gian: %s",
                 order.getOrderNumber(),
                 payment.getMethod(),

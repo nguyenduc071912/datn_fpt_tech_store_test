@@ -313,6 +313,18 @@
           </div>
         </div>
 
+        <div v-else class="transfer-qr-card">
+          <el-text size="small" class="mb-5 block transfer-qr-title">Quét mã QR để chuyển khoản</el-text>
+          <div class="transfer-qr-box">
+            <img :src="transferQrUrl" alt="QR thanh toán MB Bank" class="transfer-qr-image" />
+          </div>
+          <div class="transfer-qr-meta">
+            <div><strong>Ngân hàng:</strong> MB Bank</div>
+            <div><strong>Số tài khoản:</strong> 0344269926</div>
+            <div><strong>Số tiền:</strong> {{ formatMoney(totalAmount) }}</div>
+          </div>
+        </div>
+
         <el-input v-model="orderNotes" type="textarea" placeholder="Ghi chú đơn hàng (nếu có)..." :rows="2" />
         <el-alert v-if="payError" :title="payError" type="error" show-icon :closable="false" />
         <el-text v-if="payLoading" type="primary" size="small" class="center block">{{ payStep }}</el-text>
@@ -424,6 +436,13 @@ const subtotal = computed(() => cart.value.reduce((s, i) => s + i.price, 0));
 const vipDiscount = computed(() => Math.round(subtotal.value * vipDiscountPct.value / 100));
 const spinDiscount = computed(() => Math.round(subtotal.value * spinDiscountPct.value / 100));
 const totalAmount = computed(() => Math.max(0, subtotal.value - vipDiscount.value - spinDiscount.value - promoDiscount.value));
+const transferQrUrl = computed(() => {
+  const bankCode = "MB";
+  const accountNo = "0344269926";
+  const amount = Math.max(0, Math.round(totalAmount.value));
+  const message = `TECHSTORE-${(orderNotes.value || "POS").trim() || "POS"}`;
+  return `https://img.vietqr.io/image/${bankCode}-${accountNo}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(message)}`;
+});
 const quickOptions = computed(() => {
   const t = totalAmount.value;
   const base = Math.ceil(t / 10000) * 10000;
@@ -1150,4 +1169,31 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
 .pval { font-size: 12px; font-weight: 600; color: #f56c6c; }
 .psave { font-size: 10px; color: #67c23a; margin-top: 2px; }
 .pexp { font-size: 10px; color: #909399; margin-top: 1px; }
+.transfer-qr-card {
+  border: 1px solid #d9ecff;
+  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+  border-radius: 10px;
+  padding: 12px;
+}
+.transfer-qr-title { font-weight: 600; color: #1f3b63; }
+.transfer-qr-box {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 10px;
+}
+.transfer-qr-image {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+}
+.transfer-qr-meta {
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.6;
+  word-break: break-word;
+}
 </style>
