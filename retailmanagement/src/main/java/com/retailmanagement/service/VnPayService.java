@@ -20,6 +20,7 @@ public class VnPayService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
         String safeOrderNumber = order.getOrderNumber();
+        String txnRef = String.valueOf(order.getId());
 
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", "2.1.0");
@@ -29,7 +30,7 @@ public class VnPayService {
         // VNPAY yêu cầu số tiền nhân với 100
         vnp_Params.put("vnp_Amount", String.valueOf(order.getTotalAmount().longValue() * 100));
         vnp_Params.put("vnp_CurrCode", "VND");
-        vnp_Params.put("vnp_TxnRef", safeOrderNumber);
+        vnp_Params.put("vnp_TxnRef", txnRef);
         vnp_Params.put("vnp_OrderInfo", "TT_" + safeOrderNumber);
         vnp_Params.put("vnp_OrderType", "other");
         vnp_Params.put("vnp_Locale", "vn");
@@ -38,7 +39,7 @@ public class VnPayService {
 
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-        vnp_Params.put("vnp_CreateDate", formatter.format(cld.getTime()));
+        vnp_Params.put("vnp_CreateDate", formatter.format(cld.getTime()));  
 
         cld.add(Calendar.MINUTE, 15);
         vnp_Params.put("vnp_ExpireDate", formatter.format(cld.getTime()));
