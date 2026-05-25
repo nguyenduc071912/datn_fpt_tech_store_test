@@ -439,13 +439,29 @@ function formatStatus(status) {
   return ({ IN_STOCK: 'Trong kho', SOLD: 'Đã bán', FAULTY: 'Lỗi / Hỏng' })[status] ?? status;
 }
 function statusActionOptions(currentStatus) {
-  return [
-    { value: 'IN_STOCK', label: 'Nhập kho',  elType: 'success' },
-    { value: 'FAULTY',   label: 'Đánh lỗi',  elType: 'danger'  },
-    { value: 'SOLD',     label: 'Đã bán',     elType: 'primary' },
-  ].filter(o => o.value !== currentStatus);
-}
+  // Máy trạng thái: Quyết định chính xác nút nào được hiện dựa vào tình trạng hiện tại
+  if (currentStatus === 'IN_STOCK') {
+    return [
+      { value: 'FAULTY',   label: 'Đánh lỗi',  elType: 'danger' }
+      // (Nút Đã bán không hiện ở đây vì hệ thống tự chốt đơn, không bấm tay)
+    ];
+  } 
+  
+  if (currentStatus === 'SOLD') {
+    // Đã bán thì không cho bấm nút nào cả (Muốn nhập kho phải qua luồng Trả hàng)
+    return []; 
+  } 
+  
+  if (currentStatus === 'FAULTY') {
+    return [
+      { value: 'IN_STOCK', label: 'Nhập kho',  elType: 'success' }
+      // (Hàng lỗi thì chỉ có nước sửa xong mới được nhập lại kho bán tiếp)
+    ];
+  }
 
+  // Mặc định an toàn nhất là không hiện nút nào
+  return []; 
+}
 onMounted(() => { loadProducts(); load(); });
 </script>
 
