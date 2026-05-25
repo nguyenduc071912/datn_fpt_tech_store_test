@@ -51,8 +51,8 @@ public class PaymentController {
         }
 
         // 2. Tìm đơn hàng
-        String orderNumber = params.get("vnp_TxnRef");
-        var orderOpt = orderRepository.findByOrderNumber(orderNumber);
+        String txnRef = params.get("vnp_TxnRef");
+        var orderOpt = resolveOrderByTxnRef(txnRef);
         if (orderOpt.isEmpty()) {
             return ResponseEntity.ok(Map.of("RspCode", "01", "Message", "Order not found"));
         }
@@ -69,7 +69,7 @@ public class PaymentController {
             PaymentRequest paymentRequest = new PaymentRequest();
             paymentRequest.setOrderId(order.getId());
             paymentRequest.setMethod("VNPAY");
-            paymentRequest.setTransactionRef(params.getOrDefault("vnp_TransactionNo", "TXN-" + orderNumber));
+            paymentRequest.setTransactionRef(params.getOrDefault("vnp_TransactionNo", "TXN-" + txnRef));
             paymentService.createPayment(paymentRequest, null);
         }
 
@@ -94,8 +94,8 @@ public class PaymentController {
             return ResponseEntity.ok(Map.of("RspCode", "97", "Message", "Invalid Checksum"));
         }
 
-        String orderNumber = params.get("vnp_TxnRef");
-        var orderOpt = orderRepository.findByOrderNumber(orderNumber);
+        String txnRef = params.get("vnp_TxnRef");
+        var orderOpt = resolveOrderByTxnRef(txnRef);
         if (orderOpt.isEmpty()) {
             return ResponseEntity.ok(Map.of("RspCode", "01", "Message", "Order not found"));
         }
@@ -111,11 +111,27 @@ public class PaymentController {
             PaymentRequest paymentRequest = new PaymentRequest();
             paymentRequest.setOrderId(order.getId());
             paymentRequest.setMethod("VNPAY");
-            paymentRequest.setTransactionRef(params.getOrDefault("vnp_TransactionNo", "TXN-" + orderNumber));
+            paymentRequest.setTransactionRef(params.getOrDefault("vnp_TransactionNo", "TXN-" + txnRef));
             paymentService.createPayment(paymentRequest, null);
         }
 
         return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"));
+    }
+
+    private java.util.Optional<com.retailmanagement.entity.Order> resolveOrderByTxnRef(String txnRef) {
+        if (txnRef == null || txnRef.isBlank()) {
+            return java.util.Optional.empty();
+        }
+
+        if (txnRef.matches("\\d+")) {
+            try {
+                return orderRepository.findById(Long.valueOf(txnRef));
+            } catch (NumberFormatException ignored) {
+                // fall through to order number lookup
+            }
+        }
+
+        return orderRepository.findByOrderNumber(txnRef);
     }
 
     /**
