@@ -55,21 +55,19 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
-    @CheckPermission(PermissionEnum.PRODUCT_CREATE)
+
     @PostMapping
     public ResponseEntity<?> createProduct(@ModelAttribute ProductRequest request) throws IOException {
         productService.createProduct(request);
         return ResponseEntity.ok("Thêm sản phẩm thành công");
     }
 
-    @CheckPermission(PermissionEnum.PRODUCT_UPDATE)
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable Integer id, @ModelAttribute ProductRequest request) throws IOException {
         productService.updateProduct(id, request);
         return ResponseEntity.ok("Cập nhật sản phẩm thành công");
     }
 
-    @CheckPermission(PermissionEnum.PRODUCT_DELETE)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Integer id) {
         productService.softDeleteProduct(id);
