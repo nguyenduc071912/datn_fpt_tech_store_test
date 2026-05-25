@@ -241,12 +241,12 @@
             </div>
 
             <!-- VIP Discount -->
-            <div v-if="vipDiscountPct > 0" class="summary-line discount-line vip-line">
+            <div v-if="vipDiscountValue > 0" class="summary-line discount-line vip-line">
               <span class="label">
                 <el-icon style="vertical-align:middle;margin-right:3px"><Medal /></el-icon>
-                VIP ({{ vipDiscountPct }}%)
+                VIP {{ vipDiscountLabel }}
               </span>
-              <span class="value">-{{ formatMoney(vipDiscount) }}</span>
+              <span class="value">-{{ formatMoney(vipDiscountValue) }}</span>
             </div>
 
             <!-- Spin Discount -->
@@ -355,9 +355,10 @@
   <ReceiptPrint
   ref="receiptRef"
   :order="orderDone"
+    :vipDiscountLabel="vipDiscountLabel"
   :customerTierName="customerTierName"
   :vipDiscountPct="vipDiscountPct"
-  :vipDiscount="vipDiscount"
+  :vipDiscount="vipDiscountValue"
   :spinDiscountPct="spinDiscountPct"
   :spinDiscount="spinDiscount"
   :promoCode="appliedPromo?.code"
@@ -410,6 +411,7 @@ const promoDiscount = ref(0);
 
 // ── VIP & Spin Discount ──
 const vipDiscountPct = ref(0);   // % giảm theo hạng VIP (vd: 5 = 5%)
+const vipDiscountAmount = ref(0); // Số tiền giảm cố định theo tier (vd: 100000)
 const spinDiscountPct = ref(0);  // % giảm từ spin wheel bonus (vd: 10 = 10%)
 const spinBonusExpiry = ref(null); // Thời điểm hết hạn spin bonus
 const customerTierName = ref(""); // Tên hạng VIP (ví dụ: Platinum, Diamond)
@@ -434,8 +436,18 @@ const receiptRef = ref(null)
 // ── Computed ──
 const subtotal = computed(() => cart.value.reduce((s, i) => s + i.price, 0));
 const vipDiscount = computed(() => Math.round(subtotal.value * vipDiscountPct.value / 100));
+const vipDiscountLabel = computed(() => {
+  if (vipDiscountAmount.value > 0) {
+    return [customerTierName.value, formatMoney(vipDiscountAmount.value)].filter(Boolean).join(' ');
+  }
+  if (vipDiscountPct.value > 0) {
+    return [customerTierName.value, `${vipDiscountPct.value}%`].filter(Boolean).join(' ');
+  }
+  return customerTierName.value || '';
+});
+const vipDiscountValue = computed(() => vipDiscountAmount.value > 0 ? vipDiscountAmount.value : vipDiscount.value);
 const spinDiscount = computed(() => Math.round(subtotal.value * spinDiscountPct.value / 100));
-const totalAmount = computed(() => Math.max(0, subtotal.value - vipDiscount.value - spinDiscount.value - promoDiscount.value));
+const totalAmount = computed(() => Math.max(0, subtotal.value - vipDiscountValue.value - spinDiscount.value - promoDiscount.value));
 const transferQrUrl = computed(() => {
   const bankCode = "MB";
   const accountNo = "0344269926";
@@ -455,10 +467,15 @@ function openPaymentModal() {
 }
 
 // ── Helpers ──
-const SOLD_STATUSES = ["sold", "used", "inactive", "disabled", "deleted", "reserved"];
+const SOLD_STATUSES = ["sold", "used", "inactive", "disabled", "deleted", "reserved", "faulty"];
 const formatMoney = (v) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v || 0);
 const formatShort = (v) => v >= 1000000 ? (v / 1000000).toFixed(1) + "Tr" : (v / 1000).toFixed(0) + "K";
 const serialCode = (s) => s.serialNumber ?? s.serialCode ?? s.code ?? "";
+const tierFixedDiscountMap = {
+  bronze: 50000,
+  silver: 100000,
+  gold: 150000,
+};
 
 // ── Draft Order Logic ────────────────────────────────────
 // Lưu có chọn lọc: chỉ lưu cart + customerQuery, không lưu full customer object
@@ -662,16 +679,29 @@ async function lookupCustomer() {
 async function fetchCustomerDiscounts(customerId) {
   discountsLoading.value = true;
   vipDiscountPct.value = 0;
+  vipDiscountAmount.value = 0;
   spinDiscountPct.value = 0;
   spinBonusExpiry.value = null;
   try {
     // 1. VIP tier discount
     const tierRes = await customersApi.getCustomerTierProgress(customerId);
     const tierData = tierRes.data?.data ?? tierRes.data ?? {};
-    // Backend có thể trả `currentDiscountRate` là decimal (0.03)
-    const rate = Number(tierData.currentDiscountRate ?? tierData.discountPercentage ?? tierData.discount ?? tierData.vipDiscountPct ?? 0);
-    vipDiscountPct.value = (rate > 0 && rate < 1) ? rate * 100 : rate;
-    customerTierName.value = tierData.currentTierDisplay || tierData.currentTier || "";
+    // Backend có thể trả giảm theo % hoặc giảm tiền cố định
+    const rate = Number(tierData.currentDiscountRate ?? tierData.discountPercentage ?? tierData.discountRate ?? tierData.vipDiscountPct ?? 0);
+    const amount = Number(tierData.currentDiscountAmount ?? tierData.discountAmount ?? tierData.discountValue ?? tierData.vipDiscountAmount ?? 0);
+    const tierNameRaw = String(tierData.currentTierDisplay ?? tierData.currentTier ?? "").trim();
+    const tierNameKey = tierNameRaw.toLowerCase();
+    const fallbackAmount = tierFixedDiscountMap[tierNameKey] ?? 0;
+    if (amount > 0) {
+      vipDiscountAmount.value = amount;
+      vipDiscountPct.value = 0;
+    } else if (fallbackAmount > 0) {
+      vipDiscountAmount.value = fallbackAmount;
+      vipDiscountPct.value = 0;
+    } else {
+      vipDiscountPct.value = (rate > 0 && rate < 1) ? rate * 100 : rate;
+    }
+    customerTierName.value = tierNameRaw;
 
     // 2. Spin wheel bonus
     const spinRes = await spinWheelApi.getStatus(customerId);
@@ -693,9 +723,13 @@ async function fetchCustomerDiscounts(customerId) {
       spinBonusExpiry.value = null;
     }
 
-    if (vipDiscountPct.value > 0 || spinDiscountPct.value > 0) {
+    if (vipDiscountValue.value > 0 || spinDiscountPct.value > 0) {
+      const vipLabel = vipDiscountValue.value > 0
+        ? `${customerTierName.value || 'VIP'} ${formatMoney(vipDiscountValue.value)}`
+        : '';
+      const spinLabel = spinDiscountPct.value > 0 ? `Spin ${spinDiscountPct.value}%` : '';
       toast(
-        `Áp dụng: VIP ${vipDiscountPct.value}% + Spin ${spinDiscountPct.value}%`,
+        `Áp dụng: ${[vipLabel, spinLabel].filter(Boolean).join(' + ')}`,
         "success"
       );
     }
@@ -710,6 +744,7 @@ const removeCustomer = () => {
   foundCustomer.value = null;
   cusQuery.value = "";
   vipDiscountPct.value = 0;
+  vipDiscountAmount.value = 0;
   spinDiscountPct.value = 0;
   spinBonusExpiry.value = null;
   customerTierName.value = "";
@@ -767,7 +802,7 @@ async function confirmPayment() {
       promotionCode: appliedPromo.value?.code,
       // Truyền thêm discount VIP và Spin để backend ghi nhận
       vipDiscountPercent: vipDiscountPct.value || undefined,
-      vipDiscountAmount: vipDiscount.value || undefined,
+      vipDiscountAmount: vipDiscountValue.value || undefined,
       spinDiscountPercent: spinDiscountPct.value || undefined,
       spinDiscountAmount: spinDiscount.value || undefined,
       items: cart.value.map(i => ({ variantId: i.variantId, serialId: i.serialId, quantity: 1 }))
@@ -834,7 +869,7 @@ function resetAll() {
   showDone.value = false;
   cart.value = []; foundCustomer.value = null; cusQuery.value = "";
   orderNotes.value = ""; searchQuery.value = ""; clearPromo();
-  vipDiscountPct.value = 0; spinDiscountPct.value = 0; spinBonusExpiry.value = null; customerTierName.value = "";
+  vipDiscountPct.value = 0; vipDiscountAmount.value = 0; spinDiscountPct.value = 0; spinBonusExpiry.value = null; customerTierName.value = "";
   localStorage.removeItem('pos_draft');
   showDraftPrompt.value = false;
 }

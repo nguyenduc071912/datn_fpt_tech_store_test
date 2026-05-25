@@ -40,7 +40,7 @@
         @Autowired
         private PaymentService paymentService;
 
-        @CheckPermission(PermissionEnum.CUSTOMER_CREATE)
+
         @PostMapping("")
         public ResponseEntity<CustomerResponse> addCustomer(@Valid @RequestBody CustomerRequest cus) {
            CustomerResponse response= cusservice.create(cus);
@@ -51,14 +51,14 @@
             return ResponseEntity.status(HttpStatus.OK).body(cusservice.findAll());
         }
 
-        @CheckPermission(PermissionEnum.CUSTOMER_DELETE)
+
         @DeleteMapping("/{id}")
         public ResponseEntity<CustomerResponse> deleteCustomer(@Valid @PathVariable int id) {
             cusservice.deleteById(id);
             return ResponseEntity.noContent().build();
         }
 
-        @CheckPermission(PermissionEnum.CUSTOMER_UPDATE)
+
         @PutMapping("/{id}")
         public ResponseEntity<CustomerResponse> updateCustomer(@Valid @PathVariable int id, @RequestBody CustomerRequest cus) {
             CustomerResponse up = cusservice.updateById(id, cus);

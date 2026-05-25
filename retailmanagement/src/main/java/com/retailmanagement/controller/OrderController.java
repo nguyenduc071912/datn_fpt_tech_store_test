@@ -31,7 +31,7 @@ public class OrderController {
     // =========================================================
     // CREATE ORDER
     // =========================================================
-    @CheckPermission(PermissionEnum.ORDER_CREATE)
+
     @PostMapping
     public ResponseEntity<CreateOrderResponse> createOrder(
             @RequestBody CreateOrderRequest request,
@@ -103,7 +103,7 @@ public class OrderController {
     // =========================================================
     // UPDATE ORDER (GENERAL)
     // =========================================================
-    @CheckPermission(PermissionEnum.ORDER_UPDATE)
+
     @PutMapping("/{orderId}")
     public ResponseEntity<Void> updateOrder(
             @PathVariable Long orderId,
@@ -170,7 +170,7 @@ public class OrderController {
     // =========================================================
     // DELETE ORDER (ADMIN ONLY – nếu bạn cho phép)
     // =========================================================
-    @CheckPermission(PermissionEnum.ORDER_DELETE)
+
     @DeleteMapping("/{orderId}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long orderId) {
         orderService.deleteOrder(orderId);

@@ -98,8 +98,8 @@
             <span>{{ formatMoney(order?.subtotal) }}</span>
           </div>
 
-          <div v-if="vipDiscountPct > 0 && vipDiscount > 0" class="sum-row">
-            <span>Giam VIP ({{ vipDiscountPct }}%)</span>
+          <div v-if="vipDiscount > 0" class="sum-row">
+            <span>Giam VIP ({{ vipDiscountLabel || (vipDiscountPct > 0 ? `${vipDiscountPct}%` : formatMoney(vipDiscount)) }})</span>
             <span>-{{ formatMoney(vipDiscount) }}</span>
           </div>
 
@@ -169,6 +169,7 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   order:            { type: Object, default: null },
   customerTierName: { type: String, default: '' },
+  vipDiscountLabel: { type: String, default: '' },
   vipDiscountPct:   { type: Number, default: 0 },
   vipDiscount:      { type: Number, default: 0 },
   spinDiscountPct:  { type: Number, default: 0 },
