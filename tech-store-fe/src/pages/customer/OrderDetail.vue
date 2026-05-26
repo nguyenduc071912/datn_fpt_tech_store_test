@@ -328,7 +328,8 @@
 
           <!-- TRANSFER - ONLINE (VNPay) -->
           <el-alert
-            v-if="detail?.paymentMethod === 'TRANSFER' && detail?.channel === 'ONLINE'"
+            v-if="detail?.paymentMethod === 'TRANSFER' && detail?.channel === 'ONLINE' &&
+    detail?.status !== 'DELIVERED'"
             type="warning"
             :closable="false"
             show-icon
@@ -350,7 +351,8 @@
 
           <!-- TRANSFER - OFFLINE (Thanh toán qua VNPay — giống ONLINE) -->
           <el-alert
-            v-if="detail?.paymentMethod === 'TRANSFER' && detail?.channel === 'OFFLINE'"
+            v-if="detail?.paymentMethod === 'TRANSFER' && detail?.channel === 'OFFLINE' &&
+    detail?.status !== 'DELIVERED'"
             type="warning"
             :closable="false"
             show-icon
