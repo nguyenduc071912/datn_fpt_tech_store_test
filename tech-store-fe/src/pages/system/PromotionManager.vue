@@ -417,7 +417,7 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">🎁 Combo <el-text type="info" size="small">(để trống nếu không phải combo)</el-text></el-divider>
+        <!-- <el-divider content-position="left">🎁 Combo <el-text type="info" size="small">(để trống nếu không phải combo)</el-text></el-divider>
         <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item label="Số lượng mua (buyQty)">
@@ -429,7 +429,7 @@
               <el-input v-model.number="dlg.form.getQty" type="number" :min="0" placeholder="VD: 1" />
             </el-form-item>
           </el-col>
-        </el-row>
+        </el-row> -->
 
         <el-divider content-position="left">Thời gian & Giới hạn</el-divider>
         <el-row :gutter="12">
