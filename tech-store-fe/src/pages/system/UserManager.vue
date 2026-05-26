@@ -236,11 +236,36 @@
           </el-col>
           <el-col :span="dlg.mode === 'create' ? 12 : 24">
             <el-form-item label="Vai trò *">
-              <el-select v-model="dlg.form.role" style="width: 100%;">
-                <el-option label="ADMIN"     value="ADMIN" />
+              <el-select
+                v-model="dlg.form.role"
+                style="width: 100%;"
+                :disabled="dlg.mode === 'edit' && ['ADMIN', 'CUSTOMER'].includes(dlg.originalRole)"
+              >
+                <el-option
+                  v-if="dlg.mode === 'create' || dlg.originalRole === 'ADMIN'"
+                  label="ADMIN"
+                  value="ADMIN"
+                />
                 <el-option label="SALES"     value="SALES" />
                 <el-option label="INVENTORY" value="INVENTORY" />
+                <el-option
+                  v-if="dlg.mode === 'edit' && ['ADMIN', 'CUSTOMER'].includes(dlg.originalRole)"
+                  label="CUSTOMER"
+                  value="CUSTOMER"
+                />
               </el-select>
+              <div
+                v-if="dlg.mode === 'edit' && dlg.originalRole === 'CUSTOMER'"
+                style="margin-top: 6px; font-size: 12px; color: var(--el-text-color-secondary);"
+              >
+                Tài khoản CUSTOMER không thể đổi sang role khác.
+              </div>
+              <div
+                v-if="dlg.mode === 'edit' && dlg.originalRole === 'ADMIN'"
+                style="margin-top: 6px; font-size: 12px; color: var(--el-text-color-secondary);"
+              >
+                Tài khoản ADMIN không thể đổi sang role khác.
+              </div>
             </el-form-item>
           </el-col>
           <el-col :span="24" v-if="dlg.mode === 'edit'">
@@ -415,6 +440,14 @@ async function save() {
   dlg.alert = "";
   if (!dlg.form.username || !dlg.form.email || !dlg.form.role) {
     dlg.alert = "Username, email và vai trò là bắt buộc.";
+    return;
+  }
+  if (dlg.mode === "edit" && dlg.originalRole !== "ADMIN" && dlg.form.role === "ADMIN") {
+    dlg.alert = "Không thể đổi tài khoản thường sang role ADMIN.";
+    return;
+  }
+  if (dlg.mode === "edit" && ['ADMIN', 'CUSTOMER'].includes(dlg.originalRole) && dlg.form.role !== dlg.originalRole) {
+    dlg.alert = `Không thể đổi role của tài khoản ${dlg.originalRole}.`;
     return;
   }
   if (dlg.mode === "create" && !dlg.form.password) {
