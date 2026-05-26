@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <!-- ── Validate bar ── -->
+    <!-- ── Validate bar ──
     <el-card shadow="never">
       <div class="validate-row">
         <el-icon :size="16"><Search /></el-icon>
@@ -84,7 +84,7 @@
           show-icon
         />
       </div>
-    </el-card>
+    </el-card> -->
 
     <!-- ── Conflicts panel ── -->
     <el-card v-if="conflicts !== null" shadow="never">
@@ -406,10 +406,18 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="Giá trị giảm">
-              <el-input v-model.number="dlg.form.discountValue" type="number" :min="0" placeholder="10" />
-            </el-form-item>
-          </el-col>
+  <el-form-item label="Giá trị giảm">
+    <el-input-number
+      v-model="dlg.form.discountValue"
+      :min="0"
+      :max="50"
+      :step="1"
+      :controls="false"
+      placeholder="10"
+      style="width: 100%"
+    />
+  </el-form-item>
+</el-col>
           <el-col :span="8">
             <el-form-item label="Ưu tiên (priority)">
               <el-input v-model.number="dlg.form.priority" type="number" :min="0" placeholder="1" />
