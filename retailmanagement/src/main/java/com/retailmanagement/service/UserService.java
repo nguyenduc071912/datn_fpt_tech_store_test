@@ -180,6 +180,10 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
 
+        if (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getName())) {
+            throw new IllegalArgumentException("Không thể xóa tài khoản có role ADMIN");
+        }
+
         user.setIsActive(false);
         userRepository.save(user);
 

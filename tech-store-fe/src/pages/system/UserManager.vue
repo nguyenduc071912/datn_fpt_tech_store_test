@@ -173,7 +173,7 @@
                   <el-icon><Edit /></el-icon>
                 </el-button>
               </el-tooltip>
-              <el-tooltip content="Xóa" placement="top">
+              <el-tooltip v-if="canDeleteRow(row)" content="Xóa" placement="top">
                 <el-button size="small" type="danger" plain @click="remove(row)">
                   <el-icon><Delete /></el-icon>
                 </el-button>
@@ -361,6 +361,10 @@ function roleTagType(role) {
   );
 }
 
+function canDeleteRow(row) {
+  return String(row?.role || "").toUpperCase() !== "ADMIN";
+}
+
 function formatDate(dt) {
   if (!dt) return "—";
   return new Date(dt).toLocaleDateString("vi-VN", {
@@ -449,6 +453,10 @@ async function save() {
 }
 
 async function remove(row) {
+  if (!canDeleteRow(row)) {
+    toast("Không thể xóa tài khoản ADMIN.", "error");
+    return;
+  }
   const ok = await confirmModal(`Xóa người dùng "${row?.username}" (#${row?.id})?`, "Xác nhận xóa", "Xóa", true);
   if (!ok) return;
   try {
